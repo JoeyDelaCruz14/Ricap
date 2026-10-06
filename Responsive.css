@@ -1,0 +1,238 @@
+/* =====================================================================
+   RiCap – responsive.css  (mobile fixes for every page)
+   Load this LAST on every page, after the page's own CSS:
+     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+     <link rel="stylesheet" href="responsive.css">
+   Breakpoints used everywhere: 1100 / 900 / 768 / 480 / 360
+   ===================================================================== */
+
+/* ---------- 0. Global guards ---------- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { max-width: 100%; }   /* no overflow rule on html/body here: it conflicts with pages that already set it and makes the page drag sideways */
+img, video, canvas, svg { max-width: 100%; }
+img, video { height: auto; }
+.leaflet-container img, .leaflet-container svg { max-width: none; }   /* don't break map tiles */
+input, select, textarea, button { max-width: 100%; }
+.m-table-wrap, .table-wrap, .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ---------- 1. Navigation (all pages: 100vh -> dvh, bigger tap target) ---------- */
+@media (max-width: 1380px) {
+    .nav-links { height: 100vh; height: 100dvh; overflow-y: auto; }   /* Landing / Home drawer */
+}
+@media (max-width: 768px) {
+    .nav-links { height: 100vh; height: 100dvh; overflow-y: auto;
+                 padding-bottom: env(safe-area-inset-bottom); }
+    .nav-toggle { width: 44px; height: 44px; min-width: 44px; }      /* >= 40px tap target */
+    .nav-inner { padding-left: max(12px, env(safe-area-inset-left)); }
+    .nav-links a { padding-block: 6px; display: inline-block; }       /* easier to tap */
+}
+@media (max-width: 760px) {
+    .submit-page .nav-toggle { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+    .submit-page .nav-links a { padding: 12px; }
+    .submit-page .nav-links { max-height: calc(100dvh - 60px); overflow-y: auto; }
+}
+
+/* ---------- 2. Apply / Submit page ---------- */
+@media (max-width: 768px) {
+    .submit-main { padding: 80px 14px 64px; }
+    .submit-shell { max-width: 100%; }
+}
+@media (max-width: 560px) {
+    .submit-form-section, .submit-success { padding: 22px 16px; }
+    .field input, .field select { font-size: 16px; min-height: 44px; }   /* 16px stops iOS zoom */
+    .submit-btn, .ghost-btn { min-height: 44px; }
+    .capture-choice-btns, .success-actions, .capture-live-actions { flex-direction: column; width: 100%; }
+    .capture-choice-btns > *, .success-actions > *, .capture-live-actions > * { width: 100%; }
+    .capture-box { padding: 14px; }
+    .submit-page .chip { padding: 10px 14px; }
+}
+
+/* ---------- 3. Home page ---------- */
+@media (max-width: 900px) {
+    .site-header { padding: 16px 4%; }
+    .hero-section { min-height: 100svh; padding: 110px 6% 70px; }
+    .hero-title { font-size: clamp(44px, 14vw, 110px); }
+    .hero-buttons { flex-wrap: wrap; }
+    .hero-description { font-size: 15px; margin-top: 24px; }
+    .section { min-height: auto; padding: 90px 6%; grid-template-columns: 1fr; }
+    .section-number { margin-bottom: 14px; }
+    .section-title { font-size: clamp(36px, 10vw, 80px); margin-bottom: 26px; }
+    .about-highlight { grid-template-columns: 1fr; margin-top: 44px; }
+    .feature-grid { grid-template-columns: 1fr; margin-top: 40px; }
+    .feature-card { min-height: 0; }
+    .cursor-glow { display: none; }
+}
+@media (max-width: 480px) {
+    .hero-section { padding: 100px 5% 56px; }
+    .hero-buttons { flex-direction: column; align-items: stretch; }
+    .primary-btn, .secondary-btn { width: 100%; min-height: 48px; }
+    .feature-info { padding: 20px; }
+    .feature-info h3, .process-item h3 { font-size: 22px; }
+    .process-item { padding: 22px 0; }
+    .auth-box { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; }
+    .toast { max-width: calc(100vw - 24px); }
+}
+@media (max-width: 360px) {
+    .hero-title { font-size: 40px; }
+    .section { padding: 70px 5%; }
+}
+
+/* ---------- 4. Landing page ---------- */
+@media (max-width: 900px) {
+    .hero { height: 100svh; min-height: 480px; padding: 0 4vw; }
+    .hero-text { font-size: clamp(2.8rem, 16vw, 9rem); padding: 0 8px; }
+    .collage-wrap { height: 260vh; }
+    .collage-sticky { height: 100vh; height: 100svh; }
+    .collage-line { white-space: normal; max-width: 90vw; }
+    .second { padding: 0 5vw; }
+    .third { padding: 6vh 6vw; flex-direction: column; align-items: flex-start; text-align: left; }
+    .third-text, .third-media { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+    .letter-reveal-svg { width: min(80vw, 420px); }
+}
+@media (max-width: 480px) {
+    .ricap_eyebrow { font-size: .95rem; letter-spacing: .16em; }
+    .features-grid, .about-list { gap: 14px; }
+}
+
+/* ---------- 5. Forum ---------- */
+@media (max-width: 1100px) {
+    .forum-body { grid-template-columns: 1fr; }
+    .forum-sidebar { position: static; max-height: none; }
+}
+@media (max-width: 900px) {
+    .forum-feed { grid-template-columns: 1fr; }
+    .forum-feed:has(.post:only-child) .post { grid-template-columns: 1fr; grid-template-rows: none; }
+    .forum-feed:has(.post:only-child) .post > :not(.post-media) { grid-column: auto; }
+    .forum-feed:has(.post:only-child) .post-media { grid-column: auto; grid-row: auto; }
+}
+@media (max-width: 600px) {
+    .forum { padding-inline: 14px; }
+    .forum-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .stat { padding: 12px 8px; }
+    .stat-num { font-size: 1.3rem; }
+    .stat-label { font-size: .68rem; }
+    .forum-title { font-size: clamp(1.7rem, 8vw, 2.4rem); }
+    .post-actions button { width: 44px; height: 44px; }
+    .post-add-comment input { font-size: 16px; min-height: 44px; }
+    .fab-submit { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 360px) {
+    .forum-feed { grid-template-columns: minmax(0, 1fr); }
+    .forum-stats { grid-template-columns: 1fr; }
+}
+
+/* ---------- 6. Image Processing (scanner) ---------- */
+@media (max-width: 1200px) {
+    .scan-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 768px) {
+    .scan-section { padding: 3vh 5vw 12vh; }
+    .scan-hero { padding-inline: 5vw; }
+    .scan-heading { font-size: clamp(1.8rem, 8vw, 3rem); }
+    .card { padding: 20px 16px; }
+    .scanner-actions { flex-wrap: wrap; }
+    .scanner-actions .btn { flex: 1 1 140px; min-height: 46px; }
+    .camera-overlay { height: 100dvh; padding-bottom: env(safe-area-inset-bottom); }
+    .camera-overlay video { max-width: 100vw; max-height: 70dvh; }
+    .camera-overlay-actions { flex-wrap: wrap; justify-content: center; }
+    .camera-overlay-actions .btn { min-width: 120px; min-height: 46px; }
+}
+@media (max-width: 480px) {
+    .quickread-row { flex-wrap: wrap; gap: 10px; }
+    .quickread-score { text-align: left; }
+    .quickread-actions { flex-wrap: wrap; }
+    .quickread-actions .btn, .result-actions .btn { width: 100%; }
+    .score-value { font-size: 2rem; }
+}
+
+/* ---------- 7. Tracking (records + trend map) ---------- */
+@media (max-width: 900px) {
+    .docs-section { padding: 3vh 5vw 12vh; }
+    .detail-image-panel { position: static; }
+    .docs-list-header { flex-direction: column; align-items: stretch; gap: 12px; }
+    .docs-header-actions { flex-wrap: wrap; gap: 10px; }
+    .trend-head { flex-wrap: wrap; gap: 10px; }
+}
+@media (max-width: 480px) {
+    .docs-section { padding: 2vh 14px 10vh; }
+    .record-grid { grid-template-columns: minmax(0, 1fr); }
+    .docs-filter, .docs-filter-select, .docs-new-scan-btn, .docs-clear-btn { width: 100%; min-height: 44px; }
+    .trend-nav-btn { width: 44px; height: 44px; }
+    .record-delete { width: 40px; height: 40px; }
+    .trend-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .trend-map { height: 320px; }
+    .trend-legend { flex-wrap: wrap; gap: 8px; }
+    .trend-legend-hint { margin-left: 0; width: 100%; }
+    .river-chips { gap: 6px; }
+    .river-chip { padding: 8px 12px; }
+    .trend-map .leaflet-popup-content { max-width: 70vw; }
+}
+
+/* ---------- 8. Maintenance (admin) ---------- */
+@media (max-width: 900px) {
+    .maintenance-page .maint-shell { max-width: 100%; }
+    .maint-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+    .m-card { grid-template-columns: minmax(0, 1fr); }
+    .m-card img, .m-noimg { max-height: 240px; }
+    .m-card-top { flex-wrap: wrap; }
+    .maint-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 12px; }
+    .m-tab { flex: 0 0 auto; min-height: 42px; white-space: nowrap; }
+    .m-toolbar > * { flex: 1 1 100%; }
+    .m-toolbar input[type="search"] { min-width: 0; }
+    .m-toolbar input, .m-toolbar select, .m-card select, .m-form input, .m-form select { font-size: 16px; min-height: 44px; }
+    .m-form { padding: 16px; }
+    .m-actions .ghost-btn, .m-actions .submit-btn { flex: 1 1 auto; min-height: 42px; }
+    .m-table { min-width: 560px; }                      /* scrolls inside .m-table-wrap */
+    .m-check li { flex-direction: column; gap: 4px; }
+    .m-toast { width: calc(100vw - 24px); text-align: center; bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+@media (max-width: 360px) {
+    .maint-stats { grid-template-columns: 1fr; }
+}
+
+/* ---------- 9. Admin shell / cards ---------- */
+@media (max-width: 900px) {
+    .admin-shell { padding-inline: 14px; max-width: 100%; }
+}
+@media (max-width: 720px) {
+    .app-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+    .app-card > * { min-width: 0; max-width: 100%; }
+    .app-card img { width: 100%; max-height: 240px; object-fit: cover; }
+    .app-card button, .app-card .ghost-btn, .app-card .submit-btn { min-height: 42px; }
+    .app-card [class*="actions"] { flex-wrap: wrap; }
+}
+
+/* ---------- 10. Mapping page ---------- */
+@media (max-width: 800px) {
+    .month-bar { left: 64px; right: 12px; max-width: calc(100vw - 76px); }
+    .month-sub { display: none; }
+}
+@media (max-width: 480px) {
+    .month-bar button, .month-bar .m-nav { min-width: 40px; min-height: 40px; }
+    .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; }  /* bigger zoom buttons */
+    .leaflet-popup-content { max-width: 70vw; }
+}
+
+/* ---------- 11. Touch + motion ---------- */
+@media (hover: none) {
+    .primary-btn:hover, .secondary-btn:hover, .feature-card:hover .feature-image img { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+}
+
+/* ---------- 12. Keep every section inside the screen width (Home / Landing / all pages) ---------- */
+/* Nothing is blocked: sections simply can't be wider than the phone, so there is nothing to scroll to. */
+main, section, .section, .section-content, .feature-grid, .feature-card, .hero-section, .hero-content,
+.features, .features-inner, .features-grid, .about, .third, .second {
+    max-width: 100%; min-width: 0; box-sizing: border-box;
+}
+main { overflow-x: clip; width: 100%; }              /* clip: cuts stray overflow WITHOUT making a scroll area */
+@media (max-width: 900px) {
+    .section { width: 100%; }
+    .feature-card, .tilt-card, .scroll-tilt, .magnetic { transform: none !important; }  /* inline 3D tilt widens cards */
+    .section-title, .hero-title, .features-heading { overflow-wrap: anywhere; }
+    .cursor-glow { display: none !important; }
+}

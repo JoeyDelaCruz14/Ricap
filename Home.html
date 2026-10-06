@@ -1,0 +1,83 @@
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Home</title>
+            <link rel="stylesheet" href="style.css">
+            <link rel="stylesheet" href="Responsive.css">
+            <link rel="stylesheet" href="Home.css">
+        </head>
+
+        <body class="forum-page">
+            <nav class="nav scrolled" id="nav">
+                <div class="nav-inner">
+                    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+                    <ul class="nav-links" id="navLinks">
+                        <li><a href="Home.html" class="nav-link--active">Home</a></li>
+                        <li><a href="mapping.html">Mapping</a></li>
+                        <li><a href="Image_Processing.html">Scanner</a></li>
+                        <li><a href="Tracking.html">Tracking</a></li>
+                        <li><a href="main.html#about">About</a></li>
+                        <li><a href="main.html#contact">Contact</a></li>
+                        <li><a href ="main.html">Login</a></li>
+                        <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+                        <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
+                    </ul>
+                </div>
+            </nav>
+
+            <main class="forum">
+                <header class="forum-header">
+                    <p class="forum-eyebrow">Community Reports</p>
+                    <h1 class="forum-title">River Watch Forum</h1>
+                    <p class="forum-sub">Live field reports from verified officials, with AI-suggested actions. Vote, comment, and follow Bataan's rivers in real time.</p>
+                    <dl class="forum-stats">
+                        <div class="stat"><dt class="stat-num" id="statReports">0</dt><dd class="stat-label">Reports</dd></div>
+                        <div class="stat"><dt class="stat-num" id="statRivers">0</dt><dd class="stat-label">Rivers covered</dd></div>
+                        <div class="stat"><dt class="stat-num" id="statOfficials">0</dt><dd class="stat-label">Verified officials</dd></div>
+                    </dl>
+                </header>
+
+                <div class="forum-body">
+                    <aside class="forum-sidebar" id="forumSidebar">
+                        <div class="sidebar-block">
+                            <p class="sidebar-block-title">Filter by status</p>
+                            <div class="status-chips" id="statusChips">
+                                <button type="button" class="chip is-active" data-status="all">All</button>
+                                <button type="button" class="chip" data-status="healthy">Healthy</button>
+                                <button type="button" class="chip" data-status="moderate">Moderate</button>
+                                <button type="button" class="chip" data-status="polluted">Polluted</button>
+                                <button type="button" class="chip" data-status="critical">Critical</button>
+                            </div>
+                        </div>
+                        <div class="sidebar-block">
+                            <p class="sidebar-block-title">Sort</p>
+                            <select id="sortSelect" class="sidebar-select">
+                                <option value="newest">Newest first</option>
+                                <option value="liked">Top voted</option>
+                                <option value="discussed">Most discussed</option>
+                            </select>
+                        </div>
+                        <div class="sidebar-block">
+                            <p class="sidebar-block-title">Alerts</p>
+                            <button type="button" class="preview-btn" id="notifBtn" style="width:100%">Enable notifications</button>
+                        </div>
+                        <div class="sidebar-block">
+                            <p class="sidebar-block-title">Verified officials active this week</p>
+                            <ul class="official-list" id="officialList"></ul>
+                        </div>
+                        <div class="sidebar-block preview-block">
+                            <p class="sidebar-block-title">Your account</p>
+                            <div id="authBlock"></div>
+                        </div>
+                    </aside>
+                    <section class="forum-feed" id="forumFeed" aria-live="polite"></section>
+                </div>
+            </main>
+
+            <button class="fab-submit" id="fabSubmit" hidden>＋ New report</button>
+            <script type="module" src="Home.js"></script>
+            <script type="module" src="admin-nav.js"></script>
+        </body>
+        </html>

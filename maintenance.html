@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiCap — Maintenance Module</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="Responsive.css">
+    <link rel="stylesheet" href="apply.css">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="maintenance.css">
+</head>
+<body class="submit-page maintenance-page">
+
+    <nav class="nav" id="nav">
+        <div class="nav-inner">
+            <a href="main-admin.html" class="nav-brand">Ri<span>Cap</span></a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="Home.html">Home</a></li>
+                <li><a href="mapping.html">Mapping</a></li>
+                <li><a href="Admin.html">Admin</a></li>
+                <li><a href="maintenance.html" class="nav-link--active">Maintenance</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="submit-main">
+        <div class="submit-shell maint-shell">
+
+            <section class="access-gate" id="mGate">
+                <p class="gate-eyebrow">Admin</p>
+                <h1 class="gate-title">Maintenance Module</h1>
+                <p class="gate-copy">Restricted to RiCap admin accounts created in Firebase Authentication.</p>
+                <form id="mLoginForm" class="access-form" autocomplete="off">
+                    <label for="mEmail">Email</label>
+                    <input type="email" id="mEmail" required>
+                    <label for="mPassword">Password</label>
+                    <input type="password" id="mPassword" required>
+                    <button type="submit">Sign in</button>
+                </form>
+                <p class="access-error" id="mLoginError" hidden></p>
+            </section>
+
+            <!-- ===================== MODULE ===================== -->
+            <section id="mPanel" hidden>
+                <header class="maint-head">
+                    <div>
+                        <p class="form-eyebrow">Signed in as <span id="mEmailLabel"></span> ·
+                            <button type="button" id="mSignOut" class="link-btn">sign out</button></p>
+                        <h1 class="form-title">Maintenance Module</h1>
+                        <p class="form-sub">Review flagged content, manage river location records, and maintain system records.</p>
+                    </div>
+                </header>
+
+                <div class="maint-stats" id="mStats">
+                    <div class="m-stat"><span id="stReports">0</span><small>Reports</small></div>
+                    <div class="m-stat"><span id="stFlagged">0</span><small>Flagged</small></div>
+                    <div class="m-stat"><span id="stRivers">0</span><small>River records</small></div>
+                    <div class="m-stat"><span id="stCodes">0</span><small>Active officials</small></div>
+                </div>
+
+                <div class="maint-tabs" role="tablist">
+                    <button type="button" class="m-tab is-active" data-tab="flagged">Flagged content <em id="flagBadge" hidden>0</em></button>
+                    <button type="button" class="m-tab" data-tab="reports">All reports</button>
+                    <button type="button" class="m-tab" data-tab="rivers">River locations</button>
+                    <button type="button" class="m-tab" data-tab="system">System records</button>
+                </div>
+
+                <!-- Flagged -->
+                <div class="m-pane is-active" id="pane-flagged">
+                    <p class="m-empty" id="flaggedEmpty">Nothing is flagged right now.</p>
+                    <div class="m-list" id="flaggedList"></div>
+                </div>
+
+                <!-- All reports -->
+                <div class="m-pane" id="pane-reports">
+                    <div class="m-toolbar">
+                        <input type="search" id="reportSearch" placeholder="Search name, river, reporter…">
+                        <select id="reportStatus">
+                            <option value="all">All statuses</option>
+                            <option value="healthy">Healthy</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="polluted">Polluted</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                        <button type="button" class="ghost-btn" id="exportReportsBtn">Export CSV</button>
+                    </div>
+                    <p class="m-empty" id="reportsEmpty" hidden>No reports match.</p>
+                    <div class="m-list" id="reportList"></div>
+                </div>
+
+                <!-- Rivers -->
+                <div class="m-pane" id="pane-rivers">
+                    <form id="riverForm" class="m-form" autocomplete="off">
+                        <h2 id="riverFormTitle">Add river location</h2>
+                        <input type="hidden" id="riverDocId">
+                        <div class="field-grid">
+                            <div class="field field-wide">
+                                <label for="riverName">River name</label>
+                                <input type="text" id="riverName" maxlength="80" required placeholder="e.g. Lamao River">
+                            </div>
+                            <div class="field">
+                                <label for="riverLat">Latitude</label>
+                                <input type="number" id="riverLat" step="any" min="14.33" max="14.97" required placeholder="14.5">
+                            </div>
+                            <div class="field">
+                                <label for="riverLng">Longitude</label>
+                                <input type="number" id="riverLng" step="any" min="120.02" max="120.66" required placeholder="120.5">
+                            </div>
+                            <div class="field">
+                                <label for="riverCoast">Coast</label>
+                                <select id="riverCoast" required>
+                                    <option value="east">Manila Bay side (east)</option>
+                                    <option value="west">South China Sea side (west)</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="riverActive">Monitoring</label>
+                                <select id="riverActive">
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                            <div class="field field-wide">
+                                <label for="riverNotes">Notes <span class="field-optional">(optional)</span></label>
+                                <input type="text" id="riverNotes" maxlength="200" placeholder="Landmarks, barangay, access notes">
+                            </div>
+                        </div>
+                        <p class="form-error" id="riverError" hidden></p>
+                        <div class="m-actions">
+                            <button type="submit" class="submit-btn" id="riverSaveBtn">Save river</button>
+                            <button type="button" class="ghost-btn" id="riverCancelBtn" hidden>Cancel edit</button>
+                        </div>
+                    </form>
+
+                    <p class="m-empty" id="riversEmpty">No river records yet.</p>
+                    <div class="m-table-wrap">
+                        <table class="m-table" id="riverTable" hidden>
+                            <thead><tr><th>Name</th><th>Coast</th><th>Coordinates</th><th>Status</th><th></th></tr></thead>
+                            <tbody id="riverRows"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- System -->
+                <div class="m-pane" id="pane-system">
+                    <h2 class="m-h2">Official access codes</h2>
+                    <p class="m-empty" id="codesEmpty">No access codes issued yet.</p>
+                    <div class="m-table-wrap">
+                        <table class="m-table" id="codeTable" hidden>
+                            <thead><tr><th>Code</th><th>Official</th><th>Role / Organization</th><th>State</th><th></th></tr></thead>
+                            <tbody id="codeRows"></tbody>
+                        </table>
+                    </div>
+
+                    <h2 class="m-h2">Data integrity</h2>
+                    <div class="m-check" id="integrityBox">Loading…</div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div class="m-toast" id="mToast" hidden></div>
+
+    <script src="mapping-data.js"></script>
+    <script type="module" src="maintenance.js"></script>
+</body>
+</html>

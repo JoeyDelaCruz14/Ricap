@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RiCap — Tracking</title>
+<link rel="stylesheet" href="Image_Processing.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="Tracking.css">
+<link rel="stylesheet" href="Responsive.css">
+</head>
+<body>
+
+<video autoplay muted loop playsinline id="bg-video">
+    <source src="images&vids/River3.mp4" type="video/mp4">
+</video>
+
+<nav class="nav" id="siteNav">
+    <div class="nav-inner">
+        <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href="main.html">Home</a></li>
+            <li><a href="mapping.html">Mapping</a></li>
+            <li><a href="Submit.html">Submit</a></li>
+            <li><a href="Image_Processing.html">Scanner</a></li>
+            <li><a href="Tracking.html">Tracking</a></li>
+            <li><a href="forum.html">Forum</a></li>
+            <li><a href="main.html#about">About</a></li>
+            <li><a href="main.html#contact">Contact</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- HERO -->
+<header class="scan-hero">
+    <p class="scan-eyebrow">Tracking</p>
+    <h1 class="scan-heading">Every river you've scanned, on record.</h1>
+    <p class="scan-sub">Open any past scan to see the exact photo RiCap read and the full pollution breakdown behind its score.</p>
+</header>
+
+<main class="docs-section">
+    <div class="docs-shell">
+
+        <section id="listState">
+            <section class="card trend-card" id="trendCard">
+                <div class="trend-head">
+                    <div>
+                        <p class="card-eyebrow">Monthly river map</p>
+                        <h2 class="card-heading" id="trendTitle">This month</h2>
+                    </div>
+                    <div class="trend-nav">
+                        <button type="button" class="trend-nav-btn" id="trendPrev" aria-label="Previous month">&lsaquo;</button>
+                        <button type="button" class="trend-nav-btn" id="trendNext" aria-label="Next month">&rsaquo;</button>
+                    </div>
+                </div>
+
+                <p class="trend-note" id="trendNote" hidden></p>
+
+                <div class="trend-stats" id="trendStats"></div>
+
+                <div class="trend-map-wrap">
+                    <div class="trend-map" id="trendMap" role="img" aria-label="Map of rivers scanned this month"></div>
+                    <p class="trend-empty trend-map-empty" id="trendEmpty" hidden>No scans with a location in this month yet.</p>
+                </div>
+
+                <div class="trend-legend">
+                    <span><i style="background:#4fae8c"></i>Healthy</span>
+                    <span><i style="background:#e6b207"></i>Moderate</span>
+                    <span><i style="background:#d6574a"></i>Polluted</span>
+                    <span class="trend-legend-hint">Color = latest scan this month · bigger circle = more scans</span>
+                </div>
+
+                <div class="river-chips" id="riverChips"></div>
+            </section>
+
+            <div class="docs-list-header">
+                <div>
+                    <p class="card-eyebrow">Records</p>
+                    <h2 class="card-heading" id="recordCount">0 scans logged</h2>
+                </div>
+                <div class="docs-header-actions">
+                    <label class="docs-filter" for="sortOrder">
+                        <span class="docs-filter-label">Sort by</span>
+                        <select id="sortOrder" class="docs-filter-select" aria-label="Sort scans chronologically">
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                        </select>
+                    </label>
+                    <button type="button" class="btn btn-outline docs-clear-btn" id="clearAllBtn" hidden>Delete all</button>
+                    <a href="Image_Processing.html" class="btn btn-purple docs-new-scan-btn">Scan a river</a>
+                </div>
+            </div>
+
+            <div class="docs-empty" id="docsEmpty" hidden>
+                <p>No scans yet. Run a scan and press "Submit Official Report" to add it here.</p>
+                <a href="Image_Processing.html" class="btn btn-outline">Go to Scanner</a>
+            </div>
+
+            <div class="record-grid" id="recordGrid"></div>
+        </section>
+
+        <section id="detailState" hidden>
+            <button class="back-link" id="backToList" type="button">&larr; All records</button>
+
+            <div class="detail-grid">
+
+                <div class="card detail-image-panel">
+                    <p class="card-eyebrow">Processed Photo</p>
+                    <img id="detailImage" alt="Processed river photo">
+                    <p class="detail-timestamp" id="detailTimestamp"></p>
+                </div>
+
+                <div class="card detail-analysis-panel">
+                    <div class="result-top-row">
+                        <div class="result-top-left">
+                            <span class="status-dot" id="detailStatusDot"></span>
+                            <h2 class="status-title" id="detailStatusTitle"></h2>
+                        </div>
+                        <div class="color-swatch" id="detailColorSwatch"></div>
+                    </div>
+
+                    <div class="status-score-inline">
+                        <span class="label">Pollution Score</span>
+                        <span><span class="score-value" id="detailScoreValue"></span><span class="score-suffix-inline">/ 100</span></span>
+                    </div>
+
+                    <div class="confidence-block">
+                        <div class="confidence-label"><span>Confidence</span><span class="pct" id="detailConfidenceValue"></span></div>
+                        <div class="confidence-bar"><div class="confidence-bar-fill" id="detailConfidenceFill"></div></div>
+                    </div>
+
+                    <div class="assessment-box" id="detailAssessmentBox">
+                        <span class="label">Assessment</span>
+                        <p id="detailAssessmentText"></p>
+                    </div>
+
+                    <p class="indicator-heading">Visual Indicators</p>
+                    <div class="metric-grid">
+                        <div class="metric-tile">
+                            <p class="label">Color Cast</p>
+                            <p class="value" id="detailColorCast"></p>
+                        </div>
+                        <div class="metric-tile">
+                            <p class="label">Surface Clarity</p>
+                            <p class="value" id="detailSurfaceClarity"></p>
+                        </div>
+                        <div class="metric-tile">
+                            <p class="label">Lighting</p>
+                            <p class="value" id="detailLighting"></p>
+                        </div>
+                        <div class="metric-tile">
+                            <p class="label">Overall Reading</p>
+                            <p class="value" id="detailOverall"></p>
+                        </div>
+                    </div>
+
+                    <p class="meta-line" id="detailMetaLine"></p>
+
+                    <div class="disclaimer-box">
+                        <span class="icon">i</span>
+                        <span>Prototype heuristic — this reads color, tint, and surface variation in the photo. It's not a certified water safety test. For hazards that need immediate attention, contact your barangay or the DENR directly.</span>
+                    </div>
+
+                    <div class="result-actions">
+                        <button class="btn btn-purple" id="logReportBtn">Log this as an official report</button>
+                        <button class="btn btn-outline" id="deleteRecordBtn">Delete this record</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="mapping-data.js"></script>
+<script src="Tracking.js"></script>
+</body>
+</html>

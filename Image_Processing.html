@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image Processing</title>
+<link rel="stylesheet" href="Image_Processing.css">
+<link rel="stylesheet" href="Responsive.css">
+<style>
+.reco-box{margin-top:16px;padding:14px 16px;border-radius:12px;background:rgba(97,11,235,.12);border:1px solid rgba(97,11,235,.4)}                                                                                                                  
+.verify-banner{margin:0 0 18px;padding:16px 18px;border-radius:12px;background:rgba(212,175,106,.08);border:1px solid rgba(212,175,106,.4)}
+.verify-title{margin:0 0 4px;font-family:Georgia,serif;font-weight:700;font-size:1.05rem}
+.verify-copy{margin:0 0 12px;font-size:.85rem;line-height:1.5;color:rgba(255,255,255,.6)}
+.verify-form{display:flex;gap:10px}
+.verify-form input{flex:1;min-width:0;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#0b0c10;color:#fff;font-family:inherit;font-size:.9rem;text-transform:uppercase}
+.verify-form .btn{flex:none;padding:11px 22px}
+.verify-error{margin:10px 0 0;font-size:.8rem;color:#d6574a}
+.verify-foot{margin:12px 0 0;font-size:.8rem;color:rgba(255,255,255,.55)}
+.verify-foot a{color:#d4af6a}
+
+.verified-bar{margin:0 0 18px;padding:10px 14px;border-radius:10px;background:rgba(79,174,140,.1);border:1px solid rgba(79,174,140,.45);font-size:.85rem}
+.link-btn{background:none;border:none;padding:0;color:#d4af6a;font:inherit;text-decoration:underline;cursor:pointer}
+</style>
+</head>
+<body>
+
+<video autoplay muted loop playsinline id="bg-video">
+    <source src="images&vids/River3.mp4" type="video/mp4">
+</video>
+
+<nav class="nav" id="siteNav">
+    <div class="nav-inner">
+        <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="Home.html">Home</a></li>
+            <li><a href="mapping.html">Mapping</a></li>
+            <li><a href="Image_Processing.html" class="nav-link--active">Scanner</a></li>
+            <li><a href="Tracking.html">Tracking</a></li>
+            <li><a href="forum.html">Forum</a></li>
+            <li><a href="main.html#about">About</a></li>
+            <li><a href="main.html#contact">Contact</a></li>
+        </ul>
+    </div>
+</nav>
+
+<header class="scan-hero">
+    <p class="scan-eyebrow">Image Processing</p>
+    <h1 class="scan-heading">Scan a river photo, get an instant pollution read.</h1>
+    <p class="scan-sub">Upload or drag in a photo of a river, stream, or shoreline. RiCap runs a real object-detection model (YOLOv11) to spot litter and dumped items, combines that with a visual read of tint and surface texture, and an AI model suggests what to do next. Only verified officials can submit official reports.</p>
+</header>
+
+<main class="scan-section">
+    <div class="scan-grid">
+        <section class="card scanner-card" aria-label="River image scanner">
+            <p class="card-eyebrow">Capture</p>
+            <h2 class="card-heading">River Scanner</h2>
+            <p class="card-desc">Drop a photo below or click to browse. Clear daylight shots work best.</p>
+            <div class="scanner-viewport" id="dropzone" tabindex="0" role="button" aria-label="Upload a river image">
+                <div class="scanline" aria-hidden="true"></div>
+                <div class="scanner-placeholder" id="scannerPlaceholder">
+                    <strong>Drop an image here</strong>
+                    or click to browse<br>
+                    JPG · PNG · WEBP
+                </div>
+                <img id="previewImg" alt="Uploaded river image preview" hidden>
+                <canvas id="detectionCanvas" hidden></canvas>
+            </div>
+
+            <input type="file" id="fileInput" class="scan-file-input" accept="image/*">
+
+            <div class="scanner-actions">
+                <button class="btn btn-outline" id="cameraBtn" type="button">Use Camera</button>
+                <button class="btn btn-outline" id="uploadBtn" type="button">Upload Photo</button>
+            </div>
+            <div class="scanner-actions" style="margin-top:12px;">
+                <button class="btn btn-solid" id="scanBtn" disabled>Scan Image</button>
+                <button class="btn btn-outline" id="resetBtn">Reset</button>
+            </div>
+        </section>
+
+        <section class="card results-card" id="resultsCard" aria-live="polite">
+            <p class="card-eyebrow">Scan Result</p>
+            <h2 class="card-heading">Quick Read</h2>
+            <div class="verify-banner" id="verifyBanner" hidden>
+                <p class="verify-title">Verified officials only</p>
+                <p class="verify-copy">You can scan freely. To submit an official report, enter your access code.</p>
+                <form id="accessForm" class="verify-form" autocomplete="off">
+                    <input type="text" id="accessCode" placeholder="RICAP-XXXXXX" aria-label="Official access code">
+                    <button type="submit" class="btn btn-solid" id="accessBtn">Verify</button>
+                </form>
+                <p class="verify-error" id="accessError" hidden></p>
+                <p class="verify-foot">Not registered yet? <a href="apply.html">Apply for official access</a></p>
+            </div>
+
+            <div class="verified-bar" id="verifiedBar" hidden>
+                Verified as <strong id="verifiedName">Verified Official</strong> · <button type="button" id="signOutBtn" class="link-btn">not you?</button>
+            </div>
+
+            <p class="card-desc">A short read appears here the moment a scan finishes. Verified officials can press Submit Official Report to save it to Tracking, the Map and the Forum.</p>
+
+            <div class="scan-warnings" id="scanWarnings" hidden></div>
+
+            <div class="quickread-row" id="quickreadRow">
+                <span class="status-dot" id="quickStatusDot"></span>
+                <div class="quickread-text">
+                    <p class="quickread-title" id="quickStatusTitle">Waiting for scan</p>
+                    <p class="quickread-sub" id="quickStatusSub">Upload or capture a photo, then run the scan.</p>
+                </div>
+                <div class="quickread-score">
+                    <span class="score-value" id="quickScoreValue">—</span>
+                    <span class="score-suffix">/ 100</span>
+                </div>
+            </div>
+
+            <div class="reco-box" id="recoBox" hidden>
+                <p class="card-eyebrow">AI Recommendation</p>
+                <p id="recoText" style="white-space:pre-line;margin:6px 0 0;font-size:.9rem;line-height:1.6"></p>
+                <p id="recoSource" class="card-desc" style="margin-top:8px"></p>
+            </div>
+
+            <div class="quickread-actions" id="quickreadActions" hidden>
+                <button class="btn btn-outline" id="scanAnotherBtn">Scan another river</button>
+                <button class="btn btn-purple" id="viewDocsBtn">View in Tracking</button>
+            </div>
+        </section>
+
+    </div>
+</main>
+
+<div class="camera-overlay" id="cameraOverlay" hidden>
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <p class="camera-error" id="cameraError" hidden></p>
+    <div class="camera-overlay-actions">
+        <button class="btn btn-solid" id="captureBtn" type="button">Capture</button>
+        <button class="btn btn-outline" id="cancelCameraBtn" type="button">Cancel</button>
+    </div>
+</div>
+
+<script src="vendor/onnxruntime-web/ort.min.js"></script>
+<script src="mapping-data.js"></script>
+<script type="module" src="Image_Processing.js"></script>
+</body>
+</html>

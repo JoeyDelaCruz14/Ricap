@@ -1,0 +1,67 @@
+.admin-shell { max-width: 760px; }
+
+.app-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.app-card {
+    display: flex;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.app-card img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+.app-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.app-card-name {
+    margin: 0 0 4px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.app-card-meta {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--text-faint);
+    line-height: 1.6;
+}
+
+.app-card-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.app-card-actions .submit-btn,
+.app-card-actions .ghost-btn {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 0.82rem;
+}
+
+.reject-btn {
+    border-color: rgba(193, 68, 60, 0.4) !important;
+    background: rgba(193, 68, 60, 0.08) !important;
+    color: var(--status-critical) !important;
+}
+
+.app-card-code {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--status-healthy);
+    font-family: var(--mono);
+}

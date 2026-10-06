@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiCap — Apply for Official Access</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="Responsive.css">
+    <link rel="stylesheet" href="submit.css">
+    <link rel="stylesheet" href="apply.css">
+</head>
+<body class="submit-page">
+    <nav class="nav" id="nav">
+        <div class="nav-inner">
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="Home.html">Home</a></li>
+                <li><a href="mapping.html">Mapping</a></li>
+                <li><a href="Image_Processing.html">Scanner</a></li>
+                <li><a href="forum.html">Forum</a></li>
+                <li><a href="main.html#about">About</a></li>
+                <li><a href="main.html#contact">Contact</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="submit-main">
+        <div class="submit-shell">
+
+            <section class="submit-form-section" id="applyFormSection">
+                <p class="form-eyebrow">Official Access Application</p>
+                <h1 class="form-title">Apply for Official Access</h1>
+                <p class="form-sub">
+                    Take a quick photo of yourself (or your official/volunteer ID) so an admin can
+                    verify your application. You'll be emailed an access code once approved.
+                </p>
+
+                <form id="applyForm" class="report-form" autocomplete="off">
+
+                    <div class="field-grid">
+                        <div class="field field-wide">
+                            <label for="fullName">Full name</label>
+                            <input type="text" id="fullName" name="fullName" placeholder="Juan Dela Cruz" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="roleInput">Role</label>
+                            <select id="roleInput" name="role" required>
+                                <option value="">Select a role</option>
+                                <option value="Barangay Official">Barangay Official</option>
+                                <option value="DENR Partner">DENR Partner</option>
+                                <option value="RiverTale Analyst">RiverTale Analyst</option>
+                                <option value="Conservation Volunteer">Conservation Volunteer</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="orgInput">Organization / Barangay</label>
+                            <input type="text" id="orgInput" name="organization" placeholder="e.g. Barangay Ibayo" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="emailInput">Email</label>
+                            <input type="email" id="emailInput" name="email" placeholder="you@example.com" required>
+                        </div>
+
+                        <div class="field">
+                            <label for="phoneInput">Phone</label>
+                            <input
+                                type="tel"
+                                id="phoneInput"
+                                name="phone"
+                                placeholder="09171234567"
+                                inputmode="numeric"
+                                autocomplete="tel"
+                                pattern="^(09|\+639)\d{9}$"
+                                title="Enter a valid PH mobile number, e.g. 09171234567 or +639171234567"
+                                required>
+                            <small class="field-hint">Used for SMS notifications.</small>
+                        </div>
+                    </div>
+
+                    <div class="field field-wide">
+                        <label></label>
+
+                        <div class="capture-box" id="captureBox">
+
+                            <div class="capture-empty" id="captureEmpty">
+                                <p>Take a live photo, or upload an existing ID picture.</p>
+                                <div class="capture-choice-btns">
+                                    <button type="button" class="ghost-btn" id="startCameraBtn">Use camera</button>
+                                    <button type="button" class="ghost-btn" id="uploadInsteadBtn">Upload photo</button>
+                                </div>
+                                <input type="file" id="fileInput" accept="image/*" hidden>
+                            </div>
+
+                            <div class="capture-live" id="captureLive" hidden>
+                                <video id="cameraVideo" autoplay playsinline muted></video>
+                                <div class="capture-live-actions">
+                                    <button type="button" class="submit-btn" id="snapBtn">Take photo</button>
+                                </div>
+                                <p class="capture-error" id="cameraError" hidden></p>
+                            </div>
+
+                            <div class="capture-preview" id="capturePreview" hidden>
+                                <img id="capturedImg" alt="Captured photo preview">
+                                <button type="button" class="ghost-btn" id="retakeBtn">Cancel</button>
+                            </div>
+
+                        </div>
+                        <canvas id="captureCanvas" hidden></canvas>
+                    </div>
+
+                    <p class="form-error" id="applyError" hidden></p>
+
+                    <button type="submit" class="submit-btn" id="applySubmitBtn">Submit application</button>
+                </form>
+            </section>
+
+            <section class="submit-success" id="applySuccess" hidden>
+                <svg viewBox="0 0 24 24" width="46" height="46" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h1 class="success-title">Application submitted</h1>
+                <p class="success-copy">
+                    An admin will review your photo and details. Once approved, your access code
+                    will be sent to the email you provided — use it on the Submit page.
+                </p>
+                <div class="success-actions">
+                    <a href="Home.html" class="submit-btn">Back to Home</a>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script type="module" src="apply.js"></script>
+</body>
+</html>
