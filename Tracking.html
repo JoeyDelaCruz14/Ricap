@@ -60,6 +60,7 @@
                 </div>
 
                 <p class="trend-note" id="trendNote" hidden></p>
+                <p class="trend-note" id="sourceNote" hidden></p>
 
                 <div class="trend-stats" id="trendStats"></div>
 
@@ -84,6 +85,13 @@
                     <h2 class="card-heading" id="recordCount">0 scans logged</h2>
                 </div>
                 <div class="docs-header-actions">
+                    <label class="docs-filter" for="scopeFilter">
+                        <span class="docs-filter-label">Show</span>
+                        <select id="scopeFilter" class="docs-filter-select" aria-label="Choose which records to show">
+                            <option value="all">All official reports</option>
+                            <option value="mine">My scans only</option>
+                        </select>
+                    </label>
                     <label class="docs-filter" for="sortOrder">
                         <span class="docs-filter-label">Sort by</span>
                         <select id="sortOrder" class="docs-filter-select" aria-label="Sort scans chronologically">
@@ -97,7 +105,7 @@
             </div>
 
             <div class="docs-empty" id="docsEmpty" hidden>
-                <p>No scans yet. Run a scan and press "Submit Official Report" to add it here.</p>
+                <p id="docsEmptyText">No official reports yet. Run a scan and press "Submit Official Report" to add it here.</p>
                 <a href="Image_Processing.html" class="btn btn-outline">Go to Scanner</a>
             </div>
 
@@ -113,6 +121,7 @@
                     <p class="card-eyebrow">Processed Photo</p>
                     <img id="detailImage" alt="Processed river photo">
                     <p class="detail-timestamp" id="detailTimestamp"></p>
+                    <p class="detail-timestamp" id="detailReporter"></p>
                 </div>
 
                 <div class="card detail-analysis-panel">

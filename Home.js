@@ -10,7 +10,6 @@ import {
 import { getAccount, isLocalLoggedIn } from './account.js';
 import { emailAlertsEnabled, setEmailAlerts, resyncIfOptedIn } from './alerts.js';
 
-/* ---------------- constants & helpers ---------------- */
 
 const STATUS_COLORS = {
     healthy: '#4fae8c',
@@ -66,8 +65,6 @@ const ICON = {
     bookmarkFilled: '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
     verified: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.400 2.200 3.200-.4 1 3.100 2.800 1.700-1 3.100 1 3.100-2.800 1.700-1 3.100-3.200-.4L12 22l-2.400-2.200-3.200.4-1-3.100L2.600 15.400l1-3.100-1-3.100 2.800-1.700 1-3.100 3.200.4z"/><path d="M8.500 12l2.500 2.500 4.500-5" fill="none" stroke="#0b0c10" stroke-width="2"/></svg>'
 };
-
-/* ---------------- state ---------------- */
 
 const state = {
     reports: [],

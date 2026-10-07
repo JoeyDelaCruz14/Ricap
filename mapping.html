@@ -7,7 +7,6 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="mapping.css">
-<link rel="stylesheet" href="Responsive.css">
 </head>
 
 <body>
@@ -35,7 +34,7 @@
 
 <main class="map-page">
 
-    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle river list" aria-expanded="false"> ☰ </button>
+    <button class="sidebar-toggle" id="sidebarToggle"aria-label="Toggle river list"aria-expanded="false"> ☰ </button>
 
     <aside class="map-sidebar" id="mapSidebar">
 
@@ -50,13 +49,22 @@
             <input type="search" id="riverSearch" placeholder="Search rivers..." autocomplete="off">
         </div>
 
-        <div class="sidebar-groups" id="sidebarGroups"></div>
+        <div
+            class="sidebar-groups"
+            id="sidebarGroups">
+        </div>
 
-        <div id="mapLegend" class="map-legend"></div>
+        <div
+            id="mapLegend"
+            class="map-legend">
+        </div>
 
         <div class="sidebar-footer">
 
-            <button type="button" class="reset-view-btn" id="resetView">
+            <button
+                type="button"
+                class="reset-view-btn"
+                id="resetView">
                 Reset view
             </button>
 
@@ -70,17 +78,10 @@
 
     </aside>
 
-    <!-- month selector: shows which month's scans are on the map -->
-    <div class="month-bar" id="monthBar">
-        <button type="button" class="month-btn" id="monthPrev" aria-label="Previous month">&lsaquo;</button>
-        <div class="month-info">
-            <strong class="month-title" id="monthTitle">Loading…</strong>
-            <span class="month-sub" id="monthSub"></span>
-        </div>
-        <button type="button" class="month-btn" id="monthNext" aria-label="Next month">&rsaquo;</button>
+    <div
+        class="map-canvas"
+        id="map">
     </div>
-
-    <div class="map-canvas" id="map"></div>
 
 </main>
 

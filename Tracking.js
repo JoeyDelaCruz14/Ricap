@@ -1,63 +1,76 @@
-/* Shares the "ricap_river_records" localStorage key written by Image_Processing.js */
+/* ==========================================================================
+   RiCap Tracking
+   Shows OFFICIAL REPORTS from ALL accounts (not just the logged-in one),
+   plus a "My scans" view for the current user's own scans.
+   ========================================================================== */
+
+/* ---------- Configuration ---------- */
+
+// Local cache written by Image_Processing.js (this browser only)
 const RECORDS_KEY = 'ricap_river_records';
 
-// Whatever this file is called, use it (no more hard-coded "Documentation.html")
+// Shared reports endpoint. Leave '' until the backend exists.
+//   GET    REPORTS_API            -> JSON array of ALL official reports (every account)
+//   POST   REPORTS_API            -> body: one record, saves it as an official report
+//   DELETE REPORTS_API/<id>       -> delete a report (server must check ownership/admin)
+// Example: const REPORTS_API = 'api/reports.php';
+const REPORTS_API = '';
+
+// Where your login code stores the signed-in user (JSON with id/email/username, or a plain string).
+// Change this key to match your login system.
+const USER_KEY = 'ricap_current_user';
+
 const PAGE_PATH = window.location.pathname.split('/').pop() || 'Tracking.html';
-
-// Remembers the chosen chronological order between visits
 const SORT_KEY = 'ricap_tracking_sort';
+const SCOPE_KEY = 'ricap_tracking_scope';
 
-function loadSortOrder() {
+/* ---------- Current user ---------- */
+
+function getCurrentUser() {
     try {
-        return localStorage.getItem(SORT_KEY) === 'oldest' ? 'oldest' : 'newest';
+        const raw = localStorage.getItem(USER_KEY);
+        if (!raw) return { id: '', name: '' };
+        try {
+            const u = JSON.parse(raw);
+            if (u && typeof u === 'object') {
+                const id = String(u.id || u.email || u.username || '');
+                return { id: id, name: String(u.name || u.username || u.email || id) };
+            }
+        } catch (e) { /* plain string */ }
+        return { id: String(raw), name: String(raw) };
     } catch (err) {
-        return 'newest';
+        return { id: '', name: '' };
     }
 }
 
+// A record is "mine" if it carries my user id. Old records with no owner were made in this browser, so they count as mine.
+function isMine(record) {
+    const me = getCurrentUser().id;
+    if (!record.userId) return true;
+    return !!me && String(record.userId) === me;
+}
+
+function reporterLabel(record) {
+    if (record.reporter) return record.reporter;
+    if (record.userId) return String(record.userId);
+    return 'Anonymous';
+}
+
+/* ---------- Storage / data layer ---------- */
+
+function loadSortOrder() {
+    try { return localStorage.getItem(SORT_KEY) === 'oldest' ? 'oldest' : 'newest'; }
+    catch (err) { return 'newest'; }
+}
 function saveSortOrder(order) {
     try { localStorage.setItem(SORT_KEY, order); } catch (err) { /* ignore */ }
 }
-
-// Returns a sorted copy by timestamp; the stored array is never reordered.
-function sortRecords(records, order) {
-    const time = function (r) {
-        const t = new Date(r.timestamp).getTime();
-        return isNaN(t) ? 0 : t;
-    };
-    return records.slice().sort(function (a, b) {
-        return order === 'oldest' ? time(a) - time(b) : time(b) - time(a);
-    });
+function loadScope() {
+    try { return localStorage.getItem(SCOPE_KEY) === 'mine' ? 'mine' : 'all'; }
+    catch (err) { return 'all'; }
 }
-
-function initNav() {
-    const nav = document.getElementById('siteNav');
-    const toggle = document.getElementById('navToggle');
-    const links = document.getElementById('navLinks');
-
-    function onScroll() {
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
-        nav.classList.toggle('scrolled', scrollTop > 12);
-    }
-
-    function onToggleClick() {
-        const isOpen = links.classList.toggle('open');
-        toggle.classList.toggle('open', isOpen);
-        toggle.setAttribute('aria-expanded', String(isOpen));
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    toggle.addEventListener('click', onToggleClick);
-
-    links.querySelectorAll('a').forEach(function (a) {
-        a.addEventListener('click', function () {
-            links.classList.remove('open');
-            toggle.classList.remove('open');
-            toggle.setAttribute('aria-expanded', 'false');
-        });
-    });
-
-    onScroll();
+function saveScope(scope) {
+    try { localStorage.setItem(SCOPE_KEY, scope); } catch (err) { /* ignore */ }
 }
 
 function loadRecords() {
@@ -81,6 +94,106 @@ function saveRecords(records) {
     }
 }
 
+// Pulls every account's official reports from the shared backend.
+// Returns { records, shared } — shared=false means no backend answered.
+async function fetchSharedReports() {
+    if (!REPORTS_API) return { records: [], shared: false };
+    try {
+        const res = await fetch(REPORTS_API, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (Array.isArray(data.reports) ? data.reports : []);
+        return { records: list, shared: true };
+    } catch (err) {
+        console.error('Could not load shared reports:', err);
+        return { records: [], shared: false, failed: true };
+    }
+}
+
+// Builds the list to display for the chosen scope.
+//   all  -> every official report from every account (+ official reports saved in this browser)
+//   mine -> all of the current user's scans, reported or not
+async function getDataset(scope) {
+    const local = loadRecords();
+
+    if (scope === 'mine') {
+        return { records: local.filter(isMine), shared: false };
+    }
+
+    const remote = await fetchSharedReports();
+    const byId = new Map();
+    remote.records.forEach(function (r) { if (r && r.id != null) byId.set(String(r.id), r); });
+    local.forEach(function (r) {
+        if (r.reported && !byId.has(String(r.id))) byId.set(String(r.id), r);
+    });
+    return { records: Array.from(byId.values()), shared: remote.shared, failed: !!remote.failed };
+}
+
+async function sendReportToServer(record) {
+    if (!REPORTS_API) return true;
+    try {
+        const res = await fetch(REPORTS_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(record)
+        });
+        return res.ok;
+    } catch (err) {
+        console.error('Could not send report:', err);
+        return false;
+    }
+}
+
+async function deleteReportOnServer(id) {
+    if (!REPORTS_API) return true;
+    try {
+        const res = await fetch(REPORTS_API + '/' + encodeURIComponent(id), { method: 'DELETE' });
+        return res.ok;
+    } catch (err) {
+        console.error('Could not delete report:', err);
+        return false;
+    }
+}
+
+/* ---------- Helpers ---------- */
+
+function sortRecords(records, order) {
+    const time = function (r) {
+        const t = new Date(r.timestamp).getTime();
+        return isNaN(t) ? 0 : t;
+    };
+    return records.slice().sort(function (a, b) {
+        return order === 'oldest' ? time(a) - time(b) : time(b) - time(a);
+    });
+}
+
+function initNav() {
+    const nav = document.getElementById('siteNav');
+    const toggle = document.getElementById('navToggle');
+    const links = document.getElementById('navLinks');
+
+    function onScroll() {
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        nav.classList.toggle('scrolled', scrollTop > 12);
+    }
+    function onToggleClick() {
+        const isOpen = links.classList.toggle('open');
+        toggle.classList.toggle('open', isOpen);
+        toggle.setAttribute('aria-expanded', String(isOpen));
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    toggle.addEventListener('click', onToggleClick);
+    links.querySelectorAll('a').forEach(function (a) {
+        a.addEventListener('click', function () {
+            links.classList.remove('open');
+            toggle.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+        });
+    });
+    onScroll();
+}
+
 function formatTimestamp(iso) {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '';
@@ -90,12 +203,10 @@ function formatTimestamp(iso) {
 
 const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted' };
 
-
 /* ---------- Monthly river map ---------- */
 
 const STATUS_COLORS = { healthy: '#4fae8c', moderate: '#e6b207', polluted: '#d6574a' };
 
-// Anything that is not healthy/moderate is treated as polluted (e.g. "critical")
 function bucketOf(status) {
     return status === 'healthy' || status === 'moderate' ? status : 'polluted';
 }
@@ -110,7 +221,6 @@ function hasPoint(r) {
     return typeof r.lat === 'number' && typeof r.lng === 'number' && isFinite(r.lat) && isFinite(r.lng);
 }
 
-// Uses mapping-data.js (RIVER_DATA) to turn a riverId into a readable river name
 function riverNameFor(record) {
     try {
         if (typeof RIVER_DATA !== 'undefined' && record.riverId) {
@@ -126,7 +236,6 @@ function inMonth(record, year, month) {
     return !isNaN(t.getTime()) && t.getFullYear() === year && t.getMonth() === month;
 }
 
-// One group per river for a given month (scans without a river id are grouped by rounded coordinates)
 function groupByRiver(records, year, month) {
     const groups = new Map();
     records.forEach(function (r) {
@@ -172,8 +281,9 @@ function popupHtml(g, prev) {
     const st = bucketOf(g.latest.status);
     let html = '<p class="pop-title">' + esc(g.name) + '</p>' +
         '<span class="pop-pill" style="background:' + STATUS_COLORS[st] + '">' + esc(statusLabels[st] || st) + '</span>' +
-        '<p class="pop-row"><b>' + g.count + '</b> ' + (g.count === 1 ? 'scan' : 'scans') + ' this month · avg score <b>' + g.avg + '</b>/100</p>' +
-        '<p class="pop-row">Latest: ' + esc(formatTimestamp(g.latest.timestamp)) + ' · <b>' + (Number(g.latest.score) || 0) + '</b>/100</p>';
+        '<p class="pop-row"><b>' + g.count + '</b> ' + (g.count === 1 ? 'report' : 'reports') + ' this month · avg score <b>' + g.avg + '</b>/100</p>' +
+        '<p class="pop-row">Latest: ' + esc(formatTimestamp(g.latest.timestamp)) + ' · <b>' + (Number(g.latest.score) || 0) + '</b>/100</p>' +
+        '<p class="pop-row">By: ' + esc(reporterLabel(g.latest)) + '</p>';
     if (g.count > 1) {
         html += '<p class="pop-row">' + g.counts.healthy + ' healthy · ' + g.counts.moderate + ' moderate · ' + g.counts.polluted + ' polluted</p>';
     }
@@ -184,12 +294,16 @@ function popupHtml(g, prev) {
             : 'no change';
         html += '<p class="pop-row">Last month avg <b>' + prev.avg + '</b> → ' + arrow + '</p>';
     } else {
-        html += '<p class="pop-row">No scans here last month.</p>';
+        html += '<p class="pop-row">No reports here last month.</p>';
     }
     return html;
 }
 
-function renderMonthMap(records, year, month) {
+function statTile(label, value) {
+    return '<div class="trend-stat"><p class="label">' + label + '</p><p class="value">' + value + '</p></div>';
+}
+
+function renderMonthMap(records, year, month, noun) {
     const title = document.getElementById('trendTitle');
     const stats = document.getElementById('trendStats');
     const empty = document.getElementById('trendEmpty');
@@ -208,19 +322,19 @@ function renderMonthMap(records, year, month) {
     const prevGroups = groupByRiver(records, prevDate.getFullYear(), prevDate.getMonth());
 
     const monthName = new Date(year, month, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    title.textContent = monthName + ' · ' + (groups.size === 1 ? '1 river scanned' : groups.size + ' rivers scanned');
+    title.textContent = monthName + ' · ' + (groups.size === 1 ? '1 river reported' : groups.size + ' rivers reported');
 
     const others = records.length - total;
     const noLoc = total - located;
     const bits = [];
-    if (others > 0) bits.push(others + (others === 1 ? ' scan is' : ' scans are') + ' from other months (' + records.length + ' total) — use the arrows to view them');
-    if (noLoc > 0) bits.push(noLoc + (noLoc === 1 ? ' scan this month has' : ' scans this month have') + ' no saved location, so ' + (noLoc === 1 ? 'it is' : 'they are') + ' not on the map');
+    if (others > 0) bits.push(others + (others === 1 ? ' ' + noun + ' is' : ' ' + noun + 's are') + ' from other months (' + records.length + ' total) — use the arrows to view them');
+    if (noLoc > 0) bits.push(noLoc + (noLoc === 1 ? ' ' + noun + ' this month has' : ' ' + noun + 's this month have') + ' no saved location, so ' + (noLoc === 1 ? 'it is' : 'they are') + ' not on the map');
     note.textContent = bits.join('. ') + (bits.length ? '.' : '');
     note.hidden = bits.length === 0;
 
     stats.innerHTML =
-        statTile('Rivers scanned', groups.size) +
-        statTile('Total scans', total) +
+        statTile('Rivers reported', groups.size) +
+        statTile('Total ' + noun + 's', total) +
         statTile('Healthy', buckets.healthy) +
         statTile('Moderate', buckets.moderate) +
         statTile('Polluted', buckets.polluted) +
@@ -248,7 +362,7 @@ function renderMonthMap(records, year, month) {
             fillColor: STATUS_COLORS[st],
             fillOpacity: 0.9
         }).bindPopup(popupHtml(g, prevGroups.get(g.key)), { maxWidth: 280 })
-          .bindTooltip(g.name + ' · ' + g.count + (g.count === 1 ? ' scan' : ' scans'), { direction: 'top' });
+          .bindTooltip(g.name + ' · ' + g.count + (g.count === 1 ? ' ' + noun : ' ' + noun + 's'), { direction: 'top' });
         marker.addTo(trendLayer);
         trendMarkers[g.key] = marker;
 
@@ -273,9 +387,7 @@ function renderMonthMap(records, year, month) {
     }
 }
 
-function statTile(label, value) {
-    return '<div class="trend-stat"><p class="label">' + label + '</p><p class="value">' + value + '</p></div>';
-}
+/* ---------- Page logic ---------- */
 
 function initTracking() {
     const listState = document.getElementById('listState');
@@ -283,21 +395,30 @@ function initTracking() {
     const recordGrid = document.getElementById('recordGrid');
     const recordCount = document.getElementById('recordCount');
     const docsEmpty = document.getElementById('docsEmpty');
+    const docsEmptyText = document.getElementById('docsEmptyText');
+    const sourceNote = document.getElementById('sourceNote');
     const backToList = document.getElementById('backToList');
     const logReportBtn = document.getElementById('logReportBtn');
     const deleteRecordBtn = document.getElementById('deleteRecordBtn');
-
     const sortSelect = document.getElementById('sortOrder');
+    const scopeSelect = document.getElementById('scopeFilter');
     const clearAllBtn = document.getElementById('clearAllBtn');
+    const trendPrev = document.getElementById('trendPrev');
+    const trendNext = document.getElementById('trendNext');
 
-    let currentId = null;
     const now = new Date();
     let chartYear = now.getFullYear();
     let chartMonth = now.getMonth();
-    const trendPrev = document.getElementById('trendPrev');
-    const trendNext = document.getElementById('trendNext');
+    let currentId = null;
     let sortOrder = loadSortOrder();
+    let scope = loadScope();
+    let dataset = [];          // what is currently displayed
+    let renderToken = 0;       // guards against out-of-order async loads
+
     sortSelect.value = sortOrder;
+    scopeSelect.value = scope;
+
+    function noun() { return scope === 'all' ? 'report' : 'scan'; }
 
     sortSelect.addEventListener('change', function () {
         sortOrder = sortSelect.value === 'oldest' ? 'oldest' : 'newest';
@@ -305,9 +426,14 @@ function initTracking() {
         renderList();
     });
 
+    scopeSelect.addEventListener('change', function () {
+        scope = scopeSelect.value === 'mine' ? 'mine' : 'all';
+        saveScope(scope);
+        renderList();
+    });
+
     function renderChart() {
-        renderMonthMap(loadRecords(), chartYear, chartMonth);
-        // can't go past the current month
+        renderMonthMap(dataset, chartYear, chartMonth, noun());
         trendNext.disabled = chartYear === now.getFullYear() && chartMonth === now.getMonth();
     }
 
@@ -322,14 +448,38 @@ function initTracking() {
     trendPrev.addEventListener('click', function () { shiftMonth(-1); });
     trendNext.addEventListener('click', function () { shiftMonth(1); });
 
-    function renderList() {
-        const records = loadRecords();
+    function describeSource(result) {
+        if (scope === 'mine') return 'Showing only your own scans from this browser.';
+        if (result.failed) return 'Could not reach the reports server, so only official reports saved in this browser are shown.';
+        if (!result.shared) return 'No shared reports server is connected yet, so only official reports from this browser are shown. Connect REPORTS_API in Tracking.js to see every account’s reports.';
+        return '';
+    }
+
+    async function renderList() {
+        const token = ++renderToken;
+        const result = await getDataset(scope);
+        if (token !== renderToken) return;   // a newer render superseded this one
+
+        dataset = result.records;
         renderChart();
-        recordCount.textContent = records.length === 1 ? '1 scan logged' : records.length + ' scans logged';
 
-        clearAllBtn.hidden = records.length === 0;
+        const n = dataset.length;
+        const label = scope === 'all' ? 'official report' : 'scan';
+        recordCount.textContent = n === 1 ? '1 ' + label + (scope === 'all' ? '' : ' logged')
+            : n + ' ' + label + 's' + (scope === 'all' ? '' : ' logged');
 
-        if (records.length === 0) {
+        const msg = describeSource(result);
+        sourceNote.textContent = msg;
+        sourceNote.hidden = !msg;
+
+        // "Delete all" only ever touches this user's own local scans
+        clearAllBtn.hidden = scope !== 'mine' || n === 0;
+
+        docsEmptyText.textContent = scope === 'all'
+            ? 'No official reports yet. Run a scan and press "Submit Official Report" to add it here.'
+            : 'You have no saved scans yet. Run a scan to add one here.';
+
+        if (n === 0) {
             docsEmpty.hidden = false;
             recordGrid.hidden = true;
             recordGrid.innerHTML = '';
@@ -340,45 +490,62 @@ function initTracking() {
         recordGrid.hidden = false;
         recordGrid.innerHTML = '';
 
-        sortRecords(records, sortOrder).forEach(function (record) {
+        sortRecords(dataset, sortOrder).forEach(function (record) {
             const card = document.createElement('button');
             card.type = 'button';
             card.className = 'record-card';
             card.dataset.id = record.id;
             card.innerHTML =
-                '<div class="record-thumb"><img src="' + record.image + '" alt="Processed river photo"></div>' +
+                '<div class="record-thumb"><img src="' + esc(record.image) + '" alt="Processed river photo"></div>' +
                 '<div class="record-body">' +
                     '<div class="record-status">' +
-                        '<span class="status-dot ' + record.status + '"></span>' +
+                        '<span class="status-dot ' + esc(record.status) + '"></span>' +
                         '<div>' +
-                            '<p class="record-title">' + (statusLabels[record.status] || record.status) + '</p>' +
-                            '<p class="record-date">' + formatTimestamp(record.timestamp) + '</p>' +
+                            '<p class="record-title">' + esc(statusLabels[record.status] || record.status) + '</p>' +
+                            '<p class="record-date">' + esc(formatTimestamp(record.timestamp)) + '</p>' +
+                            (scope === 'all' ? '<p class="record-date">by ' + esc(reporterLabel(record)) + '</p>' : '') +
                         '</div>' +
                     '</div>' +
-                    '<div class="record-score">' + record.score + '<span>/100</span></div>' +
+                    '<div class="record-score">' + esc(record.score) + '<span>/100</span></div>' +
                 '</div>';
             card.addEventListener('click', function () { showDetail(record.id); });
-
-            const delBtn = document.createElement('button');
-            delBtn.type = 'button';
-            delBtn.className = 'record-delete';
-            delBtn.setAttribute('aria-label', 'Delete this scan');
-            delBtn.title = 'Delete this scan';
-            delBtn.innerHTML = '&times;';
-            delBtn.addEventListener('click', function () { if (deleteRecord(record.id)) renderList(); });
 
             const item = document.createElement('div');
             item.className = 'record-item';
             item.appendChild(card);
-            item.appendChild(delBtn);
+
+            // Only the owner can delete a record
+            if (isMine(record)) {
+                const delBtn = document.createElement('button');
+                delBtn.type = 'button';
+                delBtn.className = 'record-delete';
+                delBtn.setAttribute('aria-label', 'Delete this record');
+                delBtn.title = 'Delete this record';
+                delBtn.innerHTML = '&times;';
+                delBtn.addEventListener('click', async function () {
+                    if (await deleteRecord(record.id)) renderList();
+                });
+                item.appendChild(delBtn);
+            }
             recordGrid.appendChild(item);
         });
     }
 
-    // Removes one record from this browser's saved list (used by the card X and the detail view)
-    function deleteRecord(id) {
-        if (!confirm('Delete this scan record? This cannot be undone.')) return false;
-        const remaining = loadRecords().filter(function (r) { return r.id !== id; });
+    async function deleteRecord(id) {
+        const target = dataset.find(function (r) { return String(r.id) === String(id); });
+        if (target && !isMine(target)) {
+            alert('You can only delete your own records.');
+            return false;
+        }
+        if (!confirm('Delete this record? This cannot be undone.')) return false;
+
+        if (target && target.reported && REPORTS_API) {
+            if (!(await deleteReportOnServer(id))) {
+                alert('Could not delete the report from the server.');
+                return false;
+            }
+        }
+        const remaining = loadRecords().filter(function (r) { return String(r.id) !== String(id); });
         if (!saveRecords(remaining)) {
             alert('Could not delete the record. Browser storage may be blocked.');
             return false;
@@ -387,10 +554,11 @@ function initTracking() {
     }
 
     clearAllBtn.addEventListener('click', function () {
-        const count = loadRecords().length;
-        if (!count) return;
-        if (!confirm('Delete all ' + count + ' scan records? This cannot be undone.')) return;
-        if (!saveRecords([])) {
+        const mine = loadRecords().filter(isMine);
+        if (!mine.length) return;
+        if (!confirm('Delete all ' + mine.length + ' of your saved scans from this browser? Reports already sent to the server are not removed. This cannot be undone.')) return;
+        const keep = loadRecords().filter(function (r) { return !isMine(r); });
+        if (!saveRecords(keep)) {
             alert('Could not delete the records. Browser storage may be blocked.');
             return;
         }
@@ -405,22 +573,28 @@ function initTracking() {
         renderList();
     }
 
-    function showDetail(id) {
-        const records = loadRecords();
-        const record = records.find(function (r) { return r.id === id; });
-
+    async function showDetail(id) {
+        let record = dataset.find(function (r) { return String(r.id) === String(id); });
+        if (!record) {
+            // Opened via ?id=... before the list loaded: load it now
+            const result = await getDataset('all');
+            dataset = result.records;
+            record = dataset.find(function (r) { return String(r.id) === String(id); }) ||
+                     loadRecords().find(function (r) { return String(r.id) === String(id); });
+        }
         if (!record) {
             showList();
             return;
         }
 
-        currentId = id;
+        currentId = record.id;
         listState.hidden = true;
         detailState.hidden = false;
-        history.replaceState(null, '', PAGE_PATH + '?id=' + encodeURIComponent(id));
+        history.replaceState(null, '', PAGE_PATH + '?id=' + encodeURIComponent(record.id));
 
         document.getElementById('detailImage').src = record.image;
         document.getElementById('detailTimestamp').textContent = formatTimestamp(record.timestamp);
+        document.getElementById('detailReporter').textContent = 'Reported by ' + reporterLabel(record);
 
         document.getElementById('detailStatusDot').className = 'status-dot ' + record.status;
         document.getElementById('detailStatusTitle').textContent = statusLabels[record.status] || record.status;
@@ -429,8 +603,7 @@ function initTracking() {
         document.getElementById('detailConfidenceFill').style.width = record.confidence + '%';
         document.getElementById('detailAssessmentText').textContent = record.assessment;
 
-        const accentColors = { healthy: '#4fae8c', moderate: '#e6b207', polluted: '#d6574a' };
-        const accent = accentColors[record.status] || '#e6b207';
+        const accent = STATUS_COLORS[record.status] || '#e6b207';
         const box = document.getElementById('detailAssessmentBox');
         box.style.borderLeftColor = accent;
         box.style.background = accent + '0f';
@@ -447,33 +620,49 @@ function initTracking() {
             'Analyzed ' + (record.sampledPixels || 0).toLocaleString() + ' sampled pixels · avg color rgb(' +
             avg.r + ', ' + avg.g + ', ' + avg.b + ') · score ' + record.score + '/100';
 
+        // Log button: only the owner can submit; hidden on other accounts' reports
+        const mine = isMine(record);
+        logReportBtn.hidden = !mine;
         logReportBtn.disabled = !!record.reported;
         logReportBtn.textContent = record.reported ? 'Logged as official report ✓' : 'Log this as an official report';
+        deleteRecordBtn.hidden = !mine;
 
         window.scrollTo(0, 0);
     }
 
     backToList.addEventListener('click', showList);
 
-    logReportBtn.addEventListener('click', function () {
+    logReportBtn.addEventListener('click', async function () {
         if (!currentId) return;
         const records = loadRecords();
-        const record = records.find(function (r) { return r.id === currentId; });
+        const record = records.find(function (r) { return String(r.id) === String(currentId); });
         if (!record || record.reported) return;
-        alert('This would send this reading to your reports backend. Wire logReportBtn up to your API.');
+
+        const me = getCurrentUser();
+        record.userId = record.userId || me.id;
+        record.reporter = record.reporter || me.name || 'Anonymous';
         record.reported = true;
-        saveRecords(records);
+        record.reportedAt = new Date().toISOString();
+
         logReportBtn.disabled = true;
+        logReportBtn.textContent = 'Sending…';
+        const ok = await sendReportToServer(record);
+        if (!ok) {
+            alert('Could not send the report to the server. Please try again.');
+            logReportBtn.disabled = false;
+            logReportBtn.textContent = 'Log this as an official report';
+            return;
+        }
+        saveRecords(records);
         logReportBtn.textContent = 'Logged as official report ✓';
     });
 
-    deleteRecordBtn.addEventListener('click', function () {
+    deleteRecordBtn.addEventListener('click', async function () {
         if (!currentId) return;
-        if (deleteRecord(currentId)) showList();
+        if (await deleteRecord(currentId)) showList();
     });
 
-    const params = new URLSearchParams(window.location.search);
-    const requestedId = params.get('id');
+    const requestedId = new URLSearchParams(window.location.search).get('id');
     if (requestedId) {
         showDetail(requestedId);
     } else {

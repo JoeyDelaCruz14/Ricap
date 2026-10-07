@@ -24,7 +24,7 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 //   'mid'   = middle of the river's longest segment
 //   'mouth' = downstream end of the longest segment (OSM ways run downstream)
 const ANCHOR_MODE = 'snap';
-const PROXIMITY_KM = 3;
+const PROXIMITY_KM = 6;
 const MAX_FLOOD_WAYS = 150;
 
 const QUERY =
@@ -218,7 +218,13 @@ export async function loadRiverLines(map, rivers) {
         const riverId = assigned[i];
         if (riverId !== undefined) {
             if (!byRiver[riverId]) byRiver[riverId] = L.featureGroup().addTo(map);
-            L.polyline(way.c, { color: '#4d9ab8', weight: 4.5, opacity: 0.95 })
+            // a dark "halo" under the line so the colour (set later by mapping.js, by
+            // pollution status) reads clearly against the dark basemap at any zoom
+            L.polyline(way.c, { color: '#0a1620', weight: 8, opacity: 0.55 })
+                .addTo(byRiver[riverId]);
+            // statusLine: true marks this as the line mapping.js should recolour by
+            // pollution status; the halo above is left alone so it stays dark.
+            L.polyline(way.c, { color: '#4d9ab8', weight: 4.5, opacity: 0.95, statusLine: true })
                 .bindTooltip(label, { sticky: true })
                 .addTo(byRiver[riverId]);
         } else {

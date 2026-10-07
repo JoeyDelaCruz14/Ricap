@@ -6,11 +6,6 @@ import {
     startReportAlerts
 } from './Notify.js';
 import { loadRiverLines } from './river-lines.js';
-import { db } from './firebase-config.js';
-import { ensureAuth } from './Session.js';
-import {
-    collection, query, where, onSnapshot, getDocs, Timestamp
-} from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 
 function resolveRivers() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) {}
@@ -37,14 +32,6 @@ let markers = {};
 let riverLayers = {};
 let currentSearch = '';
 
-// month being shown on the map (defaults to the current month)
-const NOW = new Date();
-let viewYear = NOW.getFullYear();
-let viewMonth = NOW.getMonth();
-let monthUnsub = null;       // Firestore listener for the current month
-let monthLoadId = 0;         // ignores late answers after the user changed month
-let fallbackStarted = false; // river-status.js is used only if monthly loading fails
-
 const statusColors = {
     healthy: '#45ad91',
     moderate: '#e3b52f',
@@ -58,8 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
     initSearch();
     initReset();
-    initMonthBar();
-    loadMonth();
+    startRiverStatusWatcher();
     startReportAlerts();
 });
 
@@ -177,19 +163,16 @@ function createRiverMarkers() {
     updateMarkerStatuses();
 }
 
-// Circle colour = status; circle size and number = how many scans this month
-function createMarkerIcon(status, count) {
+function createMarkerIcon(status) {
     const safeStatus = statusColors[status] ? status : 'none';
     const color = statusColors[safeStatus];
-    const n = Number(count) || 0;
-    const size = Math.round(Math.min(50, 34 + Math.min(n, 8) * 2));
 
     return L.divIcon({
         className: '',
-        html: `<div class="ricap-marker ${safeStatus}" style="background:${color};width:${size}px;height:${size}px">${n > 1 ? n : '●'}</div>`,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2],
-        popupAnchor: [0, -size / 2]
+        html: `<div class="ricap-marker ${safeStatus}" style="background:${color}">●</div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+        popupAnchor: [0, -17]
     });
 }
 
@@ -238,22 +221,6 @@ function paintRiverNotificationButton(button, riverId) {
     button.classList.toggle('is-on', enabled);
 }
 
-function monthLabel() {
-    return new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
-
-// "Last month avg 54 -> 12 worse" compared with the previous calendar month
-function comparisonLine(status) {
-    if (typeof status.prevAvg !== 'number' || typeof status.score !== 'number') {
-        return '<p class="river-popup-trend">No reports here last month.</p>';
-    }
-    const diff = Math.round(status.score - status.prevAvg);
-    const text = diff > 0 ? `<span class="trend-worse">&#9650; ${diff} worse</span>`
-        : diff < 0 ? `<span class="trend-better">&#9660; ${Math.abs(diff)} better</span>`
-        : 'no change';
-    return `<p class="river-popup-trend">Last month avg <b>${Math.round(status.prevAvg)}</b> → ${text}</p>`;
-}
-
 function buildRiverPopup(rv) {
     const status = statuses[rv.id];
     const riverName = rv.name || rv.officialName || 'Unknown River';
@@ -287,9 +254,8 @@ function buildRiverPopup(rv) {
                 · ${status.score ?? '—'}/100
             </p>
             ${updated
-                ? `<p class="river-popup-updated">Updated ${escapeHtml(updated)} · ${status.count} report(s) in ${escapeHtml(monthLabel())}</p>`
+                ? `<p class="river-popup-updated">Updated ${escapeHtml(updated)} · ${status.count} report(s)</p>`
                 : ''}
-            ${comparisonLine(status)}
             <button type="button" class="river-popup-full" data-river-id="${id}">
                 📋 View full analysis
             </button>
@@ -305,18 +271,13 @@ function updateMarkerStatuses() {
         const status = statuses[rv.id];
         const currentStatus = status && status.status ? status.status : 'none';
 
-        marker.setIcon(createMarkerIcon(currentStatus, status ? status.count : 0));
+        marker.setIcon(createMarkerIcon(currentStatus));
         marker.setPopupContent(buildRiverPopup(rv));
 
         // colour the river line by its pollution status
         const line = riverLayers[rv.id];
         if (line && line.setStyle) {
-            const hasStatus = currentStatus !== 'none';
-            line.setStyle({
-                color: hasStatus ? statusColors[currentStatus] : '#4d9ab8',
-                weight: hasStatus ? 5 : 3,
-                opacity: hasStatus ? 0.95 : 0.65
-            });
+            line.setStyle({ color: currentStatus === 'none' ? '#4d9ab8' : statusColors[currentStatus] });
         }
 
         if (marker.isPopupOpen()) {
@@ -371,184 +332,20 @@ function openFullAnalysis(riverId) {
     document.body.appendChild(overlay);
 }
 
-/* ---------------- Monthly data (Firestore reports) ---------------- */
+/* ---------------- Status watcher ---------------- */
 
-function statusFromScore(score) {
-    if (score > 65) return 'polluted';
-    if (score > 30) return 'moderate';
-    return 'healthy';
-}
-
-function docDate(d) {
-    const t = d.createdAt;
-    if (t && typeof t.toDate === 'function') return t.toDate();
-    return t ? new Date(t) : null;
-}
-
-// Turns a list of report documents into one entry per river (same shape the popup already uses)
-function aggregateReports(reports) {
-    const byRiver = {};
-    reports.forEach(r => {
-        if (!r.riverId) return;
-        (byRiver[r.riverId] = byRiver[r.riverId] || []).push(r);
-    });
-
-    const out = {};
-    Object.keys(byRiver).forEach(id => {
-        const list = byRiver[id].slice().sort((a, b) => docDate(b) - docDate(a));
-        const latest = list[0];
-        const avg = Math.round(list.reduce((sum, r) => sum + (Number(r.score) || 0), 0) / list.length);
-        out[id] = {
-            status: statusFromScore(avg),
-            score: avg,
-            latestScore: Number(latest.score),
-            count: list.length,
-            lastUpdated: docDate(latest),
-            imageUrl: latest.imageUrl || '',
-            reportName: latest.reportName || '',
-            reporterName: latest.reporterName || '',
-            reporterRole: latest.reporterRole || '',
-            assessment: latest.assessment || '',
-            recommendation: latest.recommendation || ''
-        };
-    });
-    return out;
-}
-
-function applyReports(allReports, year, month) {
-    const startSel = new Date(year, month, 1);
-    const endSel = new Date(year, month + 1, 1);
-    const sel = [];
-    const prev = [];
-    allReports.forEach(r => {
-        const d = docDate(r);
-        if (!d || isNaN(d.getTime())) return;
-        if (d >= startSel && d < endSel) sel.push(r);
-        else if (d < startSel) prev.push(r);
-    });
-
-    const current = aggregateReports(sel);
-    const before = aggregateReports(prev);
-    Object.keys(current).forEach(id => {
-        if (before[id]) current[id].prevAvg = before[id].score;
-    });
-
-    statuses = current;
-    updateMarkerStatuses();
-    updateSidebar();
-    updateSidebarStat();
-    updateMonthBar();
-}
-
-async function loadMonth() {
-    const loadId = ++monthLoadId;
-    if (monthUnsub) { monthUnsub(); monthUnsub = null; }
-
-    // clear the old month straight away so stale colours never linger
-    statuses = {};
-    updateMarkerStatuses();
-    updateSidebar();
-    updateSidebarStat();
-    updateMonthBar();
-
-    const year = viewYear;
-    const month = viewMonth;
-    const isCurrent = year === NOW.getFullYear() && month === NOW.getMonth();
-    const windowStart = new Date(year, month - 1, 1);          // previous month is loaded too, for the comparison
-    const windowEnd = new Date(year, month + 1, 1);
-
-    try {
-        await ensureAuth();
-        if (loadId !== monthLoadId) return;
-
-        const col = collection(db, 'reports');
-        const constraints = [where('createdAt', '>=', Timestamp.fromDate(windowStart))];
-        if (!isCurrent) constraints.push(where('createdAt', '<', Timestamp.fromDate(windowEnd)));
-        const q = query(col, ...constraints);
-
-        const handle = snap => {
-            if (loadId !== monthLoadId) return;
-            applyReports(snap.docs.map(d => d.data()), year, month);
-        };
-
-        if (isCurrent) {
-            // live: new official reports appear on the map without a refresh
-            monthUnsub = onSnapshot(q, handle, err => monthLoadFailed(err, isCurrent));
-        } else {
-            handle(await getDocs(q));
-        }
-    } catch (err) {
-        monthLoadFailed(err, isCurrent);
-    }
-}
-
-function monthLoadFailed(err, isCurrent) {
-    console.warn('RiCap: could not load monthly reports', err);
-    const sub = document.getElementById('monthSub');
-    if (sub) sub.textContent = 'Could not load reports for this month';
-
-    // safety net: the current month falls back to the original 30-day watcher
-    if (isCurrent && !fallbackStarted && rivers.length) {
-        fallbackStarted = true;
-        watchRiverStatuses(rivers, newStatuses => {
-            if (viewYear !== NOW.getFullYear() || viewMonth !== NOW.getMonth()) return;
-            statuses = newStatuses || {};
-            updateMarkerStatuses();
-            updateSidebar();
-            updateSidebarStat();
-            updateMonthBar();
-        });
-    }
-}
-
-/* ---------------- Month bar ---------------- */
-
-function initMonthBar() {
-    const prev = document.getElementById('monthPrev');
-    const next = document.getElementById('monthNext');
-    if (!prev || !next) return;
-
-    prev.addEventListener('click', () => shiftMonth(-1));
-    next.addEventListener('click', () => shiftMonth(1));
-    updateMonthBar();
-}
-
-function shiftMonth(delta) {
-    const d = new Date(viewYear, viewMonth + delta, 1);
-    if (d > new Date(NOW.getFullYear(), NOW.getMonth(), 1)) return;   // no future months
-    viewYear = d.getFullYear();
-    viewMonth = d.getMonth();
-    loadMonth();
-}
-
-function updateMonthBar() {
-    const title = document.getElementById('monthTitle');
-    const sub = document.getElementById('monthSub');
-    const next = document.getElementById('monthNext');
-    if (!title || !sub || !next) return;
-
-    title.textContent = monthLabel();
-    next.disabled = viewYear === NOW.getFullYear() && viewMonth === NOW.getMonth();
-
-    const ids = Object.keys(statuses);
-    if (!ids.length) {
-        sub.textContent = 'No scans this month';
+function startRiverStatusWatcher() {
+    if (!rivers.length) {
+        updateSidebarStat();
         return;
     }
 
-    const counts = { healthy: 0, moderate: 0, polluted: 0 };
-    let scans = 0;
-    ids.forEach(id => {
-        const st = statuses[id].status;
-        counts[st === 'healthy' || st === 'moderate' ? st : 'polluted']++;
-        scans += statuses[id].count || 0;
+    watchRiverStatuses(rivers, newStatuses => {
+        statuses = newStatuses || {};
+        updateMarkerStatuses();
+        updateSidebar();
+        updateSidebarStat();
     });
-
-    sub.innerHTML =
-        `${ids.length} ${ids.length === 1 ? 'river' : 'rivers'} · ${scans} ${scans === 1 ? 'scan' : 'scans'} ` +
-        `<span class="month-dot" style="background:${statusColors.healthy}"></span>${counts.healthy} ` +
-        `<span class="month-dot" style="background:${statusColors.moderate}"></span>${counts.moderate} ` +
-        `<span class="month-dot" style="background:${statusColors.polluted}"></span>${counts.polluted}`;
 }
 
 /* ---------------- Sidebar ---------------- */
@@ -706,7 +503,7 @@ function updateSidebarStat() {
     if (!element) return;
 
     const reportCount = Object.keys(statuses).length;
-    element.textContent = `${rivers.length} rivers mapped · ${reportCount} with reports in ${monthLabel()}`;
+    element.textContent = `${rivers.length} rivers mapped · ${reportCount} with recent reports (live)`;
 }
 
 function buildLegend() {

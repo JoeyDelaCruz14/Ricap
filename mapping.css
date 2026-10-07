@@ -82,6 +82,17 @@ body {
 .nav-toggle.open span:nth-child(2) { opacity: 0; }
 .nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 
+@media (max-width: 768px) {
+    .nav-toggle { display: flex; margin-right: 24px; }
+    .nav-links {
+        position: fixed; top: 0; right: 0; height: 100vh; width: min(72vw, 320px);
+        flex-direction: column; justify-content: center; gap: 32px; padding: 0 48px;
+        background: rgba(0,0,0,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+        transform: translateX(100%); transition: transform 0.4s ease;
+    }
+    .nav-links.open { transform: translateX(0); }
+}
+
 .map-page {
     position: fixed;
     top: 46px;
@@ -787,6 +798,47 @@ body {
     background: #7f8792;
 }
 
+
+@media (max-width: 800px) {
+
+    .map-page {
+        top: 46px;
+    }
+
+    .map-sidebar {
+        top: 10px;
+        left: 10px;
+        bottom: 10px;
+
+        width: min(310px, calc(100vw - 20px));
+
+        transform: translateX(calc(-100% - 20px));
+
+        transition: transform 0.25s ease;
+    }
+
+    .map-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .sidebar-toggle {
+        display: block;
+    }
+
+    #map .leaflet-top.leaflet-left {
+        right: 12px !important;
+        top: 12px !important;
+    }
+
+    .leaflet-popup-content {
+        width: 250px !important;
+    }
+
+    .river-popup {
+        width: 250px;
+    }
+}
+
 /* Append this to the END of mapping.css (delete the previous version first) */
 
 /* The container owns all the padding; children are reset so nothing is offset */
@@ -874,148 +926,3 @@ body {
     font-size: 11px;
 }
 .leaflet-control-layers label { color: #fff; margin: 2px 0; }
-
-/* =========================
-   DARK BASEMAP (same look as the Tracking map)
-   Inverts the light OpenStreetMap tiles; markers and river lines are not affected.
-========================= */
-
-#map .leaflet-tile-pane {
-    filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.7);
-}
-
-/* =========================
-   MONTH BAR
-========================= */
-
-.month-bar {
-    position: absolute;
-    top: 14px;
-    left: 338px;
-    right: 70px;
-    width: fit-content;
-    margin: 0 auto;
-    max-width: calc(100% - 408px);
-
-    display: flex;
-    align-items: center;
-    gap: 12px;
-
-    padding: 8px 10px;
-
-    background: rgba(18, 28, 40, 0.94);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 999px;
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-
-    z-index: 600;
-}
-
-.month-btn {
-    flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    padding: 0 0 3px;
-
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 50%;
-    background: rgba(28, 40, 53, 0.95);
-    color: #ffffff;
-
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-
-    transition: border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
-}
-
-.month-btn:hover:not(:disabled),
-.month-btn:focus-visible {
-    border-color: rgba(160, 90, 240, 0.7);
-    color: #b57bff;
-    outline: none;
-}
-
-.month-btn:disabled { opacity: 0.3; cursor: default; }
-
-.month-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 0;
-    padding: 0 4px;
-    text-align: center;
-}
-
-.month-title {
-    color: #ffffff;
-    font-family: Georgia, "Times New Roman", serif;
-    font-size: 15px;
-    line-height: 1.2;
-    white-space: nowrap;
-}
-
-.month-sub {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 11px;
-    line-height: 1.4;
-    white-space: nowrap;
-}
-
-.month-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    margin: 0 3px 0 6px;
-    border-radius: 50%;
-}
-
-/* marker count + popup trend line */
-.ricap-marker { box-sizing: border-box; transition: width 0.2s ease, height 0.2s ease; }
-
-.river-popup-trend { font-size: .75rem; color: #aab2bf; margin: 0 0 12px; }
-.river-popup-trend b { color: #fff; }
-.trend-worse { color: #f08a80; font-weight: 600; }
-.trend-better { color: #6fd3b0; font-weight: 600; }
-
-
-
-/* ======== MOBILE / RESPONSIVE ======== */
-@media (max-width: 800px) {
-    .map-page { top: 46px; }
-    .map-sidebar {
-        top: 10px; left: 10px; bottom: 10px;
-        width: min(310px, calc(100vw - 20px));
-        transform: translateX(calc(-100% - 20px));
-        transition: transform 0.25s ease;
-    }
-    .map-sidebar.open { transform: translateX(0); }
-    .sidebar-toggle { display: block; }
-    #map .leaflet-top.leaflet-left { right: 12px !important; top: 12px !important; }
-    .leaflet-popup-content { width: min(250px, 70vw) !important; }
-    .river-popup { width: min(250px, 70vw); }
-    .month-bar { left: 64px; right: 64px; max-width: none; top: 12px; gap: 6px; }
-    .month-info { flex: 1; }
-    .month-sub { display: none; }
-}
-@media (max-width: 480px) {
-    .month-bar button { min-width: 40px; min-height: 40px; }
-    .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; }
-}
-@media (max-width: 768px) {
-    .nav-toggle { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; }
-    .nav-links {
-        position: fixed; top: 0; right: 0;
-        height: 100vh; height: 100dvh; overflow-y: auto;
-        width: min(72vw, 320px);
-        flex-direction: column; justify-content: center; gap: 32px; padding: 0 48px;
-        background: rgba(0,0,0,.92);
-        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        transform: translateX(100%); visibility: hidden;
-        transition: transform .4s ease, visibility 0s .4s;
-    }
-    .nav-links.open { transform: translateX(0); visibility: visible; transition: transform .4s ease; }
-}
