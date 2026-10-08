@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RiCap – Bataan River Map</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="mapping.css">
+</head>
+
+<body>
+
+<nav class="nav scrolled" id="siteNav">
+    <div class="nav-inner">
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href="main.html">Home</a></li>
+            <li><a href="mapping.html" class="nav-link--active">Mapping</a></li>
+            <li><a href="Image_Processing.html">Scanner</a></li>
+            <li><a href="Tracking.html">Tracking</a></li>
+            <li><a href="forum.html">Forum</a></li>
+            <li><a href="main.html#about">About</a></li>
+            <li><a href="main.html#contact">Contact</a></li>
+        </ul>
+
+    </div>
+</nav>
+
+<main class="map-page">
+
+    <button class="sidebar-toggle" id="sidebarToggle"aria-label="Toggle river list"aria-expanded="false"> ☰ </button>
+
+    <aside class="map-sidebar" id="mapSidebar">
+
+        <div class="sidebar-header">
+            <p class="sidebar-eyebrow">Bataan</p>
+            <p class="sidebar-stat" id="sidebarStat">
+                Loading rivers…
+            </p>
+        </div>
+
+        <div class="sidebar-search">
+            <input type="search" id="riverSearch" placeholder="Search rivers..." autocomplete="off">
+        </div>
+
+        <div
+            class="sidebar-groups"
+            id="sidebarGroups">
+        </div>
+
+        <div
+            id="mapLegend"
+            class="map-legend">
+        </div>
+
+        <div class="sidebar-footer">
+
+            <button
+                type="button"
+                class="reset-view-btn"
+                id="resetView">
+                Reset view
+            </button>
+
+            <p class="sidebar-credit">
+                Status comes from official photo scans submitted near each river.
+                Click a marker to see its assessment, AI recommendation, and
+                notification settings. Coordinates are approximate.
+            </p>
+
+        </div>
+
+    </aside>
+
+    <div
+        class="map-canvas"
+        id="map">
+    </div>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="mapping-data.js"></script>
+
+<script type="module">
+import { mountAuthNav } from './Session.js';
+mountAuthNav();
+const t = document.getElementById('navToggle'), l = document.getElementById('navLinks');
+t.addEventListener('click', () => {
+    const o = l.classList.toggle('open');
+    t.classList.toggle('open', o);
+    t.setAttribute('aria-expanded', String(o));
+});
+</script>
+
+<script type="module" src="mapping.js"></script>
+
+</body>
+</html>

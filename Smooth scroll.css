@@ -1,0 +1,37 @@
+#bg-video {
+    transition: none;
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+.video-dim {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    will-change: opacity;
+}
+
+.cursor-glow {
+    left: 0;
+    top: 0;
+    transform: translate3d(-9999px, -9999px, 0);
+    will-change: transform;
+}
+
+.nav.scrolled {
+    background: rgba(8, 9, 12, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+/* Keep tilt items on their own layer while they animate */
+.scroll-tilt {
+    backface-visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #bg-video { transform: none !important; }
+    .scroll-tilt { transform: none !important; }
+}

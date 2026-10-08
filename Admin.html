@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiCap — Admin Review</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="Responsive.css">
+    <link rel="stylesheet" href="apply.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body class="submit-page">
+
+    <nav class="nav" id="nav">
+        <div class="nav-inner">
+            <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="Home.html">Home</a></li>
+                <li><a href="mapping.html">Mapping</a></li>
+                <li><a href="forum.html">Forum</a></li>
+                <li><a href="submit.html">Submit</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="submit-main">
+        <div class="submit-shell admin-shell">
+
+            <section class="access-gate" id="adminGate">
+                <p class="gate-eyebrow">Admin</p>
+                <h1 class="gate-title">Sign in to review applications</h1>
+                <p class="gate-copy">Restricted to RiCap admin accounts created in Firebase Authentication.</p>
+
+                <form id="adminLoginForm" class="access-form" autocomplete="off">
+                    <label for="adminEmail">Email</label>
+                    <input type="email" id="adminEmail" required>
+                    <label for="adminPassword">Password</label>
+                    <input type="password" id="adminPassword" required>
+                    <button type="submit">Sign in</button>
+                </form>
+                <p class="access-error" id="adminLoginError" hidden></p>
+            </section>
+
+            <!-- ===================== APPLICATIONS LIST ===================== -->
+            <section class="submit-form-section" id="adminPanel" hidden>
+                <p class="form-eyebrow">Signed in as <span id="adminEmailLabel"></span> · <button type="button" id="adminSignOutBtn" class="link-btn">sign out</button></p>
+                <h1 class="form-title">Pending Applications</h1>
+                <p class="form-sub" id="adminEmptyState">No pending applications right now.</p>
+
+                <div class="app-list" id="appList"></div>
+            </section>
+
+        </div>
+    </main>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>

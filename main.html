@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>River Intelligence</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="Responsive.css">
+  <link rel="stylesheet" href="home-auth.css">
+</head>
+<body class="home-page">
+  <div class="video-background">
+    <video autoplay muted loop playsinline id="bg-video">
+      <source src="images&vids/Sequence_01_2.mp4" type="video/mp4">
+    </video>
+    <div class="video-overlay"></div>
+  </div>
+
+      <nav class="nav" id="nav">
+    <div class="nav-inner">
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+
+        <ul class="nav-links" id="navLinks">
+            <li><a href= "Home.html">Home</a></li>
+            <li><a href="mapping.html">Mapping</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href ="#loginbutton">Login</a></li>
+            <li><a href="Apply.html">Verify</a></li>
+            <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+            <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
+        </ul>
+    </div>
+    <div class="nav-scrub"><div class="nav-scrub-fill" id="navScrubFill"></div></div>
+</nav>
+
+
+  <main>
+
+    <section class="hero-section" id="home">
+      <div class="hero-content">
+        <p class="hero-small reveal">RIVER INTELLIGENCE</p>
+
+        <h1 class="hero-title reveal">
+          See the river
+          <span>differently.</span>
+        </h1>
+
+        <p class="hero-description reveal">
+          RiCap uses image-based visual analysis to help identify possible
+          pollution conditions in rivers and monitor changes over time.
+        </p>
+
+        <div class="hero-buttons reveal">
+          <button class="primary-btn magnetic" data-auth="signup">Create an Account </button>
+          <a href="#features" class="secondary-btn magnetic">Explore RiCap </a></div>
+      </div>
+      </div>
+    </section>
+    <section class="features-section section" id="features">
+      <div class="section-number reveal"></div>
+
+      <div class="section-content">
+        <p class="section-label reveal">CAPABILITIES</p>
+
+        <h2 class="section-title reveal">
+          Everything you need
+          <span>in one place.</span>
+        </h2>
+
+        <div class="feature-grid">
+          <article class="feature-card reveal tilt-card">
+            <div class="feature-image">
+              <img src="images&vids/Camera-removebg-preview.png" alt="Image Analysis">
+            </div>
+            <div class="feature-info">
+              <h3>Image Analysis</h3>
+              <p>
+                Upload or capture river images and receive a visual
+                assessment of possible pollution conditions.
+              </p>
+            </div>
+          </article>
+
+          <article class="feature-card reveal tilt-card">
+            <div class="feature-image">
+              <img src="images&vids/Location.png" alt="River Mapping">
+            </div>
+            <div class="feature-info">
+              <h3>Digital Mapping</h3>
+              <p>
+                Visualize monitored river locations and identify areas that
+                may require attention.
+              </p>
+            </div>
+          </article>
+
+          <article class="feature-card reveal tilt-card">
+            <div class="feature-image">
+              <img src="images&vids/notif-removebg-preview.png" alt="Notifications">
+            </div>
+            <div class="feature-info">
+              <h3>Notifications</h3>
+              <p>
+                Stay informed when monitored river locations receive updated
+                records or changes.
+              </p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="process-section section" id="how-it-works">
+      <div class="section-number reveal"></div>
+
+      <div class="section-content">
+        <p class="section-label reveal">HOW IT WORKS</p>
+
+        <h2 class="section-title reveal">
+          From image
+          <span>to information.</span>
+        </h2>
+
+        <div class="process-list">
+          <div class="process-item reveal scroll-tilt">
+            <span class="process-number">1</span>
+            <div>
+              <h3>Capture</h3>
+              <p>Capture or upload an image of the river.</p>
+            </div>
+          </div>
+
+          <div class="process-item reveal scroll-tilt">
+            <span class="process-number">2</span>
+            <div>
+              <h3>Analyze</h3>
+              <p>RiCap evaluates visual characteristics found within the image.</p>
+            </div>
+          </div>
+
+          <div class="process-item reveal scroll-tilt">
+            <span class="process-number">3</span>
+            <div>
+              <h3>Document</h3>
+              <p>Store the assessment and related river information for future reference.</p>
+            </div>
+          </div>
+
+          <div class="process-item reveal scroll-tilt">
+            <span class="process-number">4</span>
+            <div>
+              <h3>Monitor</h3>
+              <p>Track monitored locations and observe changes through time.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta-section section" id="loginbutton">
+      <div class="cta-content reveal">
+        <h2>
+          Your river.
+          <span>Your responsibility.</span>
+        </h2>
+        <p>Create your RiCap account and let us start this journey.</p>
+        <button class="primary-btn magnetic" data-auth="login">Login</button>
+      </div>
+    </section>
+
+    <section class="contact-section section" id="contact">
+      <div class="section-content">
+        <p class="section-label reveal">CONTACT</p>
+        <h2 class="section-title reveal">
+          Have something
+          <span>to say?</span>
+        </h2>
+
+        <form class="contact-form reveal" id="contactForm">
+          <div class="form-group">
+            <label for="contactName">NAME</label>
+            <input type="text" id="contactName" placeholder="Your name" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contactEmail">EMAIL</label>
+            <input type="email" id="contactEmail" placeholder="you@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contactMessage">MESSAGE</label>
+            <textarea id="contactMessage" rows="5" placeholder="Your message..." required></textarea>
+          </div>
+
+          <button type="submit" class="primary-btn magnetic">
+            Send Message <span>↗</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="auth-modal" id="authModal">
+    <div class="auth-backdrop"></div>
+
+    <div class="auth-box">
+      <button class="auth-close" id="authClose">×</button>
+
+      <div class="auth-header">
+        <p class="section-label">RICAP ACCOUNT</p>
+        <h2 id="authTitle">Welcome back.</h2>
+        <p id="authSubtitle">Log in to continue to RiCap.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Log In</button>
+        <button class="auth-tab" data-tab="signup">Sign Up</button>
+      </div>
+
+      <form class="auth-form active" id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">EMAIL</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" required>
+        </div>
+
+        <div class="form-group password-field">
+          <label for="loginPassword">PASSWORD</label>
+          <div class="password-wrapper">
+            <input type="password" id="loginPassword" placeholder="Enter your password" required>
+            <button type="button" class="password-toggle" data-target="loginPassword">Show</button>
+          </div>
+        </div>
+
+        <div class="auth-options">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rememberMe">
+            <span>Remember me</span>
+          </label>
+          <button type="button" class="forgot-password">Forgot password?</button>
+        </div>
+
+        <button type="submit" class="primary-btn auth-submit">
+          Log In <span>↗</span>
+        </button>
+      </form>
+
+      <form class="auth-form" id="signupForm">
+        <div class="form-group">
+          <label for="signupName">FULL NAME</label>
+          <input type="text" id="signupName" placeholder="Your full name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="signupEmail">EMAIL</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="signupPhone">MOBILE NUMBER <span style="opacity:.6">(optional)</span></label>
+          <input type="tel" id="signupPhone" inputmode="tel" placeholder="09171234567" autocomplete="tel">
+        </div>
+
+        <div class="form-group password-field">
+          <label for="signupPassword">PASSWORD</label>
+          <div class="password-wrapper">
+            <input type="password" id="signupPassword" placeholder="Create a password" required>
+            <button type="button" class="password-toggle" data-target="signupPassword">Show</button>
+          </div>
+        </div>
+
+        <div class="password-strength">
+          <div class="strength-bar">
+            <span id="strengthProgress"></span>
+          </div>
+          <small id="strengthText">Enter a password</small>
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" id="signupAlerts" checked>
+          <span>Notify me (pop-up + email) when new river reports are posted.</span>
+        </label>
+
+        <label class="checkbox-label terms">
+          <input type="checkbox" id="terms" required>
+          <span>I agree to the RiCap terms and conditions.</span>
+        </label>
+
+        <button type="submit" class="primary-btn auth-submit">
+          Create Account <span>↗</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <span class="toast-icon">✓</span>
+    <span id="toastMessage">Done.</span>
+  </div>
+  <script src="nav.js"></script>
+  <script src="contact.js"></script>
+  <script src="home-interactive.js"></script>
+  <script type="module" src="admin-nav.js"></script>
+  <script type="module" src="admin-login.js"></script>
+  <script type="module" src="account-auth.js"></script>
+</body>
+</html>
