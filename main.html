@@ -30,10 +30,6 @@
             <li><a href="#contact">Contact</a></li>
             <li><a href ="#loginbutton">Login</a></li>
             <li><a href="Apply.html">Verify</a></li>
-<<<<<<< HEAD
-=======
-            <!-- Admin-only: shown once an admin is signed in (see admin-nav.js) -->
->>>>>>> 1fad4146a019df3826a6c07e76e3f470ba5a8569
             <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
             <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
         </ul>
@@ -255,18 +251,17 @@
 
       <form class="auth-form" id="signupForm">
         <div class="form-group">
-          <label for="signupName">FULL NAME</label>
-          <input type="text" id="signupName" placeholder="Your full name" required>
+          <label for="signupFirstName">First Name</label>
+          <input type="text" id="signupFirstName" placeholder="Your first name" required>
+        </div>
+        <div class="form-group">
+          <label for="signupLastName">Last Name</label>
+          <input type="text" id="signupLastName" placeholder="Your last name" required> 
         </div>
 
         <div class="form-group">
           <label for="signupEmail">EMAIL</label>
           <input type="email" id="signupEmail" placeholder="you@example.com" required>
-        </div>
-
-        <div class="form-group">
-          <label for="signupPhone">MOBILE NUMBER <span style="opacity:.6">(optional)</span></label>
-          <input type="tel" id="signupPhone" inputmode="tel" placeholder="09171234567" autocomplete="tel">
         </div>
 
         <div class="form-group password-field">
@@ -295,7 +290,7 @@
         </label>
 
         <button type="submit" class="primary-btn auth-submit">
-          Create Account <span>↗</span>
+          Create Account 
         </button>
       </form>
     </div>

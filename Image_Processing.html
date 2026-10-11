@@ -6,21 +6,6 @@
 <title>Image Processing</title>
 <link rel="stylesheet" href="Image_Processing.css">
 <link rel="stylesheet" href="Responsive.css">
-<style>
-.reco-box{margin-top:16px;padding:14px 16px;border-radius:12px;background:rgba(97,11,235,.12);border:1px solid rgba(97,11,235,.4)}                                                                                                                  
-.verify-banner{margin:0 0 18px;padding:16px 18px;border-radius:12px;background:rgba(212,175,106,.08);border:1px solid rgba(212,175,106,.4)}
-.verify-title{margin:0 0 4px;font-family:Georgia,serif;font-weight:700;font-size:1.05rem}
-.verify-copy{margin:0 0 12px;font-size:.85rem;line-height:1.5;color:rgba(255,255,255,.6)}
-.verify-form{display:flex;gap:10px}
-.verify-form input{flex:1;min-width:0;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#0b0c10;color:#fff;font-family:inherit;font-size:.9rem;text-transform:uppercase}
-.verify-form .btn{flex:none;padding:11px 22px}
-.verify-error{margin:10px 0 0;font-size:.8rem;color:#d6574a}
-.verify-foot{margin:12px 0 0;font-size:.8rem;color:rgba(255,255,255,.55)}
-.verify-foot a{color:#d4af6a}
-
-.verified-bar{margin:0 0 18px;padding:10px 14px;border-radius:10px;background:rgba(79,174,140,.1);border:1px solid rgba(79,174,140,.45);font-size:.85rem}
-.link-btn{background:none;border:none;padding:0;color:#d4af6a;font:inherit;text-decoration:underline;cursor:pointer}
-</style>
 </head>
 <body>
 
@@ -75,7 +60,7 @@
                 <button class="btn btn-outline" id="cameraBtn" type="button">Use Camera</button>
                 <button class="btn btn-outline" id="uploadBtn" type="button">Upload Photo</button>
             </div>
-            <div class="scanner-actions" style="margin-top:12px;">
+            <div class="scanner-actions scanner-actions--secondary">
                 <button class="btn btn-solid" id="scanBtn" disabled>Scan Image</button>
                 <button class="btn btn-outline" id="resetBtn">Reset</button>
             </div>
@@ -117,8 +102,8 @@
 
             <div class="reco-box" id="recoBox" hidden>
                 <p class="card-eyebrow">AI Recommendation</p>
-                <p id="recoText" style="white-space:pre-line;margin:6px 0 0;font-size:.9rem;line-height:1.6"></p>
-                <p id="recoSource" class="card-desc" style="margin-top:8px"></p>
+                <p id="recoText" class="reco-text"></p>
+                <p id="recoSource" class="card-desc reco-source"></p>
             </div>
 
             <div class="quickread-actions" id="quickreadActions" hidden>

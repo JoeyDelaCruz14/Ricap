@@ -93,8 +93,6 @@ const RIVER_DATA = [
         lat: 14.6600,
         lng: 120.2830,
         note: "One of three river systems (with Bagac and Talisay) assessed in Bataan Peninsula fish habitat studies.",
-        // OSM tags this river "Alamacen River" (different spelling) — without this hint
-        // the name-matching step would miss it and it would fall back to proximity-only.
         osmNames: ["Alamacen River", "Alamacen"]
     },
     {

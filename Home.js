@@ -175,7 +175,7 @@ function initSidebarControls() {
     const btn = $('notifBtn');
     const paint = () => {
         const on = allNotifEnabled();
-        btn.textContent = on ? '🔔 Alerts on for all rivers' : '🔕 Alert me on new reports';
+        btn.textContent = on ? 'Alerts on for all rivers' : 'Alert me on new reports';
         btn.classList.toggle('is-active', on);
     };
     btn.addEventListener('click', async () => {

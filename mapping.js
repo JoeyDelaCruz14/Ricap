@@ -649,11 +649,19 @@ function updateSidebar() {
             name.className = 'sidebar-river-name';
             name.textContent = rv.name || rv.officialName || 'Unknown River';
 
+            // Status written out with a small swatch, so the list can be read
+            // without cross-checking a legend. No report this month -> a dash.
             const statusDot = document.createElement('span');
             statusDot.className = 'sidebar-river-status';
             const status = statuses[rv.id];
             if (status && status.status && statusColors[status.status]) {
-                statusDot.style.background = statusColors[status.status];
+                const word = String(status.status);
+                statusDot.classList.add('has-status');
+                statusDot.style.setProperty('--status-color', statusColors[word]);
+                statusDot.textContent = word.charAt(0).toUpperCase() + word.slice(1);
+            } else {
+                statusDot.textContent = '—';
+                statusDot.title = 'No reports in ' + monthLabel();
             }
 
             row.append(checkbox, name, statusDot);
@@ -728,7 +736,7 @@ function updateSidebarStat() {
     if (!element) return;
 
     const reportCount = Object.keys(statuses).length;
-    element.textContent = `${rivers.length} rivers mapped · ${reportCount} with reports in ${monthLabel()}`;
+    element.textContent = `${rivers.length} rivers · ${reportCount} reported in ${monthLabel()}`;
 }
 
 function buildLegend() {
@@ -740,7 +748,7 @@ function buildLegend() {
         ['#e3b52f', 'Moderate'],
         ['#db624c', 'Polluted'],
         ['#b93442', 'Critical'],
-        ['#7f8792', 'No reports yet']
+        ['#7f8792', 'No reports']
     ];
 
     legend.innerHTML = items

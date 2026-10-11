@@ -126,7 +126,7 @@ body::before {
 }
 .nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
 .nav-toggle.open span:nth-child(2) { opacity: 0; }
-.nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }    
+.nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 
 .scan-hero {
     padding: 18vh 8vw 6vh;
@@ -288,6 +288,9 @@ body::before {
 .scan-file-input { display: none; }
 
 .scanner-actions { display: flex; gap: 12px; }
+
+/* second row of scanner actions (Scan Image / Reset) sits a little below the first */
+.scanner-actions--secondary { margin-top: 12px; }
 
 .btn {
     flex: 1;
@@ -457,6 +460,88 @@ body::before {
 .camera-overlay-actions .btn {
     flex: none;
     min-width: 140px;
+}
+
+
+.reco-box {
+    margin-top: 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(97, 11, 235, 0.12);
+    border: 1px solid rgba(97, 11, 235, 0.4);
+}
+
+.reco-text {
+    white-space: pre-line;
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.reco-source { margin-top: 8px; }
+
+.verify-banner {
+    margin: 0 0 18px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: rgba(248, 247, 248, 0.08);
+    border: 1px solid rgba(63, 10, 68, 0.4);
+}
+
+.verify-title {
+    margin: 0 0 4px;
+    font-family: Georgia, serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.verify-copy {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.verify-form { display: flex; gap: 10px; }
+
+.verify-form input {
+    flex: 1;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #0b0c10;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.verify-form .btn { flex: none; padding: 11px 22px; }
+
+.verify-error { margin: 10px 0 0; font-size: 0.8rem; color: #d6574a; }
+
+.verify-foot { margin: 12px 0 0; font-size: 0.8rem; color: rgba(255, 255, 255, 0.55); }
+.verify-foot a { color: #fcfafc; }
+
+.verified-bar {
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(79, 174, 140, 0.1);
+    border: 1px solid rgba(79, 174, 140, 0.45);
+    font-size: 0.85rem;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #d4af6a;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
 }
 
 

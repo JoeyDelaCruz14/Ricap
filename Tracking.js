@@ -1,31 +1,11 @@
-/* ==========================================================================
-   RiCap Tracking
-   Shows OFFICIAL REPORTS from ALL accounts (not just the logged-in one),
-   plus a "My scans" view for the current user's own scans.
-   ========================================================================== */
-
-/* ---------- Configuration ---------- */
-
-// Local cache written by Image_Processing.js (this browser only)
 const RECORDS_KEY = 'ricap_river_records';
-
-// Shared reports endpoint. Leave '' until the backend exists.
-//   GET    REPORTS_API            -> JSON array of ALL official reports (every account)
-//   POST   REPORTS_API            -> body: one record, saves it as an official report
-//   DELETE REPORTS_API/<id>       -> delete a report (server must check ownership/admin)
-// Example: const REPORTS_API = 'api/reports.php';
 const REPORTS_API = '';
-
-// Where your login code stores the signed-in user (JSON with id/email/username, or a plain string).
-// Change this key to match your login system.
 const USER_KEY = 'ricap_current_user';
-
 const PAGE_PATH = window.location.pathname.split('/').pop() || 'Tracking.html';
 const SORT_KEY = 'ricap_tracking_sort';
 const SCOPE_KEY = 'ricap_tracking_scope';
-const VIEW_KEY = 'ricap_tracking_view'; // 'cards' | 'table' — which layout the Records section uses
+const VIEW_KEY = 'ricap_tracking_view'; 
 
-/* ---------- Current user ---------- */
 
 function getCurrentUser() {
     try {
@@ -44,7 +24,7 @@ function getCurrentUser() {
     }
 }
 
-// A record is "mine" if it carries my user id. Old records with no owner were made in this browser, so they count as mine.
+
 function isMine(record) {
     const me = getCurrentUser().id;
     if (!record.userId) return true;
@@ -57,7 +37,6 @@ function reporterLabel(record) {
     return 'Anonymous';
 }
 
-/* ---------- Storage / data layer ---------- */
 
 function loadSortOrder() {
     try { return localStorage.getItem(SORT_KEY) === 'oldest' ? 'oldest' : 'newest'; }
@@ -102,8 +81,6 @@ function saveRecords(records) {
     }
 }
 
-// Pulls every account's official reports from the shared backend.
-// Returns { records, shared } — shared=false means no backend answered.
 async function fetchSharedReports() {
     if (!REPORTS_API) return { records: [], shared: false };
     try {
@@ -118,9 +95,6 @@ async function fetchSharedReports() {
     }
 }
 
-// Builds the list to display for the chosen scope.
-//   all  -> every official report from every account (+ official reports saved in this browser)
-//   mine -> all of the current user's scans, reported or not
 async function getDataset(scope) {
     const local = loadRecords();
 
@@ -162,8 +136,6 @@ async function deleteReportOnServer(id) {
         return false;
     }
 }
-
-/* ---------- Helpers ---------- */
 
 function sortRecords(records, order) {
     const time = function (r) {

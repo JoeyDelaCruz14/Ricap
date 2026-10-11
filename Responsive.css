@@ -229,7 +229,11 @@ main, section, .section, .section-content, .feature-grid, .feature-card, .hero-s
 .features, .features-inner, .features-grid, .about, .third, .second {
     max-width: 100%; min-width: 0; box-sizing: border-box;
 }
-main { overflow-x: clip; width: 100%; }              /* clip: cuts stray overflow WITHOUT making a scroll area */
+/* overflow-x alone here would force the browser to auto-compute overflow-y as "auto" on
+   every <main>, turning it into a scroll container and silently breaking position:sticky
+   for any descendant (e.g. .forum-sidebar inside <main class="forum">). overflow-y is
+   pinned to "visible" so main never becomes that scroll container. */
+main { overflow-x: clip; overflow-y: visible; width: 100%; }
 @media (max-width: 900px) {
     .section { width: 100%; }
     .feature-card, .tilt-card, .scroll-tilt, .magnetic { transform: none !important; }  /* inline 3D tilt widens cards */

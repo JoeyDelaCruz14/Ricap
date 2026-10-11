@@ -1,5 +1,3 @@
-// Sign-up handler for the landing page that also collects the (optional) phone number + alert consent.
-// Runs in the capture phase and stops the original handler, like admin-login.js does for login.
 import { saveAccount, normalizePhone } from './account.js';
 import { setEmailAlerts } from './alerts.js';
 import { requestNotifications, setAllNotifications } from './Notify.js';
@@ -20,20 +18,24 @@ if (form) {
         event.preventDefault();
         event.stopImmediatePropagation();
 
-        const name = document.getElementById('signupName').value.trim();
+        const firstName = document.getElementById('signupFirstName').value.trim();
+        const lastName = document.getElementById('signupLastName').value.trim();
         const email = document.getElementById('signupEmail').value.trim();
         const password = document.getElementById('signupPassword').value;
-        const phoneRaw = document.getElementById('signupPhone').value.trim();
+        const phoneInput = document.getElementById('signupPhone');
+        const phoneRaw = phoneInput ? phoneInput.value.trim() : '';
         const alertsOptIn = document.getElementById('signupAlerts').checked;
 
-        if (!name || !email || !password) { showToast('Please complete all fields.'); return; }
+        // First and last name are both required now.
+        if (!firstName || !lastName || !email || !password) { showToast('Please complete all fields, including first and last name.'); return; }
         let phone = '';
         if (phoneRaw) {                       // phone is optional, but must be valid if given
             phone = normalizePhone(phoneRaw);
             if (!phone) { showToast('Enter a valid Philippine mobile number, e.g. 09171234567, or leave it blank.'); return; }
         }
 
-        saveAccount({ name, email, password, phone, emailAlerts: false });
+        const name = `${firstName} ${lastName}`;
+        saveAccount({ name, firstName, lastName, email, password, phone, emailAlerts: false });
 
         let alertMsg = '';
         if (alertsOptIn) {

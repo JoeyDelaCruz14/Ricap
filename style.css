@@ -6,6 +6,8 @@ body {
 }
 body {
     overflow-x: hidden;
+    overflow-y: visible; 
+                          
 }
 img {
     max-width: 100%;

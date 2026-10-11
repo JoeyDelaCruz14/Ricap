@@ -800,10 +800,6 @@
     color: rgba(255, 255, 255, 0.45);
 }
 
-/* ==========================================================================
-   NEW: tabular timeline (Table view of the Records section)
-   ========================================================================== */
-
 .timeline-table-wrap {
     overflow-x: auto;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -864,7 +860,6 @@
     padding: 28px 18px;
 }
 
-/* ======== MOBILE / RESPONSIVE ======== */
 @media (max-width: 900px) {
     .docs-section { padding: 2vh 6vw 10vh; }
     .detail-grid { grid-template-columns: 1fr; }
@@ -873,8 +868,6 @@
     .docs-list-header { flex-direction: column; align-items: stretch; gap: 12px; }
     .docs-header-actions { flex-wrap: wrap; gap: 10px; }
     .trend-head { flex-wrap: wrap; gap: 10px; }
-
-    /* stack the timeline sidebar above the map instead of beside it */
     .trend-timeline-wrap { flex-direction: column; }
     .trend-timeline-sidebar { width: 100%; height: 220px; }
 }

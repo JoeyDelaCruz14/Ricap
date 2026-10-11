@@ -139,147 +139,110 @@ body {
 
 /* =========================
    SIDEBAR
+   One flat panel docked to the left edge: a single surface colour, hairline
+   rules between sections, and real reading sizes. No glass blur, gradient
+   header, or gold letter-spaced labels - those decorative layers were what
+   made it read like a generated template rather than a working map tool.
 ========================= */
 
 .map-sidebar {
+    --sb-bg: #111318;
+    --sb-raised: #181b21;
+    --sb-line: #252931;
+    --sb-text: #e6e8ec;
+    --sb-muted: #8a909b;
+    --sb-faint: #5f6570;
+    --sb-accent: #8c3cf0;      /* focus rings */
+    --sb-check: #6f4fc9;       /* checkboxes: muted so eleven of them don't shout */
+
     position: absolute;
-
-    top: 14px;
-    left: 14px;
-    bottom: 14px;
-
-    width: 310px;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 300px;
 
     display: flex;
     flex-direction: column;
 
-    background: rgba(18, 28, 40, 0.96);
-
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 14px;
-
-    box-shadow:
-        0 12px 35px rgba(0, 0, 0, 0.42),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: var(--sb-bg);
+    border-right: 1px solid var(--sb-line);
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.25);
+    color: var(--sb-text);
 
     overflow: hidden;
-
     z-index: 500;
-
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
 }
 
-/* =========================
-   SIDEBAR HEADER
-========================= */
+/* ---------- header ---------- */
 
 .sidebar-header {
-    padding: 22px 20px 16px;
-
-    background:
-        linear-gradient(
-            180deg,
-            rgba(50, 66, 84, 0.98),
-            rgba(28, 40, 53, 0.98)
-        );
-
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 18px 18px 14px;
 }
 
 .sidebar-eyebrow {
-    margin: 0 0 5px;
-
-    color: #d4af6a;
-
-    font-size: 9px;
-    font-weight: 800;
-
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
-
-.sidebar-title {
     margin: 0;
-
-    color: #ffffff;
-
-    font-family: Georgia, "Times New Roman", serif;
-
-    font-size: 27px;
-    line-height: 1.1;
+    color: var(--sb-text);
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.25;
 }
 
 .sidebar-stat {
-    margin: 8px 0 0;
-
-    color: rgba(255, 255, 255, 0.62);
-
-    font-size: 10px;
-    line-height: 1.4;
+    margin: 4px 0 0;
+    color: var(--sb-muted);
+    font-size: 12px;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
 }
 
-/* =========================
-   SEARCH
-========================= */
+/* ---------- search ---------- */
 
 .sidebar-search {
-    padding: 12px;
-
-    background: rgba(11, 17, 25, 0.86);
-
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 0 18px 14px;
+    border-bottom: 1px solid var(--sb-line);
 }
 
 .sidebar-search input {
     box-sizing: border-box;
-
     width: 100%;
-    height: 38px;
+    height: 34px;
+    padding: 0 10px 0 32px;
 
-    padding: 0 12px;
-
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 8px;
-
+    border: 1px solid var(--sb-line);
+    border-radius: 6px;
     outline: none;
 
-    background: rgba(5, 9, 15, 0.8);
+    background: #0c0e12 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238a909b' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 10px center / 14px 14px;
+    color: var(--sb-text);
+    font-size: 13px;
 
-    color: #ffffff;
-
-    font-size: 11px;
-
-    transition: 0.2s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .sidebar-search input::placeholder {
-    color: rgba(255, 255, 255, 0.42);
+    color: var(--sb-faint);
 }
 
 .sidebar-search input:focus {
-    border-color: rgba(212, 175, 106, 0.7);
-
-    box-shadow: 0 0 0 2px rgba(212, 175, 106, 0.08);
+    border-color: var(--sb-accent);
+    box-shadow: 0 0 0 3px rgba(140, 60, 240, 0.18);
 }
 
-/* =========================
-   SIDEBAR GROUPS
-========================= */
+/* ---------- river groups ---------- */
 
 .sidebar-groups {
     flex: 1;
-
     min-height: 0;
-
     overflow-y: auto;
     overflow-x: hidden;
+    padding-bottom: 6px;
 
-    background: rgba(10, 16, 24, 0.72);
+    scrollbar-width: thin;
+    scrollbar-color: #2c3038 transparent;
 }
 
 .sidebar-groups::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
 .sidebar-groups::-webkit-scrollbar-track {
@@ -287,213 +250,191 @@ body {
 }
 
 .sidebar-groups::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.16);
-
-    border-radius: 20px;
+    background: #2c3038;
+    border: 2px solid var(--sb-bg);
+    border-radius: 4px;
 }
 
-.sidebar-group {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+.sidebar-group + .sidebar-group {
+    border-top: 1px solid var(--sb-line);
 }
 
+/* Group headings are quiet labels, not filled bars. */
 .sidebar-group-header {
     display: flex;
     align-items: center;
-
-    min-height: 52px;
-
-    padding: 0 12px;
-
-    background: rgba(31, 43, 57, 0.92);
-
+    gap: 8px;
+    padding: 14px 18px 6px;
+    background: none;
     cursor: pointer;
-
     user-select: none;
 }
 
-.sidebar-group-header:hover {
-    background: rgba(42, 56, 72, 0.98);
-}
-
+/* The coloured coast dot is redundant next to the heading text. */
 .sidebar-group-color {
-    width: 9px;
-    height: 9px;
-
-    margin-right: 9px;
-
-    border-radius: 50%;
-
-    flex: 0 0 auto;
+    display: none;
 }
 
 .sidebar-group-title {
     flex: 1;
-
-    color: #ffffff;
-
+    color: var(--sb-muted);
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
+    line-height: 1.3;
+}
 
-    line-height: 1.2;
+.sidebar-group-header:hover .sidebar-group-title {
+    color: var(--sb-text);
 }
 
 .sidebar-group-count {
-    margin-left: 7px;
-
-    color: rgba(255, 255, 255, 0.42);
-
-    font-size: 9px;
+    color: var(--sb-faint);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
 }
 
 .sidebar-group-toggle {
-    margin-left: 8px;
-
-    color: rgba(255, 255, 255, 0.55);
-
-    font-size: 10px;
+    width: 12px;
+    color: var(--sb-faint);
+    font-size: 11px;
+    text-align: center;
 }
 
-/* =========================
-   RIVER LIST
-========================= */
+/* ---------- river rows ---------- */
 
 .sidebar-river-list {
-    padding: 5px 0 8px;
-
-    background: rgba(9, 14, 21, 0.72);
+    padding: 0 8px 8px;
 }
 
 .sidebar-river-item {
     display: flex;
     align-items: center;
+    gap: 10px;
 
-    min-height: 38px;
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 5px;
 
-    padding: 0 13px 0 16px;
-
-    color: rgba(255, 255, 255, 0.76);
-
-    font-size: 11px;
-
+    color: var(--sb-text);
+    font-size: 13px;
     cursor: pointer;
 
-    transition:
-        background 0.18s ease,
-        color 0.18s ease;
+    transition: background 0.12s ease;
 }
 
 .sidebar-river-item:hover {
-    background: rgba(255, 255, 255, 0.06);
-
-    color: #ffffff;
+    background: var(--sb-raised);
 }
 
 .sidebar-river-item input {
+    flex: 0 0 auto;
     width: 14px;
     height: 14px;
-
-    margin: 0 10px 0 0;
-
-    accent-color: #d4af6a;
-
+    margin: 0;
+    accent-color: var(--sb-check);
     cursor: pointer;
+}
+
+/* A river hidden from the map dims in the list, so the checkbox state is legible. */
+.sidebar-river-item:has(input:not(:checked)) .sidebar-river-name {
+    color: var(--sb-faint);
 }
 
 .sidebar-river-name {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
+/* Status is written out ("Moderate") with a small swatch, instead of a bare dot
+   you have to decode against the legend. Rivers without reports show a dash. */
 .sidebar-river-status {
-    width: 8px;
-    height: 8px;
-
-    border-radius: 50%;
-
-    background: #9299a3;
-
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.12);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--sb-faint);
+    font-size: 11px;
+    white-space: nowrap;
 }
 
-/* =========================
-   LEGEND
-========================= */
+.sidebar-river-status.has-status {
+    color: var(--sb-muted);
+}
+
+.sidebar-river-status.has-status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--status-color, #7f8792);
+}
+
+/* ---------- legend (for the map markers) ---------- */
 
 .map-legend {
     flex: 0 0 auto;
-
     display: flex;
     flex-wrap: wrap;
-    gap: 7px;
-
-    padding: 10px 12px;
-
-    background: #0d151f;
-
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-
-    color: rgba(255, 255, 255, 0.7);
-
-    font-size: 9px;
+    gap: 6px 12px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--sb-line);
+    color: var(--sb-muted);
+    font-size: 11px;
 }
 
 .legend-item {
     display: flex;
     align-items: center;
-
-    gap: 4px;
+    gap: 5px;
 }
 
 .legend-dot {
     width: 8px;
     height: 8px;
-
     border-radius: 50%;
 }
 
-/* =========================
-   SIDEBAR FOOTER
-========================= */
+/* ---------- footer ---------- */
 
 .sidebar-footer {
     flex: 0 0 auto;
-
-    padding: 10px 12px 12px;
-
-    background: #0b121b;
-
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--sb-line);
 }
 
 .reset-view-btn {
     width: 100%;
-    height: 34px;
+    height: 32px;
 
-    border: 1px solid rgba(212, 175, 106, 0.55);
-    border-radius: 7px;
+    border: 1px solid var(--sb-line);
+    border-radius: 6px;
+    background: var(--sb-raised);
 
-    background: rgba(212, 175, 106, 0.05);
-
-    color: #d4af6a;
-
-    font-size: 10px;
-    font-weight: 700;
+    color: var(--sb-text);
+    font-size: 13px;
+    font-weight: 500;
 
     cursor: pointer;
-
-    transition: 0.2s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .reset-view-btn:hover {
-    background: rgba(212, 175, 106, 0.13);
+    background: #1f2229;
+    border-color: #343944;
+}
+
+.reset-view-btn:focus-visible {
+    outline: 2px solid var(--sb-accent);
+    outline-offset: 2px;
 }
 
 .sidebar-credit {
-    margin: 9px 0 0;
-
-    color: rgba(255, 255, 255, 0.42);
-
-    font-size: 8px;
-    line-height: 1.45;
+    margin: 10px 0 0;
+    color: var(--sb-faint);
+    font-size: 11px;
+    line-height: 1.5;
 }
 
 /* =========================
@@ -502,25 +443,26 @@ body {
 
 .sidebar-toggle {
     position: absolute;
-
-    top: 18px;
-    left: 18px;
+    top: 12px;
+    left: 12px;
 
     display: none;
 
     width: 40px;
     height: 40px;
 
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: 8px;
+    border: 1px solid #252931;
+    border-radius: 6px;
+    background: #111318;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 
-    background: rgba(23, 34, 47, 0.95);
-
-    color: #ffffff;
+    color: #e6e8ec;
+    font-size: 18px;
+    line-height: 1;
 
     cursor: pointer;
-
     z-index: 700;
+    transition: left 0.25s ease;
 }
 
 /* =========================
@@ -553,10 +495,10 @@ body {
 
     margin: 0 0 4px !important;
 
-    border: 1px solid rgba(255, 255, 255, 0.13) !important;
-    border-radius: 8px !important;
+    border: 1px solid #252931 !important;
+    border-radius: 6px !important;
 
-    background: rgba(28, 40, 53, 0.95) !important;
+    background: #111318 !important;
 
     color: #ffffff !important;
 
@@ -566,9 +508,9 @@ body {
 }
 
 #map .leaflet-control-zoom a:hover {
-    background: rgba(50, 66, 84, 0.98) !important;
+    background: #1f2229 !important;
 
-    color: #d4af6a !important;
+    color: #ffffff !important;
 }
 
 /* =========================
@@ -806,23 +748,26 @@ body {
     }
 
     .map-sidebar {
-        top: 10px;
-        left: 10px;
-        bottom: 10px;
+        width: min(300px, calc(100vw - 60px));
 
-        width: min(310px, calc(100vw - 20px));
-
-        transform: translateX(calc(-100% - 20px));
+        transform: translateX(-100%);
+        box-shadow: none;
 
         transition: transform 0.25s ease;
     }
 
     .map-sidebar.open {
         transform: translateX(0);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
     }
 
     .sidebar-toggle {
         display: block;
+    }
+
+    /* When the panel is open the button sits just outside it and doubles as close. */
+    .sidebar-toggle[aria-expanded="true"] {
+        left: calc(min(300px, 100vw - 60px) + 10px);
     }
 
     #map .leaflet-top.leaflet-left {
@@ -919,10 +864,10 @@ body {
 ========================= */
 
 .leaflet-control-layers {
-    background: rgba(18, 28, 40, 0.95) !important;
-    color: #fff !important;
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    border-radius: 8px !important;
+    background: #111318 !important;
+    color: #e6e8ec !important;
+    border: 1px solid #252931 !important;
+    border-radius: 6px !important;
     font-size: 11px;
 }
 .leaflet-control-layers label { color: #fff; margin: 2px 0; }

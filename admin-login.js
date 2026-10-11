@@ -1,6 +1,3 @@
-// Admin-aware login for the landing page modal.
-// 1) Try Firebase Authentication (admin accounts).
-// 2) If that fails, fall back to the original localStorage account check.
 import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { resyncIfOptedIn } from './alerts.js';
@@ -39,7 +36,7 @@ if (loginForm) {
             showToast('Welcome back, ' + (cred.user.displayName || cred.user.email || 'admin') + '.');
             return;
         } catch (err) {
-            // Not a Firebase account (or wrong password) — try the local account below.
+
         } finally {
             if (btn) btn.disabled = false;
         }

@@ -1,3 +1,50 @@
+@font-face {
+    font-family: "College";
+    src: url("Fonts/college.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;  
+}
+
+@font-face {
+    font-family: "College";
+    src: url("Fonts/collegeb.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "College Condensed";
+    src: url("Fonts/collegec.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "College Slanted";
+    src: url("Fonts/colleges.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font-display: "College", Impact, "Arial Narrow Bold", sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    /* ---- HEADING SIZE DIAL -------------------------------------------
+       This one number scales the three big headings (hero, section titles,
+       CTA) at every screen size at once. 1 = the original sizes, which were
+       set for the narrow system sans; College is a much wider face, so it
+       needs to come down to fill the same space.
+         0.60 = noticeably smaller     0.72 = current     0.85 = just a trim
+       Change only this value - the clamp() figures further down keep the
+       desktop / tablet / phone relationship intact on their own. */
+    --display-scale: 0.72;
+}
+
 html { scroll-behavior: smooth; }
 body { overflow-x: hidden; }
 
@@ -154,7 +201,7 @@ button, a, input, textarea { font: inherit; }
 
 .hero-title {
     margin: 0;
-    font-size: clamp(60px, 9vw, 150px);
+    font-size: calc(clamp(60px, 9vw, 150px) * var(--display-scale));
     line-height: .88;
     font-weight: 700;
     letter-spacing: -.065em;
@@ -247,7 +294,7 @@ button, a, input, textarea { font: inherit; }
 .section-title {
     max-width: 1000px;
     margin: 0 0 40px;
-    font-size: clamp(50px, 7vw, 110px);
+    font-size: calc(clamp(50px, 7vw, 110px) * var(--display-scale));
     line-height: .95;
     letter-spacing: -.055em;
 }
@@ -401,7 +448,7 @@ button, a, input, textarea { font: inherit; }
 }
 
 .cta-content h2 {
-    font-size: clamp(55px, 8vw, 120px);
+    font-size: calc(clamp(55px, 8vw, 120px) * var(--display-scale));
     line-height: .9;
     letter-spacing: -.06em;
     margin: 0;
@@ -796,7 +843,44 @@ button, a, input, textarea { font: inherit; }
 body.home-page,
 .auth-modal,
 .toast {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-body);
+}
+
+/* =====================================================================
+   COLLEGE applied — headline type only
+   A display face carries the page's character but is tiring to read in long
+   runs, so paragraphs, buttons, labels and form fields stay in the system
+   sans. To put it on body copy too, change --font-body above instead of
+   adding selectors here.
+   ===================================================================== */
+body.home-page .hero-title,
+body.home-page .section-title,
+body.home-page .cta-content h2,
+body.home-page .feature-info h3,
+body.home-page .process-item h3,
+.auth-modal .auth-header h2 {
+  font-family: var(--font-display);
+}
+
+/* College ships a real bold (collegeb.ttf), so 700 here loads that file rather
+   than making the browser smear a synthetic bold over the regular.
+   The original -0.065em tracking was tuned for a tightly-fitted system sans;
+   College is a wide collegiate block face whose letterforms jam together at
+   negative tracking, so it is opened back up to neutral. */
+body.home-page .hero-title,
+body.home-page .section-title,
+body.home-page .cta-content h2 {
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.05;
+}
+
+/* The outlined second line of each heading: a hairline stroke disappears on a
+   decorative face, so it is nudged up slightly to stay readable. */
+body.home-page .hero-title span,
+body.home-page .section-title span,
+body.home-page .cta-content h2 span {
+  -webkit-text-stroke-width: 1.4px;
 }
 
 /* ===== Auth modal: form fields ===== */
@@ -978,7 +1062,7 @@ body.home-page,
 
     .hero-section { min-height: 100svh; padding: 120px 6% 70px; box-sizing: border-box; }
     .hero-content { max-width: 100%; }
-    .hero-title { font-size: clamp(40px, 13vw, 80px); line-height: .95; letter-spacing: -.05em; overflow-wrap: anywhere; }
+    .hero-title { font-size: calc(clamp(40px, 13vw, 80px) * var(--display-scale)); line-height: .95; letter-spacing: -.05em; overflow-wrap: anywhere; }
     .hero-description { max-width: 100%; font-size: 14px; }
     .hero-buttons { flex-direction: column; align-items: stretch; }
     .primary-btn, .secondary-btn { width: 100%; box-sizing: border-box; gap: 12px; min-height: 48px; }
@@ -986,7 +1070,7 @@ body.home-page,
     .section { display: block; width: 100%; min-height: auto; padding: 90px 6%; box-sizing: border-box; }
     .section-number { display: none; }
     .section-content { width: 100%; max-width: 100%; min-width: 0; }
-    .section-title { max-width: 100%; font-size: clamp(36px, 11vw, 64px); margin-bottom: 28px; overflow-wrap: anywhere; }
+    .section-title { max-width: 100%; font-size: calc(clamp(36px, 11vw, 64px) * var(--display-scale)); margin-bottom: 28px; overflow-wrap: anywhere; }
     .section-description { max-width: 100%; }
     .about-highlight { grid-template-columns: 1fr; }
     .about-highlight div { padding: 25px 15px; }
@@ -1007,7 +1091,7 @@ body.home-page,
 
     .cta-section { min-height: auto; padding: 90px 6%; box-sizing: border-box; }
     .cta-content { width: 100%; max-width: 100%; }
-    .cta-content h2 { font-size: clamp(38px, 12vw, 70px); }
+    .cta-content h2 { font-size: calc(clamp(38px, 12vw, 70px) * var(--display-scale)); }
     .cta-content > p:not(.section-label) { max-width: 100%; font-size: 14px; }
 
     .contact-section { width: 100%; min-width: 0; }
@@ -1029,10 +1113,10 @@ body.home-page,
 @media (max-width: 480px) {
     .nav-links { top: 70px; right: 10px; width: calc(100% - 20px); max-width: 300px; }
     .hero-section { padding: 110px 6% 60px; }
-    .hero-title { font-size: clamp(44px, 14vw, 70px); }
+    .hero-title { font-size: calc(clamp(44px, 14vw, 70px) * var(--display-scale)); }
     .hero-description { font-size: 13px; line-height: 1.7; }
     .section { padding: 80px 6%; }
-    .section-title { font-size: clamp(36px, 11vw, 56px); }
+    .section-title { font-size: calc(clamp(36px, 11vw, 56px) * var(--display-scale)); }
     .feature-image { height: 160px; }
     .feature-info h3 { font-size: 22px; }
     .process-item { grid-template-columns: 30px minmax(0, 1fr); gap: 10px; }
@@ -1043,8 +1127,8 @@ body.home-page,
     .auth-header h2 { font-size: 29px; }
 }
 @media (max-width: 360px) {
-    .hero-title { font-size: 40px; }
-    .section-title { font-size: 34px; }
+    .hero-title { font-size: calc(40px * var(--display-scale)); }
+    .section-title { font-size: calc(34px * var(--display-scale)); }
     .hero-description { font-size: 12px; }
     .feature-info h3 { font-size: 21px; }
     .auth-box { padding: 22px 15px; }

@@ -17,7 +17,10 @@
     --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
 }
 
-html, body.forum-page { overflow-x: clip; }
+/* overflow-x clips horizontal scroll; overflow-y MUST stay explicit "visible" or the
+   browser auto-computes it to "auto", which turns html/body into a scroll container
+   and silently breaks position:sticky on every descendant (e.g. .forum-sidebar). */
+html, body.forum-page { overflow-x: clip; overflow-y: visible; }
 
 body.forum-page {
     background: var(--bg);
@@ -33,6 +36,7 @@ body.forum-page .video-overlay {
         rgba(8, 9, 14, 0.96) 100%
     );
 }
+
 
 .nav {
     position: absolute;
@@ -151,6 +155,36 @@ body.forum-page .video-overlay {
 .nav-toggle.open span:nth-child(2) { opacity: 0; }
 .nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
 
+@media (max-width: 768px) {
+    .nav-toggle { display: flex; }
+
+    .nav-links {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: min(72vw, 320px);
+
+        flex-direction: column;
+        justify-content: center;
+        gap: 32px;
+        padding: 0 48px;
+
+        background: rgba(0, 0, 0, 0.92);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+
+        transform: translateX(100%);
+        transition: transform 0.4s ease;
+    }
+
+    .nav-links.open {
+        transform: translateX(0);
+    }
+}
+
+/* ===== header ===== */
+
 .forum {
     width: 100%;
     max-width: 1560px;
@@ -252,14 +286,11 @@ body.forum-page .video-overlay {
 
 /* ===== sidebar ===== */
 
+/* A normal column: it sits beside the feed and scrolls away with the rest of the
+   page. Deliberately NOT sticky or fixed, and with no max-height, so it never
+   pins to the viewport and never grows its own inner scrollbar. */
 .forum-sidebar {
-    position: sticky;
-    top: 96px;
-    align-self: start;
-    max-height: calc(100vh - 116px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
+    position: static;
     display: flex;
     flex-direction: column;
     gap: 26px;
@@ -770,10 +801,11 @@ body.forum-page .video-overlay {
     gap: 10px;
     padding: 12px 16px 16px;
     border-top: 1px solid var(--line);
-    margin-top: auto;         
+    margin-top: auto;              /* comment box always sits at the bottom of the card */
     padding-top: 12px;
 }
 
+/* keep a little space above the comment box when the card has little content */
 .post-time { margin-bottom: 12px; }
 
 .post-add-comment input {
@@ -808,6 +840,8 @@ body.forum-page .video-overlay {
 .post-add-comment button[disabled],
 .post-add-comment input[disabled] { opacity: .5; }
 
+/* ===== floating submit button ===== */
+
 .fab-submit {
     position: fixed;
     right: 32px;
@@ -834,6 +868,39 @@ body.forum-page .video-overlay {
     box-shadow: 0 14px 34px rgba(124, 10, 231, 0.55);
 }
 
+/* ===== responsive ===== */
+
+/* Below 1100px the two columns stack, with the feed above the sidebar. */
+@media (max-width: 1100px) {
+    .forum-header { grid-template-columns: 1fr; }
+    .forum-stats { grid-column: 1; grid-row: auto; }
+
+    .forum-body {
+        grid-template-columns: 1fr;
+    }
+
+    .forum-sidebar {
+        order: 2;
+    }
+
+    .forum-feed {
+        max-width: 100%;
+        order: 1;
+    }
+}
+
+@media (max-width: 900px) {
+    .forum {
+        padding: 110px 16px 70px;
+    }
+    .forum-feed:has(.post:only-child) .post { display: block; }
+    .forum-feed:has(.post:only-child) .post-media { aspect-ratio: 4 / 5; min-height: 0; }
+
+    .fab-submit span {
+        display: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .post-avatar::before {
         animation: none;
@@ -841,48 +908,4 @@ body.forum-page .video-overlay {
     .post-actions button {
         transition: none;
     }
-}   
-
-/* ======== MOBILE / RESPONSIVE ======== */
-@media (max-width: 1100px) {
-    .forum-header { grid-template-columns: 1fr; }
-    .forum-stats { grid-column: 1; grid-row: auto; }
-    .forum-body { grid-template-columns: minmax(0, 1fr); }
-    .forum-sidebar { position: static; max-height: none; order: 2; }
-    .forum-feed { max-width: 100%; order: 1; }
-}
-@media (max-width: 900px) {
-    .forum { padding: 110px 16px 70px; }
-    .forum-feed { grid-template-columns: minmax(0, 1fr); }
-    .forum-feed:has(.post:only-child) .post { display: block; }
-    .forum-feed:has(.post:only-child) .post-media { aspect-ratio: 4 / 5; min-height: 0; }
-    .fab-submit span { display: none; }
-}
-@media (max-width: 600px) {
-    .forum { padding-inline: 14px; }
-    .forum-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .stat { padding: 12px 8px; }
-    .stat-num { font-size: 1.3rem; }
-    .stat-label { font-size: .68rem; }
-    .forum-title { font-size: clamp(1.7rem, 8vw, 2.4rem); }
-    .post-actions button { width: 44px; height: 44px; }
-    .post-add-comment input { font-size: 16px; min-height: 44px; }
-    .fab-submit { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); }
-}
-@media (max-width: 360px) {
-    .forum-stats { grid-template-columns: 1fr; }
-}
-@media (max-width: 768px) {
-    .nav-toggle { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; }
-    .nav-links {
-        position: fixed; top: 0; right: 0;
-        height: 100vh; height: 100dvh; overflow-y: auto;
-        width: min(72vw, 320px);
-        flex-direction: column; justify-content: center; gap: 32px; padding: 0 48px;
-        background: rgba(0,0,0,.92);
-        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        transform: translateX(100%); visibility: hidden;
-        transition: transform .4s ease, visibility 0s .4s;
-    }
-    .nav-links.open { transform: translateX(0); visibility: visible; transition: transform .4s ease; }
 }
