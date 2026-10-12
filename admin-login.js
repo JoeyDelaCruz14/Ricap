@@ -2,8 +2,9 @@ import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { resyncIfOptedIn } from './alerts.js';
 
+const LOGIN_REDIRECT = 'Home.html';
+const REDIRECT_DELAY_MS = 700;
 const loginForm = document.getElementById('loginForm');
-
 function showToast(message) {
     const toast = document.getElementById('toast');
     const msg = document.getElementById('toastMessage');
@@ -19,8 +20,12 @@ function closeModal() {
     document.body.style.overflow = '';
 }
 
+function goHome() {
+    setTimeout(() => { window.location.href = LOGIN_REDIRECT; }, REDIRECT_DELAY_MS);
+}
+
 if (loginForm) {
-    // Capture phase + stopImmediatePropagation so the original handler doesn't also run.
+
     loginForm.addEventListener('submit', async event => {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -34,20 +39,16 @@ if (loginForm) {
             const cred = await signInWithEmailAndPassword(auth, email, password);
             closeModal();
             showToast('Welcome back, ' + (cred.user.displayName || cred.user.email || 'admin') + '.');
+            goHome(); 
             return;
         } catch (err) {
 
-        } finally {
-            if (btn) btn.disabled = false;
         }
 
         let account = null;
         try { account = JSON.parse(localStorage.getItem('ricapAccount') || 'null'); } catch (e) { }
-        if (!account) {
-            showToast('Incorrect email or password.');
-            return;
-        }
-        if (email !== account.email || password !== account.password) {
+        if (!account || email !== account.email || password !== account.password) {
+            if (btn) btn.disabled = false;
             showToast('Incorrect email or password.');
             return;
         }
@@ -55,5 +56,6 @@ if (loginForm) {
         resyncIfOptedIn();
         closeModal();
         showToast('Welcome back, ' + account.name + '.');
+        goHome();
     }, true);
 }

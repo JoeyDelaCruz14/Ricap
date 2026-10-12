@@ -1,17 +1,10 @@
-// Nav helpers that run on every page loading this file (directly or via Session.js):
-// - Reveals [data-admin-only] items (Admin, Maintenance) for a signed-in, non-anonymous user.
-//   If the page has a #navLinks list but no such items, they are injected.
-// - Adds a "Logout" link for EVERYONE: admins, verified officials and guests.
-//   (performLogout is exported so Session.js / Home.js share the same behaviour.)
 import { auth } from './firebase-config.js';
 import { startReportAlerts } from './Notify.js';
 import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession } from './account.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const LOGOUT_REDIRECT = 'main.html';
-const OFFICIAL_KEY = 'ricap_official';   // same key as account.js / Session.js
-
-// Clears the verified-official session, signs out of Firebase (admin or guest), then leaves.
+const OFFICIAL_KEY = 'ricap_official';  
 export async function performLogout() {
     try { localStorage.removeItem(OFFICIAL_KEY); } catch (e) { /* ignore */ }
     clearLocalLogin();
@@ -50,7 +43,6 @@ function ensureLogoutLink() {
     links.appendChild(li);
 }
 
-// "Hi, <name>" shown in the nav for anyone who is logged in (admin, verified official or account holder)
 function ensureGreeting() {
     const links = document.getElementById('navLinks');
     if (!links) return null;
@@ -69,7 +61,7 @@ function ensureGreeting() {
     return li;
 }
 
-// the existing "Login" link(s) in the nav (text is "Login")
+
 function loginItems() {
     return [...document.querySelectorAll('#navLinks li')].filter(li =>
         !li.hasAttribute('data-logout') &&
@@ -94,7 +86,7 @@ function apply(user) {
 
 function start() {
     onAuthStateChanged(auth, apply);
-    startReportAlerts();      // pop-ups for new reports on every page (no-op if already started)
+    startReportAlerts();    
 }
 
 if (document.readyState === 'loading') {
