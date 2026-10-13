@@ -15,22 +15,7 @@ img, video { height: auto; }
 input, select, textarea, button { max-width: 100%; }
 .m-table-wrap, .table-wrap, .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-/* ---------- 1. Navigation (all pages: 100vh -> dvh, bigger tap target) ---------- */
-@media (max-width: 1380px) {
-    .nav-links { height: 100vh; height: 100dvh; overflow-y: auto; }   /* Landing / Home drawer */
-}
-@media (max-width: 768px) {
-    .nav-links { height: 100vh; height: 100dvh; overflow-y: auto;
-                 padding-bottom: env(safe-area-inset-bottom); }
-    .nav-toggle { width: 44px; height: 44px; min-width: 44px; }      /* >= 40px tap target */
-    .nav-inner { padding-left: max(12px, env(safe-area-inset-left)); }
-    .nav-links a { padding-block: 6px; display: inline-block; }       /* easier to tap */
-}
-@media (max-width: 760px) {
-    .submit-page .nav-toggle { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
-    .submit-page .nav-links a { padding: 12px; }
-    .submit-page .nav-links { max-height: calc(100dvh - 60px); overflow-y: auto; }
-}
+/* ---------- 1. Navigation: now lives only in style.css ---------- */
 
 /* ---------- 2. Apply / Submit page ---------- */
 @media (max-width: 768px) {

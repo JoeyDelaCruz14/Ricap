@@ -75,7 +75,7 @@ function apply(user) {
     ensureLogoutLink();
     const greet = ensureGreeting();
     document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !isAdmin; });
-    loginItems().forEach(li => { li.hidden = loggedIn; });   // Logout itself is always visible
+    loginItems().forEach(li => { li.hidden = loggedIn; });   
     if (greet) {
         const name = displayName(user);
         greet.hidden = !name;

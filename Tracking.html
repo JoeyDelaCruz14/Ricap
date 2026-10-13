@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiCap/Tracking</title>
+<title>Tracking</title>
+<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="Image_Processing.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="Tracking.css">
 <link rel="stylesheet" href="Responsive.css">
+<link rel="stylesheet" href="Tracking.css">
 </head>
 <body>
 
@@ -24,23 +25,21 @@
         </button>
 
         <ul class="nav-links" id="navLinks">
-            <li><a href="main.html">Home</a></li>
+            <li><a href="Home.html">Home</a></li>
             <li><a href="mapping.html">Mapping</a></li>
-            <li><a href="Submit.html">Submit</a></li>
             <li><a href="Image_Processing.html">Scanner</a></li>
-            <li><a href="Tracking.html">Tracking</a></li>
-            <li><a href="forum.html">Forum</a></li>
-            <li><a href="main.html#about">About</a></li>
+            <li><a href="Tracking.html" class="nav-link--active" aria-current="page">Tracking</a></li>
+            <li><a href="main.html#features">About</a></li>
             <li><a href="main.html#contact">Contact</a></li>
+            <li><a href="main.html#loginbutton">Login</a></li>
+            <li><a href="Apply.html">Verify</a></li>
         </ul>
     </div>
 </nav>
 
-<!-- HERO -->
 <header class="scan-hero">
     <p class="scan-eyebrow">Tracking</p>
-    <h1 class="scan-heading">Every river you've scanned, on record.</h1>
-    <p class="scan-sub">Open any past scan to see the exact photo RiCap read and the full pollution breakdown behind its score.</p>
+    <h1 class="scan-heading">Track your reports.</h1>
 </header>
 
 <main class="docs-section">
@@ -146,11 +145,37 @@
 
             <div class="detail-grid">
 
-                <div class="card detail-image-panel">
-                    <p class="card-eyebrow">Processed Photo</p>
-                    <img id="detailImage" alt="Processed river photo">
-                    <p class="detail-timestamp" id="detailTimestamp"></p>
-                    <p class="detail-timestamp" id="detailReporter"></p>
+                <div class="detail-side">
+                    <div class="card detail-image-panel">
+                        <p class="card-eyebrow">Processed Photo</p>
+                        <img id="detailImage" alt="Processed river photo">
+                        <p class="detail-timestamp" id="detailTimestamp"></p>
+                        <p class="detail-timestamp" id="detailReporter"></p>
+                    </div>
+
+                    <div class="card detail-indicators-panel">
+                        <p class="indicator-heading">Visual Indicators</p>
+                        <div class="metric-grid">
+                            <div class="metric-tile">
+                                <p class="label">Color Cast</p>
+                                <p class="value" id="detailColorCast"></p>
+                            </div>
+                            <div class="metric-tile">
+                                <p class="label">Surface Clarity</p>
+                                <p class="value" id="detailSurfaceClarity"></p>
+                            </div>
+                            <div class="metric-tile">
+                                <p class="label">Lighting</p>
+                                <p class="value" id="detailLighting"></p>
+                            </div>
+                            <div class="metric-tile">
+                                <p class="label">Overall Reading</p>
+                                <p class="value" id="detailOverall"></p>
+                            </div>
+                        </div>
+
+                        <p class="meta-line" id="detailMetaLine"></p>
+                    </div>
                 </div>
 
                 <div class="card detail-analysis-panel">
@@ -176,28 +201,6 @@
                         <span class="label">Assessment</span>
                         <p id="detailAssessmentText"></p>
                     </div>
-
-                    <p class="indicator-heading">Visual Indicators</p>
-                    <div class="metric-grid">
-                        <div class="metric-tile">
-                            <p class="label">Color Cast</p>
-                            <p class="value" id="detailColorCast"></p>
-                        </div>
-                        <div class="metric-tile">
-                            <p class="label">Surface Clarity</p>
-                            <p class="value" id="detailSurfaceClarity"></p>
-                        </div>
-                        <div class="metric-tile">
-                            <p class="label">Lighting</p>
-                            <p class="value" id="detailLighting"></p>
-                        </div>
-                        <div class="metric-tile">
-                            <p class="label">Overall Reading</p>
-                            <p class="value" id="detailOverall"></p>
-                        </div>
-                    </div>
-
-                    <p class="meta-line" id="detailMetaLine"></p>
 
                     <div class="disclaimer-box">
                         <span class="icon">i</span>

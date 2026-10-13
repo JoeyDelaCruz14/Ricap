@@ -1,6 +1,6 @@
-import { db, storage } from './firebase-config.js';
-import {collection, addDoc, serverTimestamp
-} from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+import { rtdb, storage } from './firebase-config.js';
+import { ref as dbRef, push, serverTimestamp
+} from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js';
 import {
     ref,
     uploadBytes,
@@ -198,17 +198,17 @@ form.addEventListener('submit', async e => {
         const name = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const photoRef = ref(storage, `applications/${name}`);
         await uploadBytes(photoRef, photoBlob, { contentType: photoBlob.type || 'image/jpeg' });
-        const photoUrl = await getDownloadURL(photoRef);
-        await addDoc(collection(db, 'applications'), {
+        const photoURL = await getDownloadURL(photoRef);
+        await push(dbRef(rtdb, 'officialApplications'), {
             fullName: $('fullName').value.trim(),
             role: $('roleInput').value,
             organization: $('orgInput').value.trim(),
             email: $('emailInput').value.trim().toLowerCase(),
             phone,                    
-            photoUrl,
+            photoURL,
             photoPath: photoRef.fullPath,
             status: 'pending',
-            createdAt: serverTimestamp()
+            submittedAt: serverTimestamp()
         });
         formSection.hidden = true;
         successSection.hidden = false;

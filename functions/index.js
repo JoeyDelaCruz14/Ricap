@@ -1,6 +1,7 @@
 // RiCap email alerts: when a new report is saved, email everyone who turned alerts on.
 // Uses EmailJS's REST API (same EmailJS account as the access codes).
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
@@ -86,3 +87,27 @@ exports.sendReportAlerts = onDocumentCreated(
         }
     }
 );
+
+// Verified officials: the access code is checked HERE, on the server, and the caller's
+// Firebase user is marked with the custom claim { official: true }. Firestore and Storage
+// rules check that claim, so only verified officials can save reports or upload images,
+// whatever the page itself shows. Called from Session.js verifyCode().
+exports.redeemAccessCode = onCall({ region: 'asia-southeast1' }, async request => {
+    if (!request.auth) {
+        throw new HttpsError('unauthenticated', 'Your session has expired. Reload the page and try again.');
+    }
+    const code = String((request.data && request.data.code) || '').trim().toUpperCase();
+    if (!/^[A-Z0-9-]{4,40}$/.test(code)) {
+        throw new HttpsError('invalid-argument', 'Enter the access code exactly as it was emailed to you.');
+    }
+
+    const snap = await admin.database().ref('accessCodes/' + code).get();
+    if (!snap.exists() || !snap.val().active) {
+        throw new HttpsError('permission-denied', 'Invalid or inactive access code.');
+    }
+
+    const v = snap.val();
+    await admin.auth().setCustomUserClaims(request.auth.uid, { official: true, officialCode: code });
+    logger.info('Official verified', { uid: request.auth.uid, code });
+    return { name: v.officialName || '', role: v.role || '', organization: v.organization || '' };
+});

@@ -2,8 +2,8 @@ import { storage, auth, db } from './firebase-config.js';
 import { ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import { signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
-import { getOfficial, isVerified, verifyCode } from './Session.js';
-import { nearestRiver } from './river-status.js';
+import { getOfficial, verifyCode, signOutOfficial } from './Session.js';
+import { initSteps, onImageFile, getSelection, refreshGate, isGateVerified } from './scanner-steps.js';
 
 let clipModPromise = null;
 function getClipGate() {
@@ -19,8 +19,6 @@ function getClipGate() {
 getClipGate()
     .then(function (m) { return m.loadClipGate(); })
     .catch(function (e) { console.warn('[CLIP] preload failed', e); });
-
-const OFFICIAL_KEY = 'ricap_official';
 
 function initNav() {
     const nav = document.getElementById('siteNav');
@@ -254,160 +252,93 @@ function buildRecommendation(a) {
 }
 
 
-function isLikelyMobile() {
-    return /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent || '');
-}
-
-function riverPoint(river) {
-    if (!river) return null;
-    if (typeof river.lat === 'number' && typeof river.lng === 'number') {
-        return { lat: river.lat, lng: river.lng };
-    }
-    const p = Array.isArray(river.path) && river.path.find(function (x) { return Array.isArray(x) && x.length >= 2; });
-    return p ? { lat: p[0], lng: p[1] } : null;
-}
-
-function askReportDetails(warnings) {
+// Confirms where the report goes (chosen in step 1) and asks for a report name.
+function askReportDetails(warnings, selection) {
     return new Promise(function (resolve) {
-        const list = getRiverList();
-
         const overlay = document.createElement('div');
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto';
+        overlay.className = 'report-dialog-backdrop';
 
-        const labelStyle = 'font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5)';
-        const fieldStyle = 'width:100%;box-sizing:border-box;margin:6px 0 14px;padding:11px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#0b0c10;color:#fff;font-family:inherit;font-size:.9rem';
-
-        const warnHtml = warnings && warnings.length
-            ? '<p style="font-size:.8rem;color:#e6b207;line-height:1.5">Heads up: ' +
-              warnings.map(function (w) { return escapeHtml(w.message); }).join(' ') + '</p>'
+        const allWarnings = (warnings || []).map(function (w) { return w.message; })
+            .concat(selection.warnings || []);
+        const warnHtml = allWarnings.length
+            ? '<p class="report-dialog-warn">Heads up: ' + allWarnings.map(escapeHtml).join(' ') + '</p>'
             : '';
 
         overlay.innerHTML =
-            '<div role="dialog" aria-modal="true" style="background:#14151b;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:26px;max-width:440px;width:100%;color:#fff">' +
-            '<h3 style="font-family:Georgia,serif;margin:0 0 6px">Submit official report</h3>' +
-            '<p style="font-size:.85rem;color:rgba(255,255,255,.55);margin:0 0 16px;line-height:1.5">Your photo and results will be saved to Tracking, the Map and the Forum.</p>' +
+            '<div class="report-dialog" role="dialog" aria-modal="true" aria-labelledby="rpTitle">' +
+            '<h3 id="rpTitle">Submit official report</h3>' +
+            '<p class="report-dialog-copy">Your photo and result will be saved to Tracking, the Map and the Forum.</p>' +
+            '<p class="report-dialog-target"><span>Saving to</span><strong>' + escapeHtml(selection.label) + '</strong></p>' +
             warnHtml +
-            '<label style="' + labelStyle + '" for="rpName">Report name</label>' +
-            '<input id="rpName" maxlength="80" placeholder="e.g. Lamao River \u2013 near bridge" style="' + fieldStyle + '">' +
-            '<label style="' + labelStyle + '" for="rpRiver">River</label>' +
-            '<select id="rpRiver" style="' + fieldStyle + '"></select>' +
-            '<label style="' + labelStyle + '" for="rpSource">Location</label>' +
-            '<select id="rpSource" style="' + fieldStyle + ';margin-bottom:6px">' +
-            '<option value="river">Use the selected river\u2019s location (works on PC)</option>' +
-            '<option value="gps">Use my device GPS (phone, outdoors)</option>' +
-            '</select>' +
-            '<p id="rpSourceHint" style="font-size:.75rem;color:rgba(255,255,255,.45);margin:0 0 14px;line-height:1.45"></p>' +
-            '<p id="rpErr" style="color:#d6574a;font-size:.8rem;margin:0 0 10px" hidden></p>' +
-            '<div style="display:flex;gap:10px">' +
+            '<label class="field-label" for="rpName">Report name</label>' +
+            '<input id="rpName" class="field-input" maxlength="80" placeholder="e.g. Lamao River \u2013 near bridge">' +
+            '<p id="rpErr" class="file-error" role="alert" hidden></p>' +
+            '<div class="report-dialog-actions">' +
             '<button id="rpCancel" class="btn btn-outline" type="button">Cancel</button>' +
             '<button id="rpOk" class="btn btn-solid" type="button">Submit</button>' +
             '</div></div>';
 
-        const riverSel = overlay.querySelector('#rpRiver');
-        const sourceSel = overlay.querySelector('#rpSource');
-        const hint = overlay.querySelector('#rpSourceHint');
-        const errEl = overlay.querySelector('#rpErr');
-
-        function rebuildRivers() {
-            const gps = sourceSel.value === 'gps';
-            const keep = riverSel.value;
-            riverSel.innerHTML = '';
-            const first = document.createElement('option');
-            first.value = '';
-            first.textContent = gps ? 'Auto-detect from my GPS location' : 'Select a river\u2026';
-            riverSel.appendChild(first);
-            const groups = {};
-            list.forEach(function (r) {
-                const key = COAST_LABELS[r.coast] || 'Rivers';
-                (groups[key] = groups[key] || []).push(r);
-            });
-            Object.keys(groups).forEach(function (label) {
-                const og = document.createElement('optgroup');
-                og.label = label;
-                groups[label]
-                    .slice()
-                    .sort(function (x, y) { return String(x.name).localeCompare(String(y.name)); })
-                    .forEach(function (r) {
-                        const opt = document.createElement('option');
-                        opt.value = String(r.id);
-                        opt.textContent = r.name || r.officialName || String(r.id);
-                        og.appendChild(opt);
-                    });
-                riverSel.appendChild(og);
-            });
-            riverSel.value = keep;
-            hint.textContent = gps
-                ? 'Needs a real GPS fix (within about 1 km) inside Bataan. Not reliable on a desktop.'
-                : 'The report is placed on the river you select. Use this when you are not at the river or have no GPS.';
-        }
-
-        sourceSel.value = isLikelyMobile() ? 'gps' : 'river';
-        sourceSel.addEventListener('change', rebuildRivers);
-        rebuildRivers();
-
         document.body.appendChild(overlay);
-        overlay.querySelector('#rpName').focus();
+        const nameInput = overlay.querySelector('#rpName');
+        const errEl = overlay.querySelector('#rpErr');
+        nameInput.focus();
 
         function close(result) {
+            document.removeEventListener('keydown', onKey);
             overlay.remove();
             resolve(result);
         }
-
-        overlay.querySelector('#rpCancel').addEventListener('click', function () { close(null); });
-        overlay.querySelector('#rpOk').addEventListener('click', function () {
-            const name = overlay.querySelector('#rpName').value.trim();
+        function submit() {
+            const name = nameInput.value.trim();
             if (name.length < 3) {
                 errEl.textContent = 'Please enter a report name (at least 3 characters).';
                 errEl.hidden = false;
+                nameInput.focus();
                 return;
             }
-            if (sourceSel.value === 'river' && !riverSel.value) {
-                errEl.textContent = 'Please select the river this report is for.';
-                errEl.hidden = false;
-                return;
-            }
-            close({ name: name, riverId: riverSel.value, locationSource: sourceSel.value });
-        });
+            close({ name: name });
+        }
+        function onKey(e) {
+            if (e.key === 'Escape') close(null);
+            if (e.key === 'Enter' && document.activeElement === nameInput) submit();
+        }
+        document.addEventListener('keydown', onKey);
+        overlay.querySelector('#rpCancel').addEventListener('click', function () { close(null); });
+        overlay.querySelector('#rpOk').addEventListener('click', submit);
     });
 }
 
+// Plain-language messages for the ways a submission can fail
+function friendlyError(err) {
+    const code = String((err && err.code) || '');
+    if (!navigator.onLine || /unavailable|network|retry-limit|deadline/.test(code)) {
+        return 'No connection to the server, so nothing was saved. Check your internet and press Submit again \u2014 your scan is kept.';
+    }
+    if (/permission-denied|unauthorized/.test(code)) {
+        return 'The server did not accept this report because your official access could not be confirmed. Press \u201cnot you?\u201d, enter your access code again, then submit.';
+    }
+    if (/unauthenticated/.test(code)) {
+        return 'Your session expired. Reload the page, then submit again.';
+    }
+    if (/quota|resource-exhausted/.test(code)) {
+        return 'The service is busy right now. Wait a minute and submit again.';
+    }
+    return (err && err.message) || 'Something went wrong while saving. Try again.';
+}
 
 async function submitOfficialReport(analysis, imageDataUrl, details) {
-    const riverList = getRiverList();
-    const picked = details.riverId
-        ? riverList.find(function (r) { return String(r.id) === String(details.riverId); })
-        : null;
-
-    let loc;
-    if (details.locationSource === 'river') {
-        // Location comes from the river the official selected (PC-friendly)
-        const pt = riverPoint(picked);
-        if (!picked || !pt) {
-            throw new Error('Please select a river that has map coordinates.');
-        }
-        loc = { lat: pt.lat, lng: pt.lng, accuracy: null, source: 'river-selected' };
-    } else {
-        loc = await getUserLocation();
-        loc.source = 'gps';
-        if (loc.accuracy > MAX_ACCEPT_ACCURACY_M) {
-            throw new Error('Your device only gave an approximate location (\u00b1' + loc.accuracy +
-                ' m). Choose "Use the selected river\u2019s location" instead, or submit from a phone with GPS outdoors.');
-        }
-        if (!inBataan(loc.lat, loc.lng)) {
-            throw new Error('Your GPS location is outside Bataan. Choose "Use the selected river\u2019s location" instead.');
-        }
-        if (loc.accuracy > WARN_ACCURACY_M &&
-            !confirm('Your location is only accurate to about \u00b1' + loc.accuracy +
-                ' m. Move outdoors for a better fix, or press OK to submit anyway.')) {
-            throw new Error('Cancelled: location was not accurate enough.');
-        }
-    }
-
+    const selection = details.selection;
+    const loc = selection.loc;               // GPS/EXIF when it is on the chosen segment, else the segment's middle
+    const riverId = selection.riverId;
+    const segmentId = selection.segmentId;   // same ids as the map: riverId-seg1 .. riverId-seg4
     const official = getOfficial() || {};
-    const river = picked || nearestRiver(loc.lat, loc.lng, riverList);
-    const riverId = river ? river.id : null;
-    if (!riverId) {
-        throw new Error('No mapped river within 4 km of your location. Select the river from the list and try again.');
+
+    await ensureFirebaseAuth();
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (!uid) {
+        const e = new Error('Your session expired.');
+        e.code = 'unauthenticated';
+        throw e;
     }
 
     const recordId = makeRecordId();
@@ -426,6 +357,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         recordId: recordId,
         reportName: details.name,
         riverId: riverId,
+        segmentId: segmentId,          // e.g. "colo-seg2" (1 = upstream ... 4 = downstream), or null
         lat: loc.lat,
         lng: loc.lng,
         accuracy: loc.accuracy,
@@ -439,6 +371,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         reporterName: official.name || '',
         reporterRole: official.role || '',
         reporterCode: official.code || '',
+        uid: uid,                        // the submitting user's Firebase id (checked by the rules)
         createdAt: serverTimestamp()
     });
 
@@ -448,6 +381,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         timestamp: timestamp,
         name: details.name,
         riverId: riverId,
+        segmentId: segmentId,
         image: thumb,
         firebasePath: uploaded.path,
         firebaseUrl: uploaded.url,
@@ -553,18 +487,46 @@ function initScanner() {
         showWaitingQuickRead();
     }
 
+    const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const MAX_FILE_BYTES = 10 * 1024 * 1024;
+    const fileMeta = document.getElementById('fileMeta');
+    const fileError = document.getElementById('fileError');
+
+    function showFileError(msg) {
+        fileError.textContent = msg || '';
+        fileError.hidden = !msg;
+    }
+
     function handleFiles(fileList) {
         const file = fileList && fileList[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-            alert('Please choose an image file (JPG, PNG, or WEBP).');
+        if (!isGateVerified()) {
+            showFileError('Only verified officials can upload photos.');
             return;
         }
+        if (!ACCEPTED_TYPES.includes(file.type)) {
+            showFileError('\u201c' + file.name + '\u201d is not a JPG, PNG or WEBP image. Please choose a photo in one of those formats.');
+            fileInput.value = '';
+            return;
+        }
+        if (file.size > MAX_FILE_BYTES) {
+            showFileError('\u201c' + file.name + '\u201d is ' + (file.size / 1048576).toFixed(1) + ' MB. Please choose a photo under 10 MB.');
+            fileInput.value = '';
+            return;
+        }
+        showFileError('');
 
         const reader = new FileReader();
-        reader.onload = function (e) { loadImageDataUrl(e.target.result); };
+        reader.onload = function (e) {
+            loadImageDataUrl(e.target.result);
+            fileMeta.textContent = file.name + ' \u00b7 ' + file.type.replace('image/', '').toUpperCase() + ' \u00b7 ' +
+                (file.size < 1048576 ? Math.round(file.size / 1024) + ' KB' : (file.size / 1048576).toFixed(1) + ' MB');
+            fileMeta.hidden = false;
+        };
+        reader.onerror = function () { showFileError('That file could not be read. Try another photo.'); };
         reader.readAsDataURL(file);
+        onImageFile(file);                  // GPS in the photo suggests a segment (never applied silently)
     }
 
     async function openCamera() {
@@ -621,6 +583,9 @@ function initScanner() {
 
         closeCamera();
         loadImageDataUrl(dataUrl);
+        fileMeta.textContent = 'Camera photo \u00b7 use \u201cSuggest from my location\u201d in step 1 to match the segment';
+        fileMeta.hidden = false;
+        showFileError('');
     }
 
     cameraBtn.addEventListener('click', openCamera);
@@ -680,6 +645,8 @@ function initScanner() {
         placeholder.hidden = false;
         scanBtn.disabled = true;
         fileInput.value = '';
+        fileMeta.hidden = true;
+        showFileError('');
         dropzone.classList.remove('is-scanning');
         renderWarnings([]);
         hideRecommendation();
@@ -696,6 +663,12 @@ function setScanningUI(isScanning, label) {
     document.getElementById('uploadBtn').disabled = isScanning;
     document.getElementById('resetBtn').disabled = isScanning;
     updateSubmitUI();
+
+    const progress = document.getElementById('scanProgress');
+    if (progress) {
+        progress.hidden = !isScanning;
+        document.getElementById('scanProgressText').textContent = label || 'Running the model\u2026';
+    }
 
     if (isScanning) {
         document.getElementById('quickStatusTitle').textContent = 'Scanning…';
@@ -744,8 +717,16 @@ async function handleSubmitReport() {
     const pending = scannerState.pending;
     if (!pending || scannerState.submitted || scannerState.isSubmitting || scannerState.isScanning) return;
 
-    if (!isVerified()) {
-        alert('Only verified officials can submit official reports. Enter your access code in the Verified officials box first.');
+    if (!isGateVerified()) {
+        showSubmitStatus('error', 'Only verified officials can submit official reports. Enter your access code at the top of the page first.');
+        return;
+    }
+
+    const selection = getSelection();
+    if (!selection.ok) {
+        showSubmitStatus('error', selection.error);
+        const step1 = document.getElementById('stepRiver');
+        if (step1) { step1.scrollIntoView({ behavior: 'smooth', block: 'center' }); step1.focus({ preventScroll: true }); }
         return;
     }
 
@@ -754,13 +735,10 @@ async function handleSubmitReport() {
         return;
     }
 
-    // Lock the button now: the river check below can take a while, and a second click
-    // during it must not start a second submission.
+
     scannerState.isSubmitting = true;
     updateSubmitUI();
 
-    // An official report must always pass the river-photo check. If the scan had to skip
-    // it (model still downloading), run it now instead of making the official rescan.
     if (!pending.analysis.gateRan) {
         const sub = document.getElementById('quickStatusSub');
         sub.textContent = 'Running the river-photo check before submitting\u2026';
@@ -791,37 +769,31 @@ async function handleSubmitReport() {
         renderWarnings(pending.analysis.warnings);
     }
 
-    const details = await askReportDetails(pending.analysis.warnings);
+    const details = await askReportDetails(pending.analysis.warnings, selection);
     if (!details) {
         scannerState.isSubmitting = false;
         updateSubmitUI();
         return;
     }
-    document.getElementById('quickStatusSub').textContent = details.locationSource === 'gps'
-        ? 'Getting your exact location and uploading official report…'
-        : 'Uploading official report…';
+    details.selection = selection;
+    showSubmitStatus('busy', 'Uploading the photo and saving the report to ' + selection.label + '\u2026');
 
     try {
         const recordId = await submitOfficialReport(pending.analysis, pending.dataUrl, details);
         scannerState.lastRecordId = recordId;
         scannerState.submitted = true;
         scannerState.pending = null;
-        document.getElementById('quickStatusSub').textContent =
-            'Official report "' + details.name + '" submitted and saved to Tracking. ' + pending.analysis.assessment;
+        showSubmitStatus('success', 'Report \u201c' + details.name + '\u201d saved to ' + selection.label +
+            '. It now shows on that segment of the map, in Tracking and in the Forum.');
     } catch (err) {
         console.error('Report submission failed:', err);
-        document.getElementById('quickStatusSub').textContent =
-            'Submission failed, so the report was NOT saved to Tracking (' + err.message + '). Try Submit again.';
+        showSubmitStatus('error', 'Not saved. ' + friendlyError(err));
     } finally {
         scannerState.isSubmitting = false;
         updateSubmitUI();
     }
 }
 
-// Two detectors work together:
-//  - LITTER model  (river_litter.onnx, 1 class: 'trash')  -> finds the trash itself
-//  - SCENE model   (river_pollution.onnx)                  -> oil / algae / dirty / chemical water
-// Set USE_SCENE_MODEL to false to run the litter model ONLY (smaller download, no water-scene classes).
 const LITTER_MODEL_URL = 'models/river_litter.onnx';
 const LITTER_MODEL_CLASSES = ['trash'];
 const SCENE_MODEL_URL = 'models/river_pollution.onnx';
@@ -1015,6 +987,8 @@ const YOLO_DOWNLOAD_TIMEOUT_MS = 60000;
 function updateScanLabel(text) {
     const sub = document.getElementById('quickStatusSub');
     if (sub) sub.textContent = text;
+    const prog = document.getElementById('scanProgressText');
+    if (prog) prog.textContent = text;
     console.log('[YOLO]', text);
 }
 
@@ -1241,7 +1215,6 @@ async function detectTiles(session, inputName, outputName, img, size, classNames
     return found;
 }
 
-// Runs ONE model on the full image (+ tiles). Returns detections.
 async function runOneModel(modelUrl, classNames, skipLabels, img, size) {
     const session = await getYoloSession(modelUrl);
     const inputName = session.inputNames[0];
@@ -1712,15 +1685,8 @@ function buildAssessment(items, contextItems, surface, clutter, modelAvailable, 
     return parts.join(' ');
 }
 
-// The river-photo check (CLIP) is a separate ~90 MB model fetched from Hugging Face.
-// On a first visit or a slow connection that download can take minutes, and the scan
-// used to wait on it with no limit - so the page sat on "Checking that this is a river
-// photo…" forever and never reached the scoring. Now the scan waits a bounded time,
-// then carries on without the check. The model keeps downloading in the background,
-// and the check is re-run at submit time (see ensureRiverCheck), so an official
-// report can still never skip it.
-const CLIP_SCAN_WAIT_MS = 25000;     // how long a scan waits for the river check
-const CLIP_SUBMIT_WAIT_MS = 60000;   // how long Submit waits (the model is usually ready by then)
+const CLIP_SCAN_WAIT_MS = 25000;     
+const CLIP_SUBMIT_WAIT_MS = 60000;  
 
 function withTimeout(promise, ms, label) {
     let timer;
@@ -2202,9 +2168,28 @@ function showWaitingQuickRead() {
     updateSubmitUI();
 }
 
+function showSubmitStatus(kind, text) {
+    const box = document.getElementById('submitStatus');
+    if (!box) return;
+    box.className = 'submit-status is-' + kind;
+    box.textContent = text;
+    box.hidden = !text;
+}
+
+function renderResultSegment() {
+    const el = document.getElementById('resultSegment');
+    if (!el) return;
+    const sel = getSelection();
+    el.textContent = sel.ok ? sel.label : 'No segment chosen yet. Choose one in step 1.';
+    el.classList.toggle('is-missing', !sel.ok);
+}
+
 function hideRecommendation() {
     const box = document.getElementById('recoBox');
     if (box) box.hidden = true;
+    const conf = document.getElementById('resultConfidence');
+    if (conf) conf.hidden = true;
+    showSubmitStatus('', '');
 }
 
 function renderQuickRead(result) {
@@ -2215,6 +2200,12 @@ function renderQuickRead(result) {
     document.getElementById('quickStatusSub').textContent = result.assessment;
     document.getElementById('quickScoreValue').textContent = result.score;
     document.getElementById('quickreadActions').hidden = false;
+    renderResultSegment();
+    const conf = document.getElementById('resultConfidence');
+    if (conf && result.confidence != null) {
+        conf.textContent = 'Model confidence: ' + Math.round(result.confidence) + '%';
+        conf.hidden = false;
+    }
 
     const recoText = document.getElementById('recoText');
     const recoSource = document.getElementById('recoSource');
@@ -2248,16 +2239,9 @@ function renderWarnings(warnings) {
 
 /* ---------- Access code gate (replaces Submit.html) ---------- */
 
+// who sees what (guest / not verified / verified) is decided in scanner-steps.js
 function refreshVerifyUI() {
-    const official = getOfficial();
-    const banner = document.getElementById('verifyBanner');
-    const bar = document.getElementById('verifiedBar');
-    if (banner) banner.hidden = !!official;
-    if (bar) {
-        bar.hidden = !official;
-        const nameEl = document.getElementById('verifiedName');
-        if (nameEl && official) nameEl.textContent = official.name || 'Verified Official';
-    }
+    return refreshGate();
 }
 
 function initAccessGate() {
@@ -2285,7 +2269,9 @@ function initAccessGate() {
                 console.error(ex);
                 err.textContent = /Invalid or inactive/i.test(ex.message)
                     ? INVALID_MSG
-                    : 'Couldn\u2019t verify that code right now \u2014 please try again.';
+                    : (!navigator.onLine
+                        ? 'You are offline. Connect to the internet and try again.'
+                        : 'Couldn\u2019t verify that code right now \u2014 please try again.');
                 err.hidden = false;
             } finally {
                 btn.disabled = false;
@@ -2295,8 +2281,8 @@ function initAccessGate() {
     }
 
     if (signOutBtn) {
-        signOutBtn.addEventListener('click', function () {
-            try { localStorage.removeItem(OFFICIAL_KEY); } catch (e) { /* ignore */ }
+        signOutBtn.addEventListener('click', async function () {
+            await signOutOfficial();
             refreshVerifyUI();
         });
     }
@@ -2308,6 +2294,15 @@ function boot() {
     initNav();
     initScanner();
     showWaitingQuickRead();
+    initSteps({
+        rivers: getRiverList(),
+        coastLabels: COAST_LABELS,
+        getUserLocation: getUserLocation,
+        inBataan: inBataan,
+        escapeHtml: escapeHtml
+    });
+    document.addEventListener('ricap:selection-change', renderResultSegment);
+    renderResultSegment();
     initAccessGate();
 }
 

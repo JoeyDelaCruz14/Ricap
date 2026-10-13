@@ -30,7 +30,7 @@ async function sendAccessCodeEmail(data, code) {
                 role: data.role,
                 organization: data.organization,
                 access_code: code,
-                submit_url: new URL('Submit.html', window.location.href).href
+                submit_url: new URL('Image_Processing.html', window.location.href).href
             }
         })
     });
@@ -42,9 +42,9 @@ async function sendAccessCodeEmail(data, code) {
 }
 
 function buildMailtoLink(data, code) {
-    const submitUrl = new URL('Submit.html', window.location.href).href;
+    const submitUrl = new URL('Image_Processing.html', window.location.href).href;
     const body = 'Hi ' + data.fullName + ',\n\nYour RiCap application was approved. Your access code is: ' +
-        code + '\n\nEnter it on the Submit page: ' + submitUrl + '\n\n- RiCap';
+        code + '\n\nEnter it on the Scanner page: ' + submitUrl + '\n\n- RiCap';
     return 'mailto:' + encodeURIComponent(data.email) +
         '?subject=' + encodeURIComponent('Your RiCap access code') +
         '&body=' + encodeURIComponent(body);
@@ -152,7 +152,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Approved and saved. Now try to email the code.
             btn.textContent = 'Emailing…';
             try {
                 await sendAccessCodeEmail(data, code);

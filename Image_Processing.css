@@ -29,104 +29,7 @@ body::before {
     pointer-events: none;
 }
 
-.nav {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    background: transparent;
-    border-bottom: 1px solid transparent;
-    transition: background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease;
-}
-
-.nav-brand {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-    font-weight: 700;
-    font-size: 1.2rem;
-    letter-spacing: 0.01em;
-    color: #fff;
-    text-decoration: none;
-    padding-left: 8px;
-}
-.nav-brand span { color: #7a07e6; }
-
-.nav-inner {
-    max-width: none;
-    margin: 0 auto;
-    padding: 13px 40px;
-    display: flex;
-    align-items: center;
-    padding: 0 0 0 12px;
-    justify-content: space-between;
-}
-
-.nav-links {
-    list-style: none;
-    display: flex;
-    gap: 40px;
-    margin: 0;
-    padding: 0;
-    position: absolute;
-    top: 22px;
-    right: 30px;
-}
-
-.nav-links a {
-    position: relative;
-    color: rgba(255, 255, 255, 0.82);
-    text-decoration: none;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 0.90rem;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    transition: color 0.25s ease;
-}
-
-.nav-links a::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -6px;
-    width: 0%;
-    height: 1px;
-    background: #7000f0;
-    transition: width 0.3s ease;
-}
-
-.nav-links a:hover,
-.nav-links a:focus-visible {
-    color: #fff;
-}
-
-.nav-links a:hover::after,
-.nav-links a:focus-visible::after {
-    width: 100%;
-}
-
-.nav-toggle {
-    display: none;
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-    width: 28px;
-    height: 28px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-}
-.nav-toggle span {
-    display: block;
-    width: 100%;
-    height: 1.5px;
-    background: #fff;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-.nav-toggle.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
-.nav-toggle.open span:nth-child(2) { opacity: 0; }
-.nav-toggle.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+/* navigation: styled only in style.css (the one nav for every page) */
 
 .scan-hero {
     padding: 18vh 8vw 6vh;
@@ -571,17 +474,502 @@ body::before {
     .camera-overlay video { max-height: 50dvh; }
     .score-value { font-size: 2rem; }
 }
-@media (max-width: 768px) {
-    .nav-toggle { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; }
-    .nav-links {
-        position: fixed; top: 0; right: 0;
-        height: 100vh; height: 100dvh; overflow-y: auto;
-        width: min(72vw, 320px);
-        flex-direction: column; justify-content: center; gap: 32px; padding: 0 48px;
-        background: rgba(0,0,0,.92);
-        backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        transform: translateX(100%); visibility: hidden;
-        transition: transform .4s ease, visibility 0s .4s;
-    }
-    .nav-links.open { transform: translateX(0); visibility: visible; transition: transform .4s ease; }
+
+/* =====================================================================
+   SCANNER PAGE: steps, gate, segment map (scoped to body.scanner-page,
+   since Tracking.html also loads this stylesheet). Existing colours only.
+   ===================================================================== */
+
+.scanner-page .scan-hero {
+    max-width: 1300px;
+    margin: 0 auto;
+    box-sizing: content-box;
+    padding: 132px 8vw 28px;
 }
+
+.scanner-page .scan-section { padding: 0 8vw 12vh; }
+
+.scanner-page .scan-section > * { max-width: 1300px; margin-left: auto; margin-right: auto; }
+
+.scanner-page .card { border-radius: 18px; padding: clamp(18px, 2.2vw, 28px); }
+
+.scanner-page .card-desc { margin-bottom: 18px; }
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+/* ---------- focus + buttons ---------- */
+
+.scanner-page .btn:focus-visible,
+.scanner-page .field-input:focus-visible,
+.scanner-page .verify-form input:focus-visible,
+.scanner-page .scanner-viewport:focus-visible,
+.scanner-page .link-btn:focus-visible,
+.scanner-page a:focus-visible {
+    outline: 2px solid #c0a1ee;
+    outline-offset: 2px;
+}
+
+.scanner-page a.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.scanner-page .btn { line-height: 1.2; }
+.scanner-page .btn:active:not(:disabled) { transform: scale(0.98); }
+.scanner-page .btn-solid:hover:not(:disabled) { background: #8d07e6; }
+
+/* the Submit Official Report button (created by Image_Processing.js) */
+.scanner-page .btn-primary {
+    background: linear-gradient(135deg, #7c3aed, #6021d6);
+    color: #fff;
+}
+.scanner-page .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 26px rgba(105, 44, 232, 0.4);
+}
+
+.scanner-page .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ---------- gate ---------- */
+
+.gate-card { margin-bottom: 20px; }
+
+.gate-checking {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+}
+
+.gate-checking[hidden] { display: none; }
+
+.gate-spinner {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #c0a1ee;
+    border-radius: 50%;
+    animation: gateSpin .8s linear infinite;
+}
+
+@keyframes gateSpin { to { transform: rotate(360deg); } }
+
+.gate-guest,
+.scanner-page .verify-banner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr);
+    gap: 14px 28px;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+}
+
+.gate-guest[hidden],
+.scanner-page .verify-banner[hidden],
+.scanner-page .verified-bar[hidden] { display: none; }
+
+.gate-title,
+.scanner-page .verify-title {
+    margin: 0 0 4px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.gate-copy,
+.scanner-page .verify-copy {
+    margin: 0;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.gate-actions { display: flex; gap: 10px; }
+
+.scanner-page .verify-form .btn { padding: 12px 22px; }
+.scanner-page .verify-form input { min-height: 46px; }
+.scanner-page .verify-error,
+.scanner-page .verify-foot { grid-column: 1 / -1; margin: 0; }
+.scanner-page .verify-foot a { color: #c0a1ee; }
+
+.scanner-page .verified-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: 0.92rem;
+}
+
+.gate-card.is-verified {
+    padding: 12px 18px;
+    background: rgba(79, 174, 140, 0.1);
+    border-color: rgba(79, 174, 140, 0.45);
+}
+
+.verified-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #4fae8c;
+    box-shadow: 0 0 8px #4fae8c;
+}
+
+/* not verified yet: the steps stay visible but are locked */
+.scan-steps.is-locked { opacity: 0.45; filter: saturate(0.6); pointer-events: none; }
+
+/* ---------- step headers ---------- */
+
+.step-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 6px;
+}
+
+.step-head .card-heading { margin: 0 0 6px; }
+.step-head .card-eyebrow { margin: 0 0 4px; }
+.step-head .card-desc { margin: 0; }
+
+.step-num {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-top: 2px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.25);
+    border: 1px solid rgba(192, 161, 238, 0.6);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.scan-steps { display: flex; flex-direction: column; gap: 20px; }
+.scan-steps[hidden] { display: none; }
+
+.scanner-page .scan-grid { max-width: none; }
+
+/* ---------- step 1 ---------- */
+
+.step-river-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 24px;
+    margin-top: 16px;
+}
+
+.field-label {
+    display: block;
+    margin: 0 0 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.field-input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 46px;
+    margin: 0 0 14px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #0b0c10;
+    color: #fff;
+    color-scheme: dark;
+    font-family: inherit;
+    font-size: 0.95rem;
+    transition: border-color .2s ease;
+}
+
+.field-input:hover:not(:disabled) { border-color: rgba(192, 161, 238, 0.6); }
+.field-input:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.field-hint {
+    margin: -6px 0 16px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.step-location { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.step-location .btn { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; }
+.step-location .field-hint { margin: 0 0 12px; }
+
+.step-suggestion {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(124, 58, 237, 0.14);
+    border: 1px solid rgba(192, 161, 238, 0.45);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.step-suggestion[hidden], .step-warning[hidden] { display: none; }
+.step-suggestion p { margin: 0; }
+.step-suggestion-km { display: block; color: rgba(255, 255, 255, 0.6); font-size: 0.82rem; }
+.step-suggestion-ok { color: #4fae8c; }
+.step-suggestion-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.step-suggestion-actions .btn { flex: 1 1 140px; padding: 10px 14px; font-size: 0.88rem; }
+
+.step-suggestion.is-warning,
+.step-warning {
+    background: rgba(230, 178, 7, 0.1);
+    border: 1px solid rgba(230, 178, 7, 0.45);
+}
+
+.step-warning {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.step-summary {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(79, 174, 140, 0.1);
+    border: 1px solid rgba(79, 174, 140, 0.45);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.step-summary[hidden] { display: none; }
+.step-check { color: #4fae8c; font-weight: 700; }
+
+.step-map-wrap { min-height: 320px; }
+
+.step-map {
+    height: 100%;
+    min-height: 320px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #0b0c10;
+}
+
+/* same dark basemap treatment as the Tracking map */
+.step-map .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.7);
+}
+
+.step-map:focus-visible { outline: 2px solid #c0a1ee; outline-offset: 2px; }
+
+.step-seg-icon { background: none; border: 0; }
+
+.step-seg-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1.5px solid #fff;
+    background: #14151b;
+    color: #fff;
+    font: 700 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition: transform .15s ease;
+}
+
+.step-seg-num:hover { transform: scale(1.12); }
+.step-seg-num.is-on { background: #7b02ec; border-color: #c0a1ee; transform: scale(1.15); }
+
+.leaflet-tooltip.step-map-tip {
+    background: #14151b;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- step 2 ---------- */
+
+.scanner-page .scanner-viewport { margin-bottom: 12px; min-height: 320px; }
+
+.scanner-page .scanner-viewport:hover { border-color: rgba(192, 161, 238, 0.6); }
+
+.scanner-page .scanner-viewport.is-dragover {
+    border-color: #c0a1ee;
+    background: rgba(124, 58, 237, 0.12);
+}
+
+.scan-progress {
+    position: absolute;
+    left: 50%;
+    bottom: 14px;
+    z-index: 3;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100% - 28px);
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(11, 12, 16, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 0.85rem;
+    color: #fff;
+}
+
+.scan-progress[hidden] { display: none; }
+
+.file-meta {
+    margin: 0 0 12px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.6);
+    overflow-wrap: anywhere;
+}
+
+.file-error {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(214, 87, 74, 0.12);
+    border: 1px solid rgba(214, 87, 74, 0.5);
+    color: #fff;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+
+.file-meta[hidden], .file-error[hidden] { display: none; }
+
+/* ---------- step 3 ---------- */
+
+.result-segment {
+    margin: 10px 0 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.14);
+    border: 1px solid rgba(192, 161, 238, 0.4);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.result-segment.is-missing {
+    background: rgba(230, 178, 7, 0.1);
+    border-color: rgba(230, 178, 7, 0.45);
+    font-weight: 500;
+}
+
+.result-confidence {
+    margin: 10px 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.result-confidence[hidden] { display: none; }
+
+.submit-status {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.submit-status[hidden] { display: none; }
+.submit-status.is-busy { background: rgba(255, 255, 255, 0.05); }
+.submit-status.is-success { background: rgba(79, 174, 140, 0.12); border-color: rgba(79, 174, 140, 0.5); }
+.submit-status.is-error { background: rgba(214, 87, 74, 0.12); border-color: rgba(214, 87, 74, 0.5); }
+
+/* ---------- submit dialog ---------- */
+
+.report-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.report-dialog {
+    width: 100%;
+    max-width: 440px;
+    padding: 26px;
+    border-radius: 18px;
+    background: #14151b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.report-dialog h3 { margin: 0 0 6px; font-family: Georgia, serif; }
+.report-dialog-copy { margin: 0 0 14px; font-size: 0.88rem; line-height: 1.5; color: rgba(255, 255, 255, 0.65); }
+
+.report-dialog-target {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(124, 58, 237, 0.14);
+    border: 1px solid rgba(192, 161, 238, 0.4);
+    font-size: 0.9rem;
+}
+
+.report-dialog-target span { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.report-dialog-warn { margin: 0 0 14px; font-size: 0.82rem; line-height: 1.5; color: #e6b207; }
+.report-dialog-actions { display: flex; gap: 10px; margin-top: 6px; }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 900px) {
+    .gate-guest,
+    .scanner-page .verify-banner { grid-template-columns: minmax(0, 1fr); }
+    .step-river-grid { grid-template-columns: minmax(0, 1fr); }
+    .step-map-wrap, .step-map { min-height: 280px; }
+    .step-map { height: 280px; }
+}
+
+@media (max-width: 600px) {
+    .scanner-page .scan-hero { padding: 104px 16px 20px; }
+    .scanner-page .scan-section { padding: 0 14px 72px; }
+    .gate-actions { flex-direction: column; }
+    .scanner-page .verify-form { flex-direction: column; }
+    .scanner-page .scanner-viewport { min-height: 240px; }
+    .step-location .btn { width: 100%; justify-content: center; }
+    .step-map, .step-map-wrap { min-height: 240px; height: 240px; }
+    .report-dialog { padding: 20px 16px; }
+    .scanner-page .btn { min-height: 46px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gate-spinner { animation-duration: 2.4s; }
+    .step-seg-num, .scanner-page .btn { transition: none; }
+}
+
+/* anything the page script hides stays hidden, whatever display its class sets */
+.scanner-page [hidden] { display: none !important; }

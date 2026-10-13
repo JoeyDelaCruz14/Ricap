@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="Responsive.css">
     <link rel="stylesheet" href="submit.css">
-    <link rel="stylesheet" href="apply.css">
+    <link rel="stylesheet" href="Apply.css">
 </head>
 <body class="submit-page">
     <nav class="nav" id="nav">
         <div class="nav-inner">
+            <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
             <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
                 <span></span><span></span><span></span>
             </button>
@@ -20,9 +21,11 @@
                 <li><a href="Home.html">Home</a></li>
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
-                <li><a href="forum.html">Forum</a></li>
-                <li><a href="main.html#about">About</a></li>
+                <li><a href="Tracking.html">Tracking</a></li>
+                <li><a href="main.html#features">About</a></li>
                 <li><a href="main.html#contact">Contact</a></li>
+                <li><a href="main.html#loginbutton">Login</a></li>
+                <li><a href="Apply.html" class="nav-link--active" aria-current="page">Verify</a></li>
             </ul>
         </div>
     </nav>
@@ -33,18 +36,42 @@
             <section class="submit-form-section" id="applyFormSection">
                 <p class="form-eyebrow">Official Access Application</p>
                 <h1 class="form-title">Apply for Official Access</h1>
-                <p class="form-sub">
-                    Take a quick photo of yourself (or your official/volunteer ID) so an admin can
-                    verify your application. You'll be emailed an access code once approved.
-                </p>
+                <p class="form-sub">Take a quick photo of yourself (or your official/volunteer ID) so an admin can verify your application. You'll be emailed an access code once approved.</p>
+
+                <ol class="apply-steps" id="applySteps" aria-label="How approval works">
+                    <li data-step="details">
+                        <span class="apply-step-num" aria-hidden="true">1</span>
+                        <div><strong>Your details</strong><span>Name, role, organization and how to reach you.</span></div>
+                    </li>
+                    <li data-step="photo">
+                        <span class="apply-step-num" aria-hidden="true">2</span>
+                        <div><strong>Verification photo</strong><span>A live photo of you, or your official or volunteer ID.</span></div>
+                    </li>
+                    <li data-step="review">
+                        <span class="apply-step-num" aria-hidden="true">3</span>
+                        <div><strong>Admin review</strong><span>An admin checks your photo and details.</span></div>
+                    </li>
+                    <li data-step="code">
+                        <span class="apply-step-num" aria-hidden="true">4</span>
+                        <div><strong>Access code by email</strong><span>Enter it on the Scanner to submit official reports.</span></div>
+                    </li>
+                </ol>
 
                 <form id="applyForm" class="report-form" autocomplete="off">
 
                     <div class="field-grid">
-                        <div class="field field-wide">
-                            <label for="fullName">Full name</label>
-                            <input type="text" id="fullName" name="fullName" placeholder="Juan Dela Cruz" required>
+                        <div class="field">
+                            <label for="firstName">First name</label>
+                            <input type="text" id="firstName" name="firstName" placeholder="Juan" autocomplete="given-name" required>
                         </div>
+
+                        <div class="field">
+                            <label for="lastName">Last name</label>
+                            <input type="text" id="lastName" name="lastName" placeholder="Dela Cruz" autocomplete="family-name" required>
+                        </div>
+
+                        <!-- Apply.js still reads #fullName: apply-enhance.js fills it with "First Last" -->
+                        <input type="hidden" id="fullName" name="fullName">
 
                         <div class="field">
                             <label for="roleInput">Role</label>
@@ -84,12 +111,12 @@
                     </div>
 
                     <div class="field field-wide">
-                        <label></label>
+                        <label>Verification photo</label>
 
                         <div class="capture-box" id="captureBox">
 
                             <div class="capture-empty" id="captureEmpty">
-                                <p>Take a live photo, or upload an existing ID picture.</p>
+                                <p>Take a live photo, or upload an existing ID picture. You can also drag a photo here.</p>
                                 <div class="capture-choice-btns">
                                     <button type="button" class="ghost-btn" id="startCameraBtn">Use camera</button>
                                     <button type="button" class="ghost-btn" id="uploadInsteadBtn">Upload photo</button>
@@ -114,7 +141,12 @@
                         <canvas id="captureCanvas" hidden></canvas>
                     </div>
 
-                    <p class="form-error" id="applyError" hidden></p>
+                    <div class="apply-progress" aria-live="polite">
+                        <div class="apply-progress-bar" aria-hidden="true"><span id="applyProgressFill"></span></div>
+                        <p class="apply-progress-text" id="applyProgressText">0 of 6 complete</p>
+                    </div>
+
+                    <p class="form-error" id="applyError" role="alert" hidden></p>
 
                     <button type="submit" class="submit-btn" id="applySubmitBtn">Submit application</button>
                 </form>
@@ -128,7 +160,7 @@
                 <h1 class="success-title">Application submitted</h1>
                 <p class="success-copy">
                     An admin will review your photo and details. Once approved, your access code
-                    will be sent to the email you provided — use it on the Submit page.
+                    will be sent to the email you provided — enter it on the Scanner page.
                 </p>
                 <div class="success-actions">
                     <a href="Home.html" class="submit-btn">Back to Home</a>
@@ -138,6 +170,7 @@
         </div>
     </main>
 
-    <script type="module" src="apply.js"></script>
+    <script type="module" src="Apply.js"></script>
+    <script src="apply-enhance.js" defer></script>
 </body>
 </html>

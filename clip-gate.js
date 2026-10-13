@@ -65,7 +65,8 @@ function loadLib() {
             for (const url of LIB_URLS) {
                 try {
                     const lib = await import(url);
-                    lib.env.allowLocalModels = false;
+                    lib.env.allowLocalModels = true;      // checker files are served by this site (models/Xenova/clip-vit-base-patch32/)
+                    lib.env.localModelPath = 'models/';
                     console.log('[CLIP] library loaded from', url);
                     return lib;
                 } catch (e) {
