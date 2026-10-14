@@ -4,6 +4,7 @@ import { signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.13.0/fi
 import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { getOfficial, verifyCode, signOutOfficial } from './Session.js';
 import { initSteps, onImageFile, getSelection, refreshGate, isGateVerified } from './scanner-steps.js';
+import { getRecommendation, DISCLAIMER } from './Gemini.js';
 
 let clipModPromise = null;
 function getClipGate() {
@@ -252,6 +253,18 @@ function buildRecommendation(a) {
 }
 
 
+// Rule text first; Gemini (localhost only, optional) may reword it. Never rejects.
+function recommendationFor(a) {
+    const sel = getSelection();
+    const official = getOfficial() || {};
+    return getRecommendation(a, sel.ok ? sel.label.split(' · ')[0] : '', {
+        ruleText: buildRecommendation(a),
+        role: official.role,
+        uid: auth.currentUser ? auth.currentUser.uid : null
+    });
+}
+
+
 // Confirms where the report goes (chosen in step 1) and asks for a report name.
 function askReportDetails(warnings, selection) {
     return new Promise(function (resolve) {
@@ -343,7 +356,8 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
 
     const recordId = makeRecordId();
     const timestamp = new Date().toISOString();
-    const recommendation = buildRecommendation(analysis);
+    const reco = await recommendationFor(analysis);
+    const recommendation = reco.text;
 
     const uploadImage = await createStoredImage(imageDataUrl, UPLOAD_MAX_DIM);
     const uploaded = await uploadSubmittedImage(recordId, uploadImage, {
@@ -353,7 +367,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
     });
 
     // Location + status go to Firestore so the map can color the river
-    await addDoc(collection(db, 'reports'), {
+    const reportDoc = {
         recordId: recordId,
         reportName: details.name,
         riverId: riverId,
@@ -366,6 +380,8 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         score: analysis.score,
         assessment: analysis.assessment,
         recommendation: recommendation,
+        recommendationRules: reco.rulesText,
+        recommendationSource: reco.source,   // 'rules' or 'rules+gemini'
         waterTint: analysis.waterTint || null,
         imageUrl: uploaded.url,
         reporterName: official.name || '',
@@ -373,7 +389,16 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         reporterCode: official.code || '',
         uid: uid,                        // the submitting user's Firebase id (checked by the rules)
         createdAt: serverTimestamp()
-    });
+    };
+    try {
+        await addDoc(collection(db, 'reports'), reportDoc);
+    } catch (err) {
+        // If the database rules do not allow the two recommendation fields yet, save without them
+        if (!/permission-denied/.test(err && err.code)) throw err;
+        delete reportDoc.recommendationRules;
+        delete reportDoc.recommendationSource;
+        await addDoc(collection(db, 'reports'), reportDoc);
+    }
 
     const thumb = await createStoredImage(imageDataUrl, THUMB_MAX_DIM);
     const record = {
@@ -394,6 +419,8 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         confidence: analysis.confidence,
         assessment: analysis.assessment,
         recommendation: recommendation,
+        recommendationRules: reco.rulesText,
+        recommendationSource: reco.source,
         colorCast: analysis.colorCast,
         waterTint: analysis.waterTint,
         surfaceClarity: analysis.surfaceClarity,
@@ -2211,9 +2238,16 @@ function renderQuickRead(result) {
     const recoSource = document.getElementById('recoSource');
     const recoBox = document.getElementById('recoBox');
     if (recoText && recoBox) {
-        recoText.textContent = buildRecommendation(result);
+        const token = String(Date.now());
+        recoBox.dataset.token = token;
+        recoText.textContent = buildRecommendation(result) + ' ' + DISCLAIMER;
         if (recoSource) recoSource.textContent = 'Rule-based suggestion from the scan result.';
         recoBox.hidden = false;
+        recommendationFor(result).then(function (reco) {
+            if (reco.source !== 'rules+gemini' || recoBox.dataset.token !== token) return;
+            recoText.textContent = reco.text;
+            if (recoSource) recoSource.textContent = 'Rule-based suggestion, reworded by Gemini.';
+        });
     }
 
     renderWarnings(result.warnings);

@@ -1,3 +1,25 @@
+@font-face {
+    font-family: "College";
+    src: url("Fonts/college.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;  
+}
+
+@font-face {
+    font-family: "College";
+    src: url("Fonts/collegeb.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    --font-display: "College", Impact, "Arial Narrow Bold", sans-serif;
+    --display-scale: 0.72;
+}
+
 html,
 body {
     margin: 0;
@@ -5,6 +27,7 @@ body {
     scroll-behavior: smooth;
 }
 body {
+    font-family: var(--font);
     overflow-x: hidden;
     overflow-y: visible; 
                           
@@ -63,7 +86,7 @@ img {
     position: relative;
     color: rgba(255, 255, 255, 0.82);
     text-decoration: none;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-size: 0.90rem;
     font-weight: 500;
     letter-spacing: 0.18em;
@@ -125,7 +148,7 @@ img {
 
 /* "RiCap" wordmark on the left (pages that show it) */
 .nav-brand {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.2rem;
     letter-spacing: 0.01em;
@@ -147,7 +170,6 @@ img {
     border-radius: 4px;
 }
 
-/* main.html: no background bar, also once the page is scrolled */
 .home-page .nav,
 .home-page .nav.scrolled {
     background: transparent;
@@ -224,7 +246,7 @@ img {
     position: absolute;
     margin: 0;
     white-space: nowrap;
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-style: italic;
     font-weight: 400;
     font-size: clamp(1.4rem, 3.6vw, 3rem);
@@ -233,7 +255,7 @@ img {
 }
 
 .collage-line--bold {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-weight: 800;
     font-style: normal;
     font-size: clamp(3rem, 8.5vw, 7.5rem);
@@ -295,7 +317,7 @@ img {
 }
 
 .ricap_eyebrow {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-size: 1.25rem;
     font-weight: 600;
     letter-spacing: 0.22em;
@@ -396,7 +418,7 @@ img {
 }
 
 .about-eyebrow {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-size: 1.1rem;
     font-weight: 600;
     letter-spacing: 0.22em;
@@ -406,7 +428,7 @@ img {
 }
 
 .about-heading {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-weight: 800;
     font-size: clamp(2.1rem, 5vw, 3.4rem);
     letter-spacing: -0.01em;
@@ -434,7 +456,7 @@ img {
 }
 
 .about-label {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-style: italic;
     font-weight: 400;
     font-size: clamp(1.05rem, 1.6vw, 1.4rem);
@@ -444,14 +466,14 @@ img {
 }
 
 .about-item-body h3 {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: clamp(1.3rem, 1.2vw, 1.7rem);
     margin: 0 0 12px;
 }
 
 .about-item-body p {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-weight: 400;
     font-size: clamp(1rem, 1.3vw, 1.15rem);
     line-height: 1.6;
@@ -480,7 +502,7 @@ img {
 }
 
 .features-eyebrow {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.22em;
@@ -490,7 +512,7 @@ img {
 }
 
 .features-heading {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-weight: 800;
     font-size: clamp(2rem, 4.5vw, 3.1rem);
     letter-spacing: -0.01em;
@@ -500,7 +522,7 @@ img {
 }
 
 .features-link {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-size: 0.95rem;
     font-weight: 600;
     color: #dbf305;
@@ -536,7 +558,7 @@ img {
 }
 
 .feature-eyebrow {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: var(--font);
     font-size: 0.85rem;
     font-weight: 600;
     color: #000005;
@@ -544,7 +566,7 @@ img {
 }
 
 .feature-card h3 {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.4rem;
     line-height: 1.25;
@@ -554,7 +576,7 @@ img {
 }
 
 .feature-card p.feature-desc {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
     font-size: 0.95rem;
     line-height: 1.5;
     color: #050000;
@@ -646,4 +668,12 @@ img {
     .nav-inner { padding: 0 0 0 4px; }
     .nav-links { width: min(85vw, 300px); gap: 26px; }
     .ricap_eyebrow { font-size: .95rem; letter-spacing: .16em; }
+}
+/* Form controls and map widgets don't inherit the page font by default */
+button,
+input,
+select,
+textarea,
+.leaflet-container {
+    font-family: var(--font);
 }

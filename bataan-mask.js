@@ -154,7 +154,7 @@ function injectStyles() {
             background: rgba(17, 19, 24, 0.92);
             box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
             color: #e6e8ec;
-            font: 600 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font: 600 12px/1.3 var(--font);
             letter-spacing: 0.01em;
             white-space: nowrap;
             pointer-events: none;

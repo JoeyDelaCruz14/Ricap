@@ -63,5 +63,5 @@
     margin-top: 8px;
     font-size: 0.78rem;
     color: var(--status-healthy);
-    font-family: var(--mono);
+    font-family: var(--font);
 }

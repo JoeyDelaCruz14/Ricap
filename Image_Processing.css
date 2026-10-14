@@ -8,7 +8,7 @@ body {
     overflow-x: hidden;
     background: #0b0c10;
     color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-family: var(--font);
 }
 
 #bg-video {
@@ -29,8 +29,6 @@ body::before {
     pointer-events: none;
 }
 
-/* navigation: styled only in style.css (the one nav for every page) */
-
 .scan-hero {
     padding: 18vh 8vw 6vh;
     max-width: 900px;
@@ -46,7 +44,7 @@ body::before {
 }
 
 .scan-heading {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: clamp(1.9rem, 4.5vw, 3rem);
     letter-spacing: -0.005em;
@@ -92,7 +90,7 @@ body::before {
 }
 
 .card-heading {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.7rem;
     margin: 0 0 14px;
@@ -192,7 +190,6 @@ body::before {
 
 .scanner-actions { display: flex; gap: 12px; }
 
-/* second row of scanner actions (Scan Image / Reset) sits a little below the first */
 .scanner-actions--secondary { margin-top: 12px; }
 
 .btn {
@@ -263,7 +260,7 @@ body::before {
 .quickread-text { flex: 1; min-width: 0; }
 
 .quickread-title {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.2rem;
     margin: 0 0 4px;
@@ -279,14 +276,14 @@ body::before {
 .quickread-score { text-align: right; flex-shrink: 0; }
 
 .score-value {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font);
     font-size: 1.5rem;
     color: #a63bf7;
     font-weight: 500;
 }
 
 .score-suffix {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font);
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.35);
     display: block;
@@ -320,7 +317,7 @@ body::before {
     justify-content: center;
     font-size: 0.7rem;
     font-style: italic;
-    font-family: Georgia, serif;
+    font-family: var(--font);
     margin-top: 1px;
 }
 
@@ -393,7 +390,7 @@ body::before {
 
 .verify-title {
     margin: 0 0 4px;
-    font-family: Georgia, serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.05rem;
 }
@@ -447,9 +444,6 @@ body::before {
     cursor: pointer;
 }
 
-
-
-/* ======== MOBILE / RESPONSIVE ======== */
 @media (max-width: 1200px) {
     .scan-grid { grid-template-columns: minmax(0, 1fr); }
     .scan-hero { padding: 16vh 6vw 4vh; }
@@ -474,11 +468,6 @@ body::before {
     .camera-overlay video { max-height: 50dvh; }
     .score-value { font-size: 2rem; }
 }
-
-/* =====================================================================
-   SCANNER PAGE: steps, gate, segment map (scoped to body.scanner-page,
-   since Tracking.html also loads this stylesheet). Existing colours only.
-   ===================================================================== */
 
 .scanner-page .scan-hero {
     max-width: 1300px;
@@ -583,7 +572,7 @@ body::before {
 .gate-title,
 .scanner-page .verify-title {
     margin: 0 0 4px;
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.2rem;
 }
@@ -794,7 +783,7 @@ body::before {
     border: 1.5px solid #fff;
     background: #14151b;
     color: #fff;
-    font: 700 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font: 700 12px/1 var(--font);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
     cursor: pointer;
     transition: transform .15s ease;
@@ -925,7 +914,7 @@ body::before {
     color: #fff;
 }
 
-.report-dialog h3 { margin: 0 0 6px; font-family: Georgia, serif; }
+.report-dialog h3 { margin: 0 0 6px; font-family: var(--font); }
 .report-dialog-copy { margin: 0 0 14px; font-size: 0.88rem; line-height: 1.5; color: rgba(255, 255, 255, 0.65); }
 
 .report-dialog-target {

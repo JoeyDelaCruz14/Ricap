@@ -15,7 +15,7 @@
   ],
   "hosting": {
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "functions/**", "*.md", "*.txt"],
+    "ignore": ["firebase.json", "gemini-config.js", "**/.*", "**/node_modules/**", "functions/**", "*.md", "*.txt"],
     "redirects": [{ "source": "/", "destination": "/main.html", "type": 302 }],
     "headers": [
       {

@@ -290,7 +290,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .record-status > div { min-width: 0; }
 
 .record-title {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.05rem;
     line-height: 1.25;
@@ -309,7 +309,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 .record-score {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 1.15rem;
     font-variant-numeric: tabular-nums;
     color: #a63bf7;
@@ -438,7 +438,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .timeline-table td:nth-child(3) { color: #fff; font-weight: 600; white-space: normal; }
 .timeline-table th:nth-child(5),
 .timeline-table td:nth-child(5) { text-align: right; }
-.timeline-table td:nth-child(5) { font-family: 'JetBrains Mono', ui-monospace, monospace; color: #fff; }
+.timeline-table td:nth-child(5) { font-family: var(--font); color: #fff; }
 .timeline-table td:nth-child(6) { color: rgba(255, 255, 255, 0.7); white-space: normal; }
 
 .timeline-table tbody tr {
@@ -596,7 +596,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 .trend-stat .value {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 1.3rem;
     font-variant-numeric: tabular-nums;
     color: #fff;
@@ -703,7 +703,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 .timeline-item-time {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.6);
     width: 50px;
@@ -833,7 +833,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .trend-map .leaflet-popup-content { margin: 14px 16px; font-size: 0.85rem; line-height: 1.5; }
 .trend-map .leaflet-container a.leaflet-popup-close-button { color: rgba(255, 255, 255, 0.6); }
 
-.pop-title { font-family: Georgia, "Times New Roman", serif; font-weight: 700; font-size: 1rem; margin: 0 0 4px; }
+.pop-title { font-family: var(--font); font-weight: 700; font-size: 1rem; margin: 0 0 4px; }
 .pop-pill {
     display: inline-block;
     font-size: 0.68rem;
@@ -905,7 +905,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 .detail-timestamp {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 0.78rem;
     color: rgba(255, 255, 255, 0.6);
     margin: 10px 0 0;
@@ -931,14 +931,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 .status-score-inline .score-value {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 1.6rem;
     color: #a63bf7;
     font-weight: 500;
 }
 
 .score-suffix-inline {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.5);
 }
@@ -953,7 +953,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .result-top-left { display: flex; align-items: center; gap: 10px; }
 
 .status-title {
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: var(--font);
     font-weight: 700;
     font-size: 1.4rem;
     margin: 0;
@@ -1067,7 +1067,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 .meta-line {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: var(--font);
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.55);
     line-height: 1.6;
@@ -1098,7 +1098,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     justify-content: center;
     font-size: 0.7rem;
     font-style: italic;
-    font-family: Georgia, serif;
+    font-family: var(--font);
     margin-top: 1px;
 }
 
