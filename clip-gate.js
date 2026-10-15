@@ -1,12 +1,3 @@
-// clip-gate.js - zero-shot "is this a river photo?" check using CLIP
-// The transformers library is loaded with a dynamic import() and several CDN
-// fallbacks, so if a CDN is down this file still loads and only the gate fails.
-//
-// How it works: CLIP must pick the best-matching caption from a fixed list. If the list has no caption
-// that fits (e.g. a glass of water or a matcha drink), it grabs the "closest" water caption by default.
-// So the list below includes many look-alike things that are NOT rivers, and the river captions are
-// specific (outdoors, natural water, riverbank) so an indoor drink can't win.
-
 const LIB_URLS = [
     'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js',
     'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1/dist/transformers.min.js',
@@ -65,8 +56,10 @@ function loadLib() {
             for (const url of LIB_URLS) {
                 try {
                     const lib = await import(url);
-                    lib.env.allowLocalModels = true;      // checker files are served by this site (models/Xenova/clip-vit-base-patch32/)
-                    lib.env.localModelPath = 'models/';
+                    lib.env.allowLocalModels = false;
+                    lib.env.allowRemoteModels = true;
+                    lib.env.remoteHost = 'https://huggingface.co';
+                    lib.env.remotePathTemplate = '{model}/resolve/{revision}/';
                     console.log('[CLIP] library loaded from', url);
                     return lib;
                 } catch (e) {

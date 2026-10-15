@@ -1,12 +1,4 @@
-/* =====================================================================
-   RiCap – responsive.css  (mobile fixes for every page)
-   Load this LAST on every page, after the page's own CSS:
-     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-     <link rel="stylesheet" href="responsive.css">
-   Breakpoints used everywhere: 1100 / 900 / 768 / 480 / 360
-   ===================================================================== */
 
-/* ---------- 0. Global guards ---------- */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { max-width: 100%; }   /* no overflow rule on html/body here: it conflicts with pages that already set it and makes the page drag sideways */
 img, video, canvas, svg { max-width: 100%; }
