@@ -22,10 +22,13 @@
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
                 <li><a href="Tracking.html">Tracking</a></li>
-                <li><a href="main.html#features">About</a></li>
+                <li><a href="main.html#features">Features</a></li>
+                <li><a href="main.html#how-it-works">How It Works</a></li>
                 <li><a href="main.html#contact">Contact</a></li>
                 <li><a href="main.html#loginbutton">Login</a></li>
                 <li><a href="Apply.html" class="nav-link--active" aria-current="page">Verify</a></li>
+                <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+                <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
             </ul>
         </div>
     </nav>
@@ -70,7 +73,6 @@
                             <input type="text" id="lastName" name="lastName" placeholder="Dela Cruz" autocomplete="family-name" required>
                         </div>
 
-                        <!-- Apply.js still reads #fullName: apply-enhance.js fills it with "First Last" -->
                         <input type="hidden" id="fullName" name="fullName">
 
                         <div class="field">
@@ -171,6 +173,7 @@
     </main>
 
     <script type="module" src="Apply.js"></script>
+    <script type="module" src="admin-nav.js"></script>
     <script src="apply-enhance.js" defer></script>
 </body>
 </html>

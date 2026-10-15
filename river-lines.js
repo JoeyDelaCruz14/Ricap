@@ -1,24 +1,5 @@
-// river-lines.js
-// Loads real river/stream geometry for Bataan from OpenStreetMap (the same data
-// waterwaymap.org displays) via the Overpass API, and draws it on the Leaflet map.
-//
-//  1. Waterways whose NAME matches a river in RIVER_DATA are grouped per river.
-//  2. A river with no name match falls back to PROXIMITY: the nearest waterway within
-//     PROXIMITY_KM of its marker (plus the connected segments) is adopted.
-//  3. Each matched river gets an ANCHOR point ON its line; mapping.js moves the marker there,
-//     so locations come from the real river geometry instead of hand-typed coordinates.
-//  4. Each river's MAIN CHANNEL is rebuilt as one ordered line from source to mouth and split
-//     into 4 equal-length segments (Upstream, Upper-Mid, Lower-Mid, Downstream) with ids
-//     riverId-seg1 .. riverId-seg4. mapping.js colours every segment by its own status.
-//     Side channels/tributaries matched to the same river are drawn thin and left uncoloured.
-//
-// Geometry comes from data/bataan-waterways.json (OSM waterways already clipped to Bataan and
-// simplified; see the _source note in the file). If that file is missing, the old live
-// Overpass download + localStorage cache is used instead, filtered to Bataan.
-//
-// Optional per-river hint in mapping-data.js:  osmNames: ["Ilog Balanga"]
 
-const BBOX = '14.33,120.02,14.97,120.66'; // south,west,north,east (Bataan)
+const BBOX = '14.33,120.02,14.97,120.66';
 const ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter'
@@ -27,10 +8,6 @@ const DATA_URL = 'data/bataan-waterways.json';
 const CACHE_KEY = 'ricap_waterways_v1';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Where the marker sits on the river line:
-//   'snap'  = closest point on the line to the coordinates in mapping-data.js (default)
-//   'mid'   = middle of the river's longest segment
-//   'mouth' = downstream end of the longest segment (OSM ways run downstream)
 const ANCHOR_MODE = 'snap';
 const PROXIMITY_KM = 6;
 const MAX_FLOOD_WAYS = 150;
@@ -52,7 +29,6 @@ function norm(name) {
         .trim();
 }
 
-/* ---------- geometry helpers ---------- */
 
 const RAD = Math.PI / 180;
 
@@ -63,7 +39,6 @@ function km(aLat, aLng, bLat, bLng) {
     return 12742 * Math.asin(Math.sqrt(h));
 }
 
-// closest point on segment a-b to p (local planar approximation, fine at this scale)
 function nearestOnSegment(p, a, b) {
     const k = Math.cos(p[0] * RAD);
     const ax = a[1] * k, ay = a[0], bx = b[1] * k, by = b[0], px = p[1] * k, py = p[0];
@@ -109,11 +84,9 @@ function lineMidpoint(coords) {
     return coords[Math.floor(coords.length / 2)];
 }
 
-/* ---------- 4-part segments ---------- */
 
 export const SEGMENT_NAMES = ['Upstream', 'Upper-Mid', 'Lower-Mid', 'Downstream'];
 
-// point at distance d (km) along the line, plus the index of the vertex just before it
 function pointAlong(coords, d) {
     let acc = 0;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -131,8 +104,6 @@ function pointAlong(coords, d) {
     return { i: coords.length - 2, pt: coords[coords.length - 1] };
 }
 
-// Splits a line into n parts of equal length. Each cut point is shared by the part that
-// ends there and the part that starts there, so the parts join with no gap or overlap.
 function splitIntoParts(coords, n) {
     const total = lineLengthKm(coords);
     const cuts = [];
@@ -151,18 +122,13 @@ function splitIntoParts(coords, n) {
     return parts;
 }
 
-// One ordered line per river, from source to mouth.
-// OSM draws waterways in the direction they flow, so ways are chained end-to-start and the
-// longest chain is taken as the main channel. The direction is then checked against the
-// coast: a river's mouth should be no farther from the coastline than its source. If it is,
-// the chain is reversed and the river is reported as "direction uncertain".
 function buildMainStem(lines, coastKm) {
     const key = p => p[0] + ',' + p[1];
     const lens = lines.map(lineLengthKm);
     const startsAt = {};
     lines.forEach((c, i) => { (startsAt[key(c[0])] = startsAt[key(c[0])] || []).push(i); });
 
-    const best = new Array(lines.length);       // longest downstream length starting with way i
+    const best = new Array(lines.length);
     const next = new Array(lines.length).fill(-1);
     const visiting = new Set();
     let cyclic = false;
@@ -203,13 +169,11 @@ function buildMainStem(lines, coastKm) {
     return { coords, used, uncertain, lengthKm: lineLengthKm(coords), totalKm: lens.reduce((a, b) => a + b, 0) };
 }
 
-// line weights that grow with zoom so rivers stay readable when zoomed out and in
 function lineWeight(zoom) {
     return Math.max(2.5, Math.min(7, 2.5 + (zoom - 10) * 0.9));
 }
 const HIT_WEIGHT = 22;
 
-// a segment marker: dark disc with the segment number, ringed in the segment's status colour
 function segmentIcon(index, color) {
     return L.divIcon({
         className: 'seg-marker-icon',
@@ -218,10 +182,9 @@ function segmentIcon(index, color) {
         iconAnchor: [13, 13],
         popupAnchor: [0, -13]
     });
-}          // invisible, finger-sized hit area around every segment
+}
 const NO_ASSESSMENT_COLOR = '#7f8792';
 
-/* ---------- data loading ---------- */
 
 function readCache() {
     try {
@@ -257,7 +220,6 @@ async function fetchWaterways() {
             });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const json = await res.json();
-            // Compact: [{ n: names[], w: waterwayType, c: [[lat,lng],...] }]
             return (json.elements || [])
                 .filter(el => el.type === 'way' && Array.isArray(el.geometry) && el.geometry.length > 1)
                 .map(el => {
@@ -276,18 +238,7 @@ async function fetchWaterways() {
     throw lastErr || new Error('Overpass unavailable');
 }
 
-/* ---------- main ---------- */
 
-/**
- * The geometry half, with no map involved: loads the waterways, matches them to the rivers,
- * builds each river's ordered main channel and splits it into 4 parts. The map (below) and
- * the Scanner (to pre-fill the segment from GPS) both use this, so they always agree on
- * where each segment starts and ends.
- * @param {Array} rivers  RIVER_DATA
- * @param {{contains?: Function, coastKm?: Function}} [options]  from bataan-mask.js:
- *        contains([lat,lng]) keeps the Overpass fallback inside Bataan,
- *        coastKm([lat,lng]) checks each river's flow direction
- */
 export async function computeRiverSegments(rivers, options = {}) {
     let ways;
     try {
@@ -302,10 +253,9 @@ export async function computeRiverSegments(rivers, options = {}) {
         if (options.contains) ways = ways.filter(w => w.c.some(p => options.contains(p)));
     }
 
-    const assigned = new Array(ways.length).fill(undefined); // way index -> river id
-    const how = {};                                           // river id -> 'name' | 'proximity'
+    const assigned = new Array(ways.length).fill(undefined);
+    const how = {};
 
-    // ---- 1) match by name ----
     const lookup = {};
     rivers.forEach(rv => {
         [rv.name, rv.officialName].concat(rv.osmNames || []).filter(Boolean).forEach(n => {
@@ -318,7 +268,6 @@ export async function computeRiverSegments(rivers, options = {}) {
         if (id !== undefined) { assigned[i] = id; how[id] = 'name'; }
     });
 
-    // ---- 2) proximity fallback for rivers with no name match ----
     const endpointIndex = {};
     const key = p => p[0] + ',' + p[1];
     ways.forEach((way, i) => {
@@ -358,7 +307,7 @@ export async function computeRiverSegments(rivers, options = {}) {
         if (assigned[i] !== undefined) (waysOf[assigned[i]] = waysOf[assigned[i]] || []).push(i);
     });
     const stems = {};
-    const parts = {};        // river id -> 4 coordinate arrays, source to mouth
+    const parts = {};
     Object.keys(waysOf).forEach(riverId => {
         stems[riverId] = buildMainStem(waysOf[riverId].map(i => ways[i].c), options.coastKm);
         if (stems[riverId].coords.length > 1) parts[riverId] = splitIntoParts(stems[riverId].coords, 4);
@@ -366,7 +315,6 @@ export async function computeRiverSegments(rivers, options = {}) {
     return { ways, assigned, how, waysOf, stems, parts };
 }
 
-// Which of a river's 4 parts a point lies on: { index: 1-4, km } or null if farther than maxKm
 export function nearestSegment(parts, riverId, lat, lng, maxKm) {
     const list = parts && parts[riverId];
     if (!list) return null;
@@ -378,22 +326,14 @@ export function nearestSegment(parts, riverId, lat, lng, maxKm) {
     return best && best.km <= maxKm ? best : null;
 }
 
-/**
- * Draws the rivers: each main channel as 4 status-coloured segments, side channels thin,
- * everything else as "Other waterways".
- * @param {L.Map} map
- * @param {Array} rivers  RIVER_DATA
- * @param {object} [options]  same as computeRiverSegments
- */
 export async function loadRiverLines(map, rivers, options = {}) {
     const { ways, assigned, how, waysOf, stems, parts } = await computeRiverSegments(rivers, options);
 
-    // ---- 3) draw ----
     const byRiver = {};
-    const segments = {};      // river id -> [4 segment objects]
-    const dividers = {};      // river id -> small dots where one segment ends and the next starts
-    const segmentMarkers = {}; // river id -> one numbered marker per segment, at its middle
-    const uncertain = [];     // rivers whose flow direction could not be confirmed
+    const segments = {};
+    const dividers = {};
+    const segmentMarkers = {};
+    const uncertain = [];
     const other = L.featureGroup();
     const unmatchedNames = new Set();
 
@@ -419,7 +359,6 @@ export async function loadRiverLines(map, rivers, options = {}) {
         const stem = stems[riverId];
         if (stem.uncertain) uncertain.push({ river: rv.name || riverId, why: stem.uncertain });
 
-        // side channels / tributaries matched to this river: thin, not segmented
         waysOf[riverId].forEach((wi, k) => {
             if (stem.used.includes(k)) return;
             L.polyline(ways[wi].c, { color: '#4d9ab8', weight: 2, opacity: 0.6 })
@@ -429,10 +368,8 @@ export async function loadRiverLines(map, rivers, options = {}) {
 
         if (stem.coords.length < 2) return;
         segments[riverId] = parts[riverId].map((coords, n) => {
-            // dark halo under the coloured line so it reads on any basemap colour
             const halo = L.polyline(coords, { color: '#0a1620', weight: weight + 4, opacity: 0.55, interactive: false }).addTo(group);
             const line = L.polyline(coords, { color: NO_ASSESSMENT_COLOR, weight, opacity: 0.95, interactive: false }).addTo(group);
-            // invisible wide stroke on top: easy to hover, tap and click even when the line is thin
             const hit = L.polyline(coords, { color: '#000', weight: HIT_WEIGHT, opacity: 0, interactive: true }).addTo(group);
             const seg = {
                 id: riverId + '-seg' + (n + 1),
@@ -449,9 +386,9 @@ export async function loadRiverLines(map, rivers, options = {}) {
                 marker: L.marker(pointAlong(coords, lineLengthKm(coords) / 2).pt, {
                     icon: segmentIcon(n + 1, NO_ASSESSMENT_COLOR),
                     title: (rv.name || 'River') + ', segment ' + (n + 1) + ' of 4 (' + SEGMENT_NAMES[n] + ')',
-                    keyboard: true,           // Tab to it, Enter opens its popup
+                    keyboard: true,
                     riseOnHover: true,
-                    segmentMarker: true       // bataan-mask.js: no fly-in / fly-back for these
+                    segmentMarker: true
                 }),
                 setColor(c) {
                     if (c === this.color) return;
@@ -471,8 +408,6 @@ export async function loadRiverLines(map, rivers, options = {}) {
 
         segmentMarkers[riverId] = L.layerGroup(segments[riverId].map(seg => seg.marker));
 
-        // small dots where one segment ends and the next starts (the 3 joints between the 4
-        // parts), shown when zoomed in
         dividers[riverId] = L.layerGroup(segments[riverId].slice(1).map(seg => L.marker(seg.coords[0], {
             icon: L.divIcon({
                 className: 'seg-divider-icon',
@@ -480,7 +415,7 @@ export async function loadRiverLines(map, rivers, options = {}) {
                 iconSize: [12, 12],
                 iconAnchor: [6, 6]
             }),
-            pane: 'shadowPane',       // above the lines, below river markers and popups
+            pane: 'shadowPane',
             interactive: false,
             keyboard: false
         })));
@@ -497,7 +432,6 @@ export async function loadRiverLines(map, rivers, options = {}) {
         console.table(uncertain);
     }
 
-    // ---- 4) anchor points on the real lines ----
     const anchors = {};
     const table = [];
     rivers.forEach(rv => {

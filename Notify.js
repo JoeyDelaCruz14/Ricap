@@ -38,7 +38,6 @@ export function toggleNotifications() {
     return requestNotifications();
 }
 
-// "Alert me for every river" (used by the forum sidebar button)
 export function allNotifEnabled() {
     return (
         'Notification' in window &&
@@ -78,14 +77,12 @@ export function bindNotifButton(btn) {
     paint();
 }
 
-// Shows a pop-up when a NEW report is posted (by someone else) while any RiCap page is open.
-// Safe to call from several places: it only starts once per page.
 export function startReportAlerts() {
     if (started) return;
     started = true;
 
     const startedAt = Date.now();
-    const known = new Set();      // reports that already existed when this page loaded
+    const known = new Set();
     let primed = false;
 
     const q = query(
@@ -97,7 +94,6 @@ export function startReportAlerts() {
     onSnapshot(
         q,
         snap => {
-            // First snapshot (cache or server): just remember what is already there.
             if (!primed) {
                 snap.docs.forEach(d => known.add(d.id));
                 primed = true;
@@ -109,13 +105,11 @@ export function startReportAlerts() {
                 if (known.has(change.doc.id)) return;
                 known.add(change.doc.id);
 
-                // our own just-submitted report still has a pending server timestamp: skip it
                 if (change.doc.metadata.hasPendingWrites) return;
 
                 const report = change.doc.data();
                 if (!report.createdAt) return;
 
-                // ignore anything that was created before this page loaded (late cache/server sync)
                 let created = 0;
                 try { created = report.createdAt.toMillis(); } catch (e) { created = Date.now(); }
                 if (created < startedAt - 2 * 60 * 1000) return;

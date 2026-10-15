@@ -24,9 +24,7 @@ body.submit-page {
     line-height: 1.5;
 }
 
-/* navigation: styled only in style.css (the one nav for every page) */
 
-/* ---------- Layout ---------- */
 .submit-main { padding: 90px 16px 80px; }
 .submit-shell { max-width: 640px; margin: 0 auto; }
 
@@ -47,7 +45,6 @@ body.submit-page {
 .form-sub { margin: 14px 0 20px; color: var(--ap-muted); font-size: .96rem; }
 .form-sub a { color: var(--ap-accent-soft); font-weight: 600; }
 
-/* ---------- Tabs (reuses .chip) ---------- */
 .submit-page .status-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .submit-page .chip {
     font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer;
@@ -60,7 +57,6 @@ body.submit-page {
     background: var(--ap-accent); border-color: var(--ap-accent); color: #fff;
 }
 
-/* ---------- Form ---------- */
 .report-form { display: flex; flex-direction: column; gap: 18px; }
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -87,7 +83,6 @@ h1, h2, h3, p, label, li { color: var(--ap-ink); }
     box-shadow: none;
 }
 
-/* ---------- Buttons ---------- */
 .submit-btn, .ghost-btn {
     font: inherit; font-weight: 600; cursor: pointer; text-decoration: none;
     display: inline-flex; align-items: center; justify-content: center;
@@ -134,12 +129,6 @@ h1, h2, h3, p, label, li { color: var(--ap-ink); }
     .form-title { font-size: 1.6rem; }
 }
 
-/* =====================================================================
-   APPLY PAGE ONLY
-   Admin.html and maintenance.html load this file too, so everything below is
-   scoped to the Apply page (the only page with #applyForm) and the rules
-   above are left exactly as they were.
-   ===================================================================== */
 
 body.submit-page:has(#applyForm) {
     --ap-card: #161618;
@@ -163,7 +152,6 @@ body.submit-page:has(#applyForm) select:focus-visible {
     outline-offset: 2px;
 }
 
-/* ---------- layout: intro + steps on the left, the form on the right ---------- */
 body.submit-page:has(#applyForm) .submit-main { padding: 96px 24px 80px; }
 body.submit-page:has(#applyForm) .submit-shell { max-width: 1160px; }
 
@@ -195,7 +183,6 @@ body.submit-page:has(#applyForm) .submit-shell { max-width: 1160px; }
 #applyFormSection > .apply-steps { grid-area: steps; }
 #applyFormSection > .report-form { grid-area: form; }
 
-/* ---------- how approval works ---------- */
 .apply-steps {
     list-style: none;
     margin: 0;
@@ -265,7 +252,6 @@ body.submit-page:has(#applyForm) .submit-shell { max-width: 1160px; }
 .apply-steps li.is-done .apply-step-num::before { content: "✓"; font-size: .85rem; }
 .apply-steps li.is-done:not(:last-child)::after { background: var(--ap-ok); }
 
-/* ---------- the form card ---------- */
 #applyForm {
     gap: 20px;
     padding: 28px;
@@ -290,7 +276,6 @@ body.submit-page:has(#applyForm) .submit-shell { max-width: 1160px; }
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
 }
 
-/* live checks from apply-enhance.js */
 #applyForm .field.is-valid input,
 #applyForm .field.is-valid select { border-color: var(--ap-ok); }
 #applyForm .field.is-invalid input,
@@ -298,7 +283,6 @@ body.submit-page:has(#applyForm) .submit-shell { max-width: 1160px; }
 .field-msg { font-size: .8rem; color: var(--ap-danger); }
 .field-msg:empty { display: none; }
 
-/* ---------- buttons ---------- */
 body.submit-page:has(#applyForm) .submit-btn,
 body.submit-page:has(#applyForm) .ghost-btn {
     min-height: 46px;
@@ -320,7 +304,6 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
 #applySubmitBtn { width: 100%; font-size: 1rem; }
 #applyForm.is-complete #applySubmitBtn { box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3); }
 
-/* ---------- photo ---------- */
 #captureBox {
     padding: 22px;
     border-color: var(--ap-line-strong);
@@ -346,7 +329,6 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
     background: rgba(255, 107, 138, 0.08);
 }
 
-/* ---------- progress ---------- */
 .apply-progress { display: flex; align-items: center; gap: 12px; }
 .apply-progress-bar {
     flex: 1;
@@ -372,7 +354,6 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
     font-variant-numeric: tabular-nums;
 }
 
-/* ---------- success ---------- */
 #applySuccess {
     max-width: 560px;
     margin: 6vh auto 0;
@@ -382,7 +363,6 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
 }
 #applySuccess svg { color: var(--ap-ok); }
 
-/* ---------- responsive ---------- */
 @media (max-width: 900px) {
     #applyFormSection {
         grid-template-columns: minmax(0, 1fr);

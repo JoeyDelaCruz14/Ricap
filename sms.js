@@ -1,5 +1,3 @@
-// SMS alert subscription. The browser only records WHO wants alerts (Firestore: smsSubscribers/{uid});
-// the actual text messages are sent by the Cloud Function in functions/index.js.
 import { db } from './firebase-config.js';
 import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ensureAuth } from './Session.js';
@@ -22,7 +20,6 @@ async function writeSubscriber(account, enabled) {
     }, { merge: true });
 }
 
-// Turn SMS alerts on/off for the logged-in account
 export async function setSmsEnabled(on) {
     const a = getAccount();
     if (!a || !a.phone) throw new Error('No phone number saved for this account.');
@@ -31,7 +28,6 @@ export async function setSmsEnabled(on) {
     saveAccount(a);
 }
 
-// Call after sign-up / login / page load so the current (anonymous) uid has a subscriber record.
 export async function resyncIfOptedIn() {
     if (!isLocalLoggedIn()) return;
     const a = getAccount();

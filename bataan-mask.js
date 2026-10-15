@@ -1,38 +1,15 @@
-// bataan-mask.js
-// Shows ONLY Bataan on the Leaflet map:
-//   - a solid mask in the page colour covers everything outside the province (a world-sized
-//     polygon with Bataan cut out as a hole). It is an ordinary Leaflet vector layer, so it
-//     moves with the map while panning/zooming with no per-frame work.
-//   - a clean outline around the province border
-//   - the 12 municipalities, each highlighted with its name when the pointer is over it
-//     (tap on touch screens)
-//   - the existing marker "pop" + fly-in when a river marker's popup opens
-//
-// Boundaries come from data/bataan-boundaries.geojson: the official land boundaries of the
-// province and its 12 municipalities (NAMRIA / PSA, published by geoBoundaries, CC BY 3.0
-// IGO; see the _source note inside the file). If that file can't be loaded, the province
-// outline is fetched from Nominatim instead (the previous behaviour) and cached, so the
-// mask still works; that outline includes municipal waters and has no municipalities.
-//
-// Called from mapping.js:
-//   const bataan = await loadBataanMask(map, BATAAN_BOUNDS, { onOverview })
-// and returns { bounds, contains(latlng), distanceToEdgeKm(latlng), municipalities,
-// focusMunicipality(name) }.
 
 const BOUNDARY_URL = 'data/bataan-boundaries.geojson';
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const CACHE_KEY = 'ricap_bataan_boundary_v2';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-// existing page colours (mapping.css): page background, sidebar surface, focus accent
 const MASK_COLOR = '#0b0c10';
 const OUTLINE_COLOR = '#8c3cf0';
 const AREA_LINE_COLOR = '#111318';
 
-// river mouths sit right on the coastline, so "inside Bataan" allows a small margin
 const EDGE_TOLERANCE_KM = 1;
 
-/* ---------------- boundary loading ---------------- */
 
 function readCache() {
     try {
@@ -46,11 +23,9 @@ function readCache() {
 
 function writeCache(rings) {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), rings })); }
-    catch (e) { /* storage full: fine, it is only a cache */ }
+    catch (e) {  }
 }
 
-// GeoJSON [lng, lat] -> Leaflet [lat, lng]; Polygon or MultiPolygon -> list of polygons,
-// each polygon a list of rings (outer first, then holes)
 function toLatLngPolygons(geometry) {
     const polys = geometry.type === 'Polygon' ? [geometry.coordinates]
         : geometry.type === 'MultiPolygon' ? geometry.coordinates
@@ -73,7 +48,6 @@ async function loadBoundaryFile() {
     };
 }
 
-// fallback only: the previous live lookup, kept so the page never loses its mask
 async function loadBoundaryFromNominatim(bounds) {
     let rings = readCache();
     if (!rings) {
@@ -93,7 +67,6 @@ async function loadBoundaryFromNominatim(bounds) {
     return { province: rings.map(r => [r]), municipalities: [] };
 }
 
-/* ---------------- geometry ---------------- */
 
 function ringContains(ring, lat, lng) {
     let inside = false;
@@ -104,14 +77,12 @@ function ringContains(ring, lat, lng) {
     return inside;
 }
 
-// even-odd across all rings of all polygons: holes and islands both work
 function polygonsContain(polygons, lat, lng) {
     let inside = false;
     polygons.forEach(poly => poly.forEach(ring => { if (ringContains(ring, lat, lng)) inside = !inside; }));
     return inside;
 }
 
-// shortest distance (km) from a point to any boundary edge; local planar approximation
 function distanceToEdgesKm(polygons, lat, lng) {
     const kx = 111.32 * Math.cos(lat * Math.PI / 180), ky = 110.57;
     let best = Infinity;
@@ -129,8 +100,6 @@ function distanceToEdgesKm(polygons, lat, lng) {
     return best;
 }
 
-// km from a point to Bataan's border (the coastline). Used by the Scanner so its river
-// segments are oriented exactly like the map's.
 export async function loadCoastDistance() {
     const data = await loadBoundaryFile();
     return p => {
@@ -139,14 +108,12 @@ export async function loadCoastDistance() {
     };
 }
 
-/* ---------------- styles ---------------- */
 
 function injectStyles() {
     if (document.getElementById('ricap-mask-styles')) return;
     const style = document.createElement('style');
     style.id = 'ricap-mask-styles';
     style.textContent = `
-        /* municipality name, centred in the highlighted area */
         .leaflet-tooltip.ricap-area-label {
             padding: 4px 10px;
             border: 1px solid #252931;
@@ -161,7 +128,6 @@ function injectStyles() {
         }
         .leaflet-tooltip.ricap-area-label::before { display: none; }
 
-        /* marker hover + click animations (markers already carry the .ricap-marker class) */
         .ricap-marker {
             transition: transform .18s cubic-bezier(.34, 1.56, .64, 1), box-shadow .18s ease;
             cursor: pointer;
@@ -192,10 +158,7 @@ function injectStyles() {
     document.head.appendChild(style);
 }
 
-/* ---------------- marker pop + fly-in ---------------- */
 
-// Leaflet stops a marker's click before it reaches the map, so this listens for the
-// map-level popupopen/popupclose events Leaflet always fires instead.
 const CLICK_ZOOM_LEVEL = 16;
 const CLICK_FLY_SECONDS = 0.7;
 
@@ -209,8 +172,6 @@ function bindMarkerClickAnimation(map, onOverview) {
         return icon.classList.contains('ricap-marker') ? icon : icon.querySelector('.ricap-marker');
     }
 
-    // switching straight from one marker to another fires close+open in the same tick;
-    // the fly-back on close waits a moment and is cancelled by the next open
     let revertTimer = null;
 
     map.on('popupopen', e => {
@@ -237,7 +198,6 @@ function bindMarkerClickAnimation(map, onOverview) {
     map.on('popupclose', e => {
         map.getContainer().querySelectorAll('.ricap-marker.ricap-active')
             .forEach(el => el.classList.remove('ricap-active'));
-        // only a river MARKER popup zoomed the map in; river-segment popups leave the view alone
         const source = e.popup && e.popup._source;
         if (!(source instanceof L.Marker) || source.options.segmentMarker) return;
         revertTimer = setTimeout(() => {
@@ -247,13 +207,7 @@ function bindMarkerClickAnimation(map, onOverview) {
     });
 }
 
-/* ---------------- main ---------------- */
 
-/**
- * @param {L.Map} map
- * @param {Array} bounds  BATAAN_BOUNDS from mapping-data.js (used only by the fallback lookup)
- * @param {{onOverview?: Function}} [options]  called to return to the full-province view
- */
 export async function loadBataanMask(map, bounds, options = {}) {
     injectStyles();
     bindMarkerClickAnimation(map, options.onOverview);
@@ -270,9 +224,6 @@ export async function loadBataanMask(map, bounds, options = {}) {
     }
     if (!data.province.length) throw new Error('Bataan boundary had no rings');
 
-    // panes: municipality shading sits under the river lines (overlayPane, 400) so their
-    // tooltips keep working; the mask sits above the river lines so waterways outside the
-    // province are hidden too; markers (600) and popups stay on top of everything
     const panes = { areas: 390, mask: 450, outline: 460 };
     Object.keys(panes).forEach(key => {
         const name = 'ricap-' + key;
@@ -282,10 +233,8 @@ export async function loadBataanMask(map, bounds, options = {}) {
             pane.style.pointerEvents = 'none';
         }
     });
-    // one SVG renderer per pane, padded so fast panning never reveals an undrawn edge
     const renderer = key => L.svg({ pane: 'ricap-' + key, padding: 1 });
 
-    // mask: the whole world with every Bataan ring punched out (evenodd)
     const world = [[-89.9, -539.9], [-89.9, 539.9], [89.9, 539.9], [89.9, -539.9]];
     const holes = data.province.flat();
     L.polygon([world, ...holes], {
@@ -297,7 +246,6 @@ export async function loadBataanMask(map, bounds, options = {}) {
         interactive: false
     }).addTo(map);
 
-    // province outline: a soft halo under a crisp line
     const outlineRenderer = renderer('outline');
     data.province.forEach(poly => {
         L.polygon(poly, { renderer: outlineRenderer, color: OUTLINE_COLOR, weight: 7, opacity: 0.22, fill: false, interactive: false }).addTo(map);
@@ -306,9 +254,6 @@ export async function loadBataanMask(map, bounds, options = {}) {
 
     const provinceBounds = L.latLngBounds(holes.flat());
 
-    // municipalities: thin borders, highlighted by hit-testing the pointer position (the
-    // river lines live on Leaflet's canvas above this pane, so the shapes themselves are
-    // deliberately not interactive)
     const areaRenderer = renderer('areas');
     const baseStyle = { color: AREA_LINE_COLOR, weight: 1, opacity: 0.45, dashArray: '4 4', fillColor: OUTLINE_COLOR, fillOpacity: 0 };
     const hoverStyle = { color: OUTLINE_COLOR, weight: 2.5, opacity: 0.95, dashArray: null, fillOpacity: 0.12 };
@@ -351,7 +296,6 @@ export async function loadBataanMask(map, bounds, options = {}) {
             frame = requestAnimationFrame(() => { frame = 0; setActive(areaAt(pending)); });
         });
         map.getContainer().addEventListener('mouseleave', () => setActive(null));
-        // touch: a tap shows the name of the municipality under the finger
         map.on('click', e => setActive(areaAt(e.latlng)));
         map.on('zoomstart', () => { if (map.hasLayer(label)) map.removeLayer(label); });
         map.on('zoomend', () => { if (active) { const a = active; active = null; setActive(a); } });
@@ -365,12 +309,10 @@ export async function loadBataanMask(map, bounds, options = {}) {
             if (polygonsContain(data.province, ll.lat, ll.lng)) return true;
             return distanceToEdgesKm(data.province, ll.lat, ll.lng) <= EDGE_TOLERANCE_KM;
         },
-        // km from a point to the province border (the coastline, for the land boundary)
         distanceToEdgeKm(latlng) {
             const ll = L.latLng(latlng);
             return distanceToEdgesKm(data.province, ll.lat, ll.lng);
         },
-        // highlight a municipality and fit the map to it (used by the search box)
         focusMunicipality(name, fitOptions) {
             const area = municipalities.find(m => m.name.toLowerCase() === String(name).toLowerCase());
             if (!area) return false;

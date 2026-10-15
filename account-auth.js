@@ -26,10 +26,9 @@ if (form) {
         const phoneRaw = phoneInput ? phoneInput.value.trim() : '';
         const alertsOptIn = document.getElementById('signupAlerts').checked;
 
-        // First and last name are both required now.
         if (!firstName || !lastName || !email || !password) { showToast('Please complete all fields, including first and last name.'); return; }
         let phone = '';
-        if (phoneRaw) {                       // phone is optional, but must be valid if given
+        if (phoneRaw) {
             phone = normalizePhone(phoneRaw);
             if (!phone) { showToast('Enter a valid Philippine mobile number, e.g. 09171234567, or leave it blank.'); return; }
         }
@@ -39,7 +38,7 @@ if (form) {
 
         let alertMsg = '';
         if (alertsOptIn) {
-            try { if (await requestNotifications()) setAllNotifications(true); } catch (e) { /* pop-ups denied */ }
+            try { if (await requestNotifications()) setAllNotifications(true); } catch (e) {  }
             try { await setEmailAlerts(true); alertMsg = ' Alerts are on.'; }
             catch (e) { console.warn('RiCap: could not save alert subscription', e); alertMsg = ' (Email alerts could not be saved yet — turn them on from Home after logging in.)'; }
         }

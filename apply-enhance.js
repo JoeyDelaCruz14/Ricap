@@ -23,8 +23,6 @@
 
     const touched = new WeakSet();
 
-    // First + last name are typed separately but saved as one "fullName", exactly as before:
-    // Apply.js reads the hidden #fullName field when the form is submitted.
     const firstName = $('firstName'), lastName = $('lastName'), fullName = $('fullName');
     function syncFullName() {
         if (!fullName || !firstName || !lastName) return;
@@ -43,7 +41,6 @@
         return !!capturePreview && !capturePreview.hidden;
     }
 
-    // a short message under the field, linked for screen readers
     function messageFor(f) {
         const id = f.el.id + 'Msg';
         let m = $(id);
@@ -110,12 +107,10 @@
         });
     });
 
-    // Apply.js shows/hides the photo preview; follow it to keep the progress right
     if (capturePreview) {
         new MutationObserver(update).observe(capturePreview, { attributes: true, attributeFilter: ['hidden'] });
     }
 
-    // on a failed submit, show every field's message, not only the ones already visited
     const submitBtn = $('applySubmitBtn');
     if (submitBtn) {
         submitBtn.addEventListener('click', () => {
@@ -128,7 +123,6 @@
         });
     }
 
-    // drag a photo onto the box: handed to the same file input Apply.js already checks
     if (captureBox && fileInput) {
         const canDrop = () => !$('captureEmpty').hidden;
         ['dragenter', 'dragover'].forEach(type => captureBox.addEventListener(type, e => {

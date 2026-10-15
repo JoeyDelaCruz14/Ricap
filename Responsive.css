@@ -1,22 +1,20 @@
 
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { max-width: 100%; }   /* no overflow rule on html/body here: it conflicts with pages that already set it and makes the page drag sideways */
+body { max-width: 100%; }
 img, video, canvas, svg { max-width: 100%; }
 img, video { height: auto; }
-.leaflet-container img, .leaflet-container svg { max-width: none; }   /* don't break map tiles */
+.leaflet-container img, .leaflet-container svg { max-width: none; }
 input, select, textarea, button { max-width: 100%; }
 .m-table-wrap, .table-wrap, .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-/* ---------- 1. Navigation: now lives only in style.css ---------- */
 
-/* ---------- 2. Apply / Submit page ---------- */
 @media (max-width: 768px) {
     .submit-main { padding: 80px 14px 64px; }
     .submit-shell { max-width: 100%; }
 }
 @media (max-width: 560px) {
     .submit-form-section, .submit-success { padding: 22px 16px; }
-    .field input, .field select { font-size: 16px; min-height: 44px; }   /* 16px stops iOS zoom */
+    .field input, .field select { font-size: 16px; min-height: 44px; }
     .submit-btn, .ghost-btn { min-height: 44px; }
     .capture-choice-btns, .success-actions, .capture-live-actions { flex-direction: column; width: 100%; }
     .capture-choice-btns > *, .success-actions > *, .capture-live-actions > * { width: 100%; }
@@ -24,7 +22,6 @@ input, select, textarea, button { max-width: 100%; }
     .submit-page .chip { padding: 10px 14px; }
 }
 
-/* ---------- 3. Home page ---------- */
 @media (max-width: 900px) {
     .site-header { padding: 16px 4%; }
     .hero-section { min-height: 100svh; padding: 110px 6% 70px; }
@@ -54,7 +51,6 @@ input, select, textarea, button { max-width: 100%; }
     .section { padding: 70px 5%; }
 }
 
-/* ---------- 4. Landing page ---------- */
 @media (max-width: 900px) {
     .hero { height: 100svh; min-height: 480px; padding: 0 4vw; }
     .hero-text { font-size: clamp(2.8rem, 16vw, 9rem); padding: 0 8px; }
@@ -71,7 +67,6 @@ input, select, textarea, button { max-width: 100%; }
     .features-grid, .about-list { gap: 14px; }
 }
 
-/* ---------- 5. Forum ---------- */
 @media (max-width: 1100px) {
     .forum-body { grid-template-columns: 1fr; }
     .forum-sidebar { position: static; max-height: none; }
@@ -98,7 +93,6 @@ input, select, textarea, button { max-width: 100%; }
     .forum-stats { grid-template-columns: 1fr; }
 }
 
-/* ---------- 6. Image Processing (scanner) ---------- */
 @media (max-width: 1200px) {
     .scan-grid { grid-template-columns: minmax(0, 1fr); }
 }
@@ -122,7 +116,6 @@ input, select, textarea, button { max-width: 100%; }
     .score-value { font-size: 2rem; }
 }
 
-/* ---------- 7. Tracking (records + trend map) ---------- */
 @media (max-width: 900px) {
     .docs-section { padding: 3vh 5vw 12vh; }
     .detail-image-panel { position: static; }
@@ -145,7 +138,6 @@ input, select, textarea, button { max-width: 100%; }
     .trend-map .leaflet-popup-content { max-width: 70vw; }
 }
 
-/* ---------- 8. Maintenance (admin) ---------- */
 @media (max-width: 900px) {
     .maintenance-page .maint-shell { max-width: 100%; }
     .maint-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -161,7 +153,7 @@ input, select, textarea, button { max-width: 100%; }
     .m-toolbar input, .m-toolbar select, .m-card select, .m-form input, .m-form select { font-size: 16px; min-height: 44px; }
     .m-form { padding: 16px; }
     .m-actions .ghost-btn, .m-actions .submit-btn { flex: 1 1 auto; min-height: 42px; }
-    .m-table { min-width: 560px; }                      /* scrolls inside .m-table-wrap */
+    .m-table { min-width: 560px; }
     .m-check li { flex-direction: column; gap: 4px; }
     .m-toast { width: calc(100vw - 24px); text-align: center; bottom: max(16px, env(safe-area-inset-bottom)); }
 }
@@ -169,7 +161,6 @@ input, select, textarea, button { max-width: 100%; }
     .maint-stats { grid-template-columns: 1fr; }
 }
 
-/* ---------- 9. Admin shell / cards ---------- */
 @media (max-width: 900px) {
     .admin-shell { padding-inline: 14px; max-width: 100%; }
 }
@@ -181,18 +172,16 @@ input, select, textarea, button { max-width: 100%; }
     .app-card [class*="actions"] { flex-wrap: wrap; }
 }
 
-/* ---------- 10. Mapping page ---------- */
 @media (max-width: 800px) {
     .month-bar { left: 64px; right: 12px; max-width: calc(100vw - 76px); }
     .month-sub { display: none; }
 }
 @media (max-width: 480px) {
     .month-bar button, .month-bar .m-nav { min-width: 40px; min-height: 40px; }
-    .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; }  /* bigger zoom buttons */
+    .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; }
     .leaflet-popup-content { max-width: 70vw; }
 }
 
-/* ---------- 11. Touch + motion ---------- */
 @media (hover: none) {
     .primary-btn:hover, .secondary-btn:hover, .feature-card:hover .feature-image img { transform: none; }
 }
@@ -200,20 +189,14 @@ input, select, textarea, button { max-width: 100%; }
     * { scroll-behavior: auto !important; }
 }
 
-/* ---------- 12. Keep every section inside the screen width (Home / Landing / all pages) ---------- */
-/* Nothing is blocked: sections simply can't be wider than the phone, so there is nothing to scroll to. */
 main, section, .section, .section-content, .feature-grid, .feature-card, .hero-section, .hero-content,
 .features, .features-inner, .features-grid, .about, .third, .second {
     max-width: 100%; min-width: 0; box-sizing: border-box;
 }
-/* overflow-x alone here would force the browser to auto-compute overflow-y as "auto" on
-   every <main>, turning it into a scroll container and silently breaking position:sticky
-   for any descendant (e.g. .forum-sidebar inside <main class="forum">). overflow-y is
-   pinned to "visible" so main never becomes that scroll container. */
 main { overflow-x: clip; overflow-y: visible; width: 100%; }
 @media (max-width: 900px) {
     .section { width: 100%; }
-    .feature-card, .tilt-card, .scroll-tilt, .magnetic { transform: none !important; }  /* inline 3D tilt widens cards */
+    .feature-card, .tilt-card, .scroll-tilt, .magnetic { transform: none !important; }
     .section-title, .hero-title, .features-heading { overflow-wrap: anywhere; }
     .cursor-glow { display: none !important; }
 }

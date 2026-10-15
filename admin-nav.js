@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 const LOGOUT_REDIRECT = 'main.html';
 const OFFICIAL_KEY = 'ricap_official';  
 export async function performLogout() {
-    try { localStorage.removeItem(OFFICIAL_KEY); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(OFFICIAL_KEY); } catch (e) {  }
     clearLocalLogin();
     try { await signOut(auth); } catch (err) { console.warn('Sign-out failed', err); }
     window.location.href = LOGOUT_REDIRECT;
@@ -14,8 +14,9 @@ export async function performLogout() {
 
 function ensureAdminLinks() {
     const links = document.getElementById('navLinks');
-    if (!links || links.querySelector('[data-admin-only]')) return;
+    if (!links) return;
     [['Admin.html', 'Admin'], ['maintenance.html', 'Maintenance']].forEach(([href, text]) => {
+        if (links.querySelector(`a[href="${href}"]`)) return;
         const li = document.createElement('li');
         li.setAttribute('data-admin-only', '');
         li.hidden = true;
@@ -32,6 +33,7 @@ function ensureLogoutLink() {
     if (!links || links.querySelector('[data-logout]')) return;
     const li = document.createElement('li');
     li.setAttribute('data-logout', '');
+    li.hidden = true;
     const a = document.createElement('a');
     a.href = '#';
     a.textContent = 'Logout';
@@ -75,7 +77,9 @@ function apply(user) {
     ensureLogoutLink();
     const greet = ensureGreeting();
     document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !isAdmin; });
-    loginItems().forEach(li => { li.hidden = loggedIn; });   
+    loginItems().forEach(li => { li.hidden = loggedIn; });
+    const logout = document.querySelector('#navLinks [data-logout]');
+    if (logout) logout.hidden = !loggedIn;
     if (greet) {
         const name = displayName(user);
         greet.hidden = !name;
@@ -84,9 +88,27 @@ function apply(user) {
     }
 }
 
+// Pages without their own menu script mark the toggle with data-nav-toggle.
+function initToggle() {
+    const toggle = document.getElementById('navToggle');
+    const links = document.getElementById('navLinks');
+    if (!toggle || !links || !toggle.hasAttribute('data-nav-toggle')) return;
+    const setOpen = open => {
+        links.classList.toggle('open', open);
+        toggle.classList.toggle('open', open);
+        toggle.setAttribute('aria-expanded', String(open));
+    };
+    toggle.addEventListener('click', () => setOpen(!links.classList.contains('open')));
+    links.addEventListener('click', e => { if (e.target.closest('a')) setOpen(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
+}
+
 function start() {
+    initToggle();
+    apply(auth.currentUser);
     onAuthStateChanged(auth, apply);
-    startReportAlerts();    
+    window.addEventListener('storage', () => apply(auth.currentUser));
+    startReportAlerts();
 }
 
 if (document.readyState === 'loading') {

@@ -17,7 +17,7 @@ function getCurrentUser() {
                 const id = String(u.id || u.email || u.username || '');
                 return { id: id, name: String(u.name || u.username || u.email || id) };
             }
-        } catch (e) { /* plain string */ }
+        } catch (e) {  }
         return { id: String(raw), name: String(raw) };
     } catch (err) {
         return { id: '', name: '' };
@@ -43,21 +43,21 @@ function loadSortOrder() {
     catch (err) { return 'newest'; }
 }
 function saveSortOrder(order) {
-    try { localStorage.setItem(SORT_KEY, order); } catch (err) { /* ignore */ }
+    try { localStorage.setItem(SORT_KEY, order); } catch (err) {  }
 }
 function loadScope() {
     try { return localStorage.getItem(SCOPE_KEY) === 'mine' ? 'mine' : 'all'; }
     catch (err) { return 'all'; }
 }
 function saveScope(scope) {
-    try { localStorage.setItem(SCOPE_KEY, scope); } catch (err) { /* ignore */ }
+    try { localStorage.setItem(SCOPE_KEY, scope); } catch (err) {  }
 }
 function loadViewMode() {
     try { return localStorage.getItem(VIEW_KEY) === 'table' ? 'table' : 'cards'; }
     catch (err) { return 'cards'; }
 }
 function saveViewMode(mode) {
-    try { localStorage.setItem(VIEW_KEY, mode); } catch (err) { /* ignore */ }
+    try { localStorage.setItem(VIEW_KEY, mode); } catch (err) {  }
 }
 
 function loadRecords() {
@@ -183,7 +183,6 @@ function formatTimestamp(iso) {
 
 const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted' };
 
-/* ---------- Monthly river map ---------- */
 
 const STATUS_COLORS = { healthy: '#4fae8c', moderate: '#e6b207', polluted: '#d6574a' };
 
@@ -207,7 +206,7 @@ function riverNameFor(record) {
             const found = RIVER_DATA.find(function (x) { return String(x.id) === String(record.riverId); });
             if (found) return found.name;
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) {  }
     return record.name || 'Unnamed spot';
 }
 
@@ -216,9 +215,6 @@ function inMonth(record, year, month) {
     return !isNaN(t.getTime()) && t.getFullYear() === year && t.getMonth() === month;
 }
 
-// Same grouping key used for the monthly map's circle markers (by river id when known,
-// otherwise by rounded coordinates) — reused by the timeline sidebar so a click there can find
-// the exact marker on the map to open.
 function groupKeyFor(r) {
     return r.riverId ? String(r.riverId) : 'pt:' + r.lat.toFixed(3) + ',' + r.lng.toFixed(3);
 }
@@ -374,7 +370,6 @@ function renderMonthMap(records, year, month, noun) {
     }
 }
 
-/* ---------- Timeline sidebar (Google-Maps-Timeline style) ---------- */
 
 function dayKey(d) {
     return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
@@ -394,10 +389,6 @@ function dayLabel(d) {
     });
 }
 
-// Renders the scrollable, day-grouped list beside the monthly map. Most recent day first;
-// within a day, entries run chronologically (earliest first), the way Google's own Timeline
-// lists a day's visited places. Clicking an entry flies the map to that scan's exact location
-// and opens the report popup for its river; the small chevron instead opens the full record.
 function renderTimelineSidebar(records, year, month, noun, onViewDetails) {
     const sidebar = document.getElementById('timelineSidebar');
     if (!sidebar) return;
@@ -483,7 +474,6 @@ function renderTimelineSidebar(records, year, month, noun, onViewDetails) {
         });
 }
 
-/* ---------- Page logic ---------- */
 
 function initTracking() {
     const listState = document.getElementById('listState');
@@ -512,8 +502,8 @@ function initTracking() {
     let sortOrder = loadSortOrder();
     let scope = loadScope();
     let viewMode = loadViewMode();
-    let dataset = [];          // what is currently displayed
-    let renderToken = 0;       // guards against out-of-order async loads
+    let dataset = [];
+    let renderToken = 0;
 
     sortSelect.value = sortOrder;
     scopeSelect.value = scope;
@@ -546,7 +536,7 @@ function initTracking() {
     sortSelect.addEventListener('change', function () {
         sortOrder = sortSelect.value === 'oldest' ? 'oldest' : 'newest';
         saveSortOrder(sortOrder);
-        renderRecordsView(); // order only — no need to refetch the dataset
+        renderRecordsView();
     });
 
     scopeSelect.addEventListener('change', function () {
@@ -579,7 +569,6 @@ function initTracking() {
         return '';
     }
 
-    // Builds the card grid for the current dataset/sort/scope.
     function renderCardsGrid() {
         recordGrid.innerHTML = '';
         sortRecords(dataset, sortOrder).forEach(function (record) {
@@ -606,7 +595,6 @@ function initTracking() {
             item.className = 'record-item';
             item.appendChild(card);
 
-            // Only the owner can delete a record
             if (isMine(record)) {
                 const delBtn = document.createElement('button');
                 delBtn.type = 'button';
@@ -623,14 +611,13 @@ function initTracking() {
         });
     }
 
-    // Builds the tabular timeline — one row per record, in the current sort order.
     function renderTableRows() {
         const tbody = document.getElementById('timelineTableBody');
         if (!tbody) return;
         tbody.innerHTML = '';
 
         const rows = sortRecords(dataset, sortOrder);
-        if (!rows.length) return; // the shared docsEmpty state covers this
+        if (!rows.length) return;
 
         rows.forEach(function (record) {
             const d = new Date(record.timestamp);
@@ -657,7 +644,6 @@ function initTracking() {
         });
     }
 
-    // Switches between Cards and Table without re-fetching the dataset.
     function renderRecordsView() {
         if (viewMode === 'table') {
             recordGrid.hidden = true;
@@ -673,7 +659,7 @@ function initTracking() {
     async function renderList() {
         const token = ++renderToken;
         const result = await getDataset(scope);
-        if (token !== renderToken) return;   // a newer render superseded this one
+        if (token !== renderToken) return;
 
         dataset = result.records;
         renderChart();
@@ -687,7 +673,6 @@ function initTracking() {
         sourceNote.textContent = msg;
         sourceNote.hidden = !msg;
 
-        // "Delete all" only ever touches this user's own local scans
         clearAllBtn.hidden = scope !== 'mine' || n === 0;
 
         docsEmptyText.textContent = scope === 'all'
@@ -753,7 +738,6 @@ function initTracking() {
     async function showDetail(id) {
         let record = dataset.find(function (r) { return String(r.id) === String(id); });
         if (!record) {
-            // Opened via ?id=... before the list loaded: load it now
             const result = await getDataset('all');
             dataset = result.records;
             record = dataset.find(function (r) { return String(r.id) === String(id); }) ||
@@ -797,7 +781,6 @@ function initTracking() {
             'Analyzed ' + (record.sampledPixels || 0).toLocaleString() + ' sampled pixels · avg color rgb(' +
             avg.r + ', ' + avg.g + ', ' + avg.b + ') · score ' + record.score + '/100';
 
-        // Log button: only the owner can submit; hidden on other accounts' reports
         const mine = isMine(record);
         logReportBtn.hidden = !mine;
         logReportBtn.disabled = !!record.reported;

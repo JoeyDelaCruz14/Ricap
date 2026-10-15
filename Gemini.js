@@ -20,7 +20,7 @@ async function loadKey() {
     try {
         const cfg = await import('./gemini-config.js');
         GEMINI_KEY = cfg.GEMINI_KEY || '';
-    } catch (e) { /* no config file: rules only */ }
+    } catch (e) {  }
     if (GEMINI_KEY.startsWith('YOUR_') || GEMINI_KEY.startsWith('PASTE')) GEMINI_KEY = '';
     return GEMINI_KEY;
 }
@@ -42,7 +42,6 @@ function takeQuota(uid) {
 export async function getRecommendation(a, riverName, opts = {}) {
     const fallback = opts.ruleText || FALLBACK[a.status] || FALLBACK.moderate;
     const rules = { text: withDisclaimer(fallback), source: 'rules', rulesText: fallback };
-    // Only what the wording needs: no names, emails, codes, ids or locations
     const items = (a.items || []).map(i => (i.count > 1 ? i.count + ' ' : '') + i.label).join(', ') || 'none';
     const role = String(opts.role || 'barangay official').slice(0, 40);
     const key = [a.status, items, role, riverName || '', fallback].join('|');

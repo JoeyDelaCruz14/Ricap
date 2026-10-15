@@ -15,10 +15,8 @@ const WATER_LABELS = [
 ];
 
 const NON_WATER_LABELS = [
-    // people
     'a photo of people',
     'a selfie or portrait of a person',
-    // indoors / objects / drinks (the usual false positives)
     'a photo of a glass of drinking water',
     'a photo of a drink in a glass or cup',
     'a photo of a cup of coffee, tea or matcha',
@@ -32,7 +30,6 @@ const NON_WATER_LABELS = [
     'a close-up photo of water droplets or bubbles',
     'a photo of a room indoors',
     'a photo of a screen, poster or document',
-    // outdoors, but not a river
     'a photo of a street or buildings',
     'a photo of a park, garden or trees on land',
     'a photo of a field or mountain',
@@ -43,8 +40,8 @@ const NON_WATER_LABELS = [
 ];
 
 const ALL_LABELS = [...WATER_LABELS, ...NON_WATER_LABELS];
-const MIN_WATER_SCORE = 0.6;   // total probability on river captions (was 0.5)
-const MIN_TOP_SCORE = 0.25;    // best single caption must also be reasonably confident
+const MIN_WATER_SCORE = 0.6;
+const MIN_TOP_SCORE = 0.25;
 
 let libPromise = null;
 let classifierPromise = null;
@@ -92,10 +89,9 @@ export function loadClipGate(onProgress) {
     return classifierPromise;
 }
 
-// imageSrc: an object URL, data URL, or image URL
 export async function checkRiverPhoto(imageSrc) {
     const classifier = await loadClipGate();
-    const results = await classifier(imageSrc, ALL_LABELS);   // sorted, scores sum to 1
+    const results = await classifier(imageSrc, ALL_LABELS);
 
     const waterScore = results
         .filter(function (r) { return WATER_LABELS.includes(r.label); })
@@ -106,7 +102,6 @@ export async function checkRiverPhoto(imageSrc) {
                WATER_LABELS.includes(top.label) &&
                top.score >= MIN_TOP_SCORE;
 
-    // handy when tuning: shows the 3 best captions in the browser console
     console.log('[CLIP] top 3:', results.slice(0, 3).map(function (r) {
         return r.label + ' ' + r.score.toFixed(2);
     }).join(' | '));

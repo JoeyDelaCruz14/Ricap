@@ -1,5 +1,3 @@
-// Tiny helpers for the local RiCap account (created in the Sign Up form) and the verified-official session.
-// No imports on purpose, so any page/module can use it.
 export const ACCOUNT_KEY = 'ricapAccount';
 export const LOGGED_KEY = 'ricapLoggedIn';
 export const OFFICIAL_KEY = 'ricap_official';
@@ -10,7 +8,7 @@ function readJSON(key) {
 
 export function getAccount() { return readJSON(ACCOUNT_KEY); }
 export function saveAccount(acc) {
-    try { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(acc)); } catch (e) { /* ignore */ }
+    try { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(acc)); } catch (e) {  }
 }
 export function getOfficialSession() { return readJSON(OFFICIAL_KEY); }
 
@@ -18,10 +16,9 @@ export function isLocalLoggedIn() {
     try { return localStorage.getItem(LOGGED_KEY) === 'true' && !!getAccount(); } catch (e) { return false; }
 }
 export function clearLocalLogin() {
-    try { localStorage.removeItem(LOGGED_KEY); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(LOGGED_KEY); } catch (e) {  }
 }
 
-// Name to greet the person with: the name they typed at sign-up (or the official's / admin's name)
 export function displayName(firebaseUser) {
     const off = getOfficialSession();
     if (off && off.name) return off.name;
@@ -32,7 +29,6 @@ export function displayName(firebaseUser) {
     return '';
 }
 
-// Philippine mobile numbers -> +639XXXXXXXXX (accepts 09XXXXXXXXX, 9XXXXXXXXX, 639XXXXXXXXX, +639XXXXXXXXX)
 export function normalizePhone(raw) {
     const d = String(raw || '').replace(/[\s\-().]/g, '').replace(/^\+/, '');
     if (/^09\d{9}$/.test(d)) return '+63' + d.slice(1);

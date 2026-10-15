@@ -5,19 +5,19 @@ import { isLocalLoggedIn } from './account.js';
 import { computeRiverSegments, nearestSegment, SEGMENT_NAMES } from './river-lines.js';
 import { loadCoastDistance } from './bataan-mask.js';
 
-const MATCH_KM = 1.5;   // same distance the map uses to place a report on a segment
-const FAR_KM = 3;       // a location farther than this from the chosen river gets a warning
+const MATCH_KM = 1.5;
+const FAR_KM = 3;
 
 const state = {
     riverId: '',
-    segment: 0,          // 1-4, 0 = not chosen yet
-    loc: null,           // { lat, lng, accuracy, source: 'photo-exif' | 'gps' }
-    gate: 'checking',    // 'guest' | 'unverified' | 'verified'
+    segment: 0,
+    loc: null,
+    gate: 'checking',
 };
 
-let deps = {};           // helpers handed over by Image_Processing.js
+let deps = {};
 let rivers = [];
-let parts = null;        // river id -> 4 coordinate arrays (source to mouth)
+let parts = null;
 let geoPromise = null;
 let map = null, riverLayer = null, locMarker = null;
 const gateListeners = [];
@@ -64,7 +64,6 @@ function midpoint(coords) {
     return coords[Math.floor(coords.length / 2)];
 }
 
-/* ======================= step 1: river + segment ======================= */
 
 function buildRiverSelect() {
     const sel = $('stepRiver');
@@ -123,14 +122,13 @@ function renderSummary() {
     document.dispatchEvent(new CustomEvent('ricap:selection-change'));
 }
 
-/* ---------- mini map ---------- */
 
 function initMap() {
     if (map || typeof L === 'undefined' || !$('segmentMap')) return;
     map = L.map('segmentMap', {
         zoomControl: true,
         attributionControl: true,
-        scrollWheelZoom: false,          // the page scrolls past it without getting stuck
+        scrollWheelZoom: false,
         tap: true,
         keyboard: true
     });
@@ -149,7 +147,6 @@ function drawMap(fit) {
     riverLayer.clearLayers();
     const selected = state.riverId && parts[state.riverId];
 
-    // every other river, faint, clickable to pick it
     Object.keys(parts).forEach(id => {
         if (id === state.riverId) return;
         parts[id].forEach(coords => {
@@ -204,7 +201,6 @@ function showLocationOnMap() {
         .addTo(map);
 }
 
-/* ---------- location suggestion (never applied silently) ---------- */
 
 async function setLocation(loc) {
     state.loc = loc;
@@ -280,7 +276,6 @@ async function useDeviceLocation() {
     }
 }
 
-/* ---------- EXIF GPS from the uploaded photo ---------- */
 
 async function readExifGps(file) {
     if (!file || file.type !== 'image/jpeg') return null;
@@ -327,19 +322,12 @@ function parseGps(v, t) {
     }
 }
 
-/** Called by Image_Processing.js whenever a photo is chosen */
 export async function onImageFile(file) {
     const gps = await readExifGps(file).catch(() => null);
     if (gps) await setLocation({ lat: gps.lat, lng: gps.lng, accuracy: null, source: 'photo-exif' });
 }
 
-/* ======================= selection for submit ======================= */
 
-/**
- * What the report should be saved against.
- * { ok, error?, riverId, segmentId, segmentIndex, segmentName, label, loc, warnings[] }
- * loc is the real location when it lies on the chosen segment, otherwise the segment's middle.
- */
 export function getSelection() {
     if (!state.riverId) return { ok: false, error: 'Choose the river in step 1.' };
     if (!state.segment) return { ok: false, error: 'Choose which segment of the river (1 to 4) in step 1.' };
@@ -372,12 +360,10 @@ export function getSelection() {
     };
 }
 
-/* ======================= gate ======================= */
 
 export function isGateVerified() { return state.gate === 'verified'; }
 export function onGateChange(fn) { gateListeners.push(fn); }
 
-// one check at a time: sign-in events and explicit refreshes can arrive together
 let gateRun = null;
 export function refreshGate() {
     if (!gateRun) gateRun = runGate().finally(() => { gateRun = null; });
@@ -392,15 +378,13 @@ async function runGate() {
     let gate = 'guest';
     if (loggedIn) gate = 'unverified';
     if (official) {
-        // verified = the server-set claim; officials verified before the Cloud Function
-        // existed get it by redeeming their stored code once, silently
         let ok = await hasOfficialClaim();
         if (!ok && official.code) {
             try { const o = await verifyCode(official.code); ok = (await hasOfficialClaim()) || !!o.legacy; }
             catch (e) { ok = false; }
         }
         gate = ok ? 'verified' : 'unverified';
-        if (!ok) try { localStorage.removeItem('ricap_official'); } catch (e) { /* ignore */ }
+        if (!ok) try { localStorage.removeItem('ricap_official'); } catch (e) {  }
     }
 
     state.gate = gate;
@@ -416,7 +400,6 @@ async function runGate() {
     steps.hidden = gate === 'guest';
     steps.inert = gate !== 'verified';
     steps.classList.toggle('is-locked', gate !== 'verified');
-    // the map was created while hidden, so Leaflet must re-measure it once it is shown
     if (!steps.hidden && map) requestAnimationFrame(() => { map.invalidateSize(); drawMap(true); });
     $('gateCard').classList.toggle('is-verified', gate === 'verified');
 
@@ -424,12 +407,7 @@ async function runGate() {
     return gate;
 }
 
-/* ======================= init ======================= */
 
-/**
- * @param {object} options  helpers from Image_Processing.js:
- *   rivers, coastLabels, getUserLocation(), inBataan(lat, lng), escapeHtml(s)
- */
 export function initSteps(options) {
     deps = options || {};
     rivers = deps.rivers || [];

@@ -1,5 +1,3 @@
-// RiCap email alerts: when a new report is saved, email everyone who turned alerts on.
-// Uses EmailJS's REST API (same EmailJS account as the access codes).
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
@@ -12,11 +10,10 @@ const EMAILJS_PRIVATE_KEY = defineSecret('EMAILJS_PRIVATE_KEY');
 
 const EMAILJS_SERVICE_ID = 'service_vlbn60c';
 const EMAILJS_PUBLIC_KEY = '5AaO3u5yFe98nJxv6';
-const EMAILJS_ALERT_TEMPLATE_ID = 'template_ne59us1';   // <- the NEW alert template, NOT template_tdqy3qr (Contact Us)
-const SITE_URL = 'http://127.0.0.1:5500/Home.html';                   // <- change once your site is hosted
+const EMAILJS_ALERT_TEMPLATE_ID = 'template_ne59us1';
+const SITE_URL = 'http://127.0.0.1:5500/Home.html';
 const ALERT_STATUSES = ['moderate', 'polluted', 'critical'];
 
-// riverId -> display name (edit to match your rivers)
 const RIVER_NAMES = {
     mamala: 'Mamala River',
     limay: 'Limay River',
@@ -37,7 +34,6 @@ exports.sendReportAlerts = onDocumentCreated(
             return;
         }
 
-        // one email per address; the most recently updated record decides opt-in / opt-out
         const snap = await admin.firestore().collection('alertSubscribers').get();
         const byEmail = new Map();
         snap.forEach(d => {
@@ -88,10 +84,6 @@ exports.sendReportAlerts = onDocumentCreated(
     }
 );
 
-// Verified officials: the access code is checked HERE, on the server, and the caller's
-// Firebase user is marked with the custom claim { official: true }. Firestore and Storage
-// rules check that claim, so only verified officials can save reports or upload images,
-// whatever the page itself shows. Called from Session.js verifyCode().
 exports.redeemAccessCode = onCall({ region: 'asia-southeast1' }, async request => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Your session has expired. Reload the page and try again.');

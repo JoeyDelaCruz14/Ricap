@@ -253,7 +253,6 @@ function buildRecommendation(a) {
 }
 
 
-// Rule text first; Gemini (localhost only, optional) may reword it. Never rejects.
 function recommendationFor(a) {
     const sel = getSelection();
     const official = getOfficial() || {};
@@ -265,7 +264,6 @@ function recommendationFor(a) {
 }
 
 
-// Confirms where the report goes (chosen in step 1) and asks for a report name.
 function askReportDetails(warnings, selection) {
     return new Promise(function (resolve) {
         const overlay = document.createElement('div');
@@ -321,7 +319,6 @@ function askReportDetails(warnings, selection) {
     });
 }
 
-// Plain-language messages for the ways a submission can fail
 function friendlyError(err) {
     const code = String((err && err.code) || '');
     if (!navigator.onLine || /unavailable|network|retry-limit|deadline/.test(code)) {
@@ -341,9 +338,9 @@ function friendlyError(err) {
 
 async function submitOfficialReport(analysis, imageDataUrl, details) {
     const selection = details.selection;
-    const loc = selection.loc;               // GPS/EXIF when it is on the chosen segment, else the segment's middle
+    const loc = selection.loc;
     const riverId = selection.riverId;
-    const segmentId = selection.segmentId;   // same ids as the map: riverId-seg1 .. riverId-seg4
+    const segmentId = selection.segmentId;
     const official = getOfficial() || {};
 
     await ensureFirebaseAuth();
@@ -366,12 +363,11 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         timestamp: timestamp
     });
 
-    // Location + status go to Firestore so the map can color the river
     const reportDoc = {
         recordId: recordId,
         reportName: details.name,
         riverId: riverId,
-        segmentId: segmentId,          // e.g. "colo-seg2" (1 = upstream ... 4 = downstream), or null
+        segmentId: segmentId,
         lat: loc.lat,
         lng: loc.lng,
         accuracy: loc.accuracy,
@@ -381,19 +377,18 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         assessment: analysis.assessment,
         recommendation: recommendation,
         recommendationRules: reco.rulesText,
-        recommendationSource: reco.source,   // 'rules' or 'rules+gemini'
+        recommendationSource: reco.source,
         waterTint: analysis.waterTint || null,
         imageUrl: uploaded.url,
         reporterName: official.name || '',
         reporterRole: official.role || '',
         reporterCode: official.code || '',
-        uid: uid,                        // the submitting user's Firebase id (checked by the rules)
+        uid: uid,
         createdAt: serverTimestamp()
     };
     try {
         await addDoc(collection(db, 'reports'), reportDoc);
     } catch (err) {
-        // If the database rules do not allow the two recommendation fields yet, save without them
         if (!/permission-denied/.test(err && err.code)) throw err;
         delete reportDoc.recommendationRules;
         delete reportDoc.recommendationSource;
@@ -553,7 +548,7 @@ function initScanner() {
         };
         reader.onerror = function () { showFileError('That file could not be read. Try another photo.'); };
         reader.readAsDataURL(file);
-        onImageFile(file);                  // GPS in the photo suggests a segment (never applied silently)
+        onImageFile(file);
     }
 
     async function openCamera() {
@@ -790,8 +785,6 @@ async function handleSubmitReport() {
             return;
         }
         pending.analysis.gateRan = true;
-        // the "check was still loading" note is no longer true, so it should not
-        // appear in the submit dialog or be saved with the record
         pending.analysis.warnings = (pending.analysis.warnings || []).filter(function (w) { return w.type !== 'gate'; });
         renderWarnings(pending.analysis.warnings);
     }
@@ -821,37 +814,33 @@ async function handleSubmitReport() {
     }
 }
 
-const LITTER_MODEL_URL = 'models/river_litter.onnx';
+const LITTER_MODEL_URL = 'models/best_litter_merged_v1.onnx';
 const LITTER_MODEL_CLASSES = ['trash'];
 const SCENE_MODEL_URL = 'models/river_pollution.onnx';
 const USE_SCENE_MODEL = true;
-// Labels from the scene model that are litter are ignored there (the litter model handles trash).
 const SCENE_MODEL_SKIP_LABELS = ['trash', 'plastic_pollution'];
 const YOLO_INPUT_SIZE = 640;
 const YOLO_CONF_THRESHOLD = 0.10;
 const YOLO_IOU_THRESHOLD = 0.45;
 
-// Order MUST match the trained model (Colab: print(m.names)). 'ignore_*' are junk labels that came
-// from the datasets (numeric / empty names). They keep their slot but are never shown or scored.
 const CURRENT_MODEL_CLASSES = [
-    'eutrophication_pollution', // 0
-    'ignore_1',                 // 1  ('0')
-    'ignore_2',                 // 2  ('1')
-    'chemical-water',           // 3
-    'dry-water',                // 4
-    'normal-water',             // 5
-    'oil-contaminated-water',   // 6
-    'polluted-water',           // 7
-    'ignore_8',                 // 8  (junk label)
-    'ignore_9',                 // 9  (junk label)
-    'clear',                    // 10
-    'trash',                    // 11
-    'ignore_12',                // 12 ('-')
-    'plastic_pollution',        // 13
-    'merah'                     // 14 (red water / red tide)
+    'eutrophication_pollution',
+    'ignore_1',
+    'ignore_2',
+    'chemical-water',
+    'dry-water',
+    'normal-water',
+    'oil-contaminated-water',
+    'polluted-water',
+    'ignore_8',
+    'ignore_9',
+    'clear',
+    'trash',
+    'ignore_12',
+    'plastic_pollution',
+    'merah'
 ];
 
-// Whole-scene WATER pollution classes from the detector (not objects). They add water points, not litter points.
 const SCENE_CLASS_INFO = {
     'eutrophication_pollution': { points: 22, kind: 'algae',    text: 'eutrophication (algae-rich, nutrient-polluted water)' },
     'merah':                    { points: 20, kind: 'algae',    text: 'red-colored water (possible algal bloom)' },
@@ -859,18 +848,11 @@ const SCENE_CLASS_INFO = {
     'oil-contaminated-water':   { points: 25, kind: 'oil',      text: 'oil-contaminated water' },
     'polluted-water':           { points: 20, kind: 'polluted', text: 'visibly polluted water' }
 };
-// A whole-scene water class adds 20-25 points on its own, so it needs real confidence
-// behind it; at 0.20 an 11-20% guess could swing a river into Moderate.
 const SCENE_MIN_SCORE = 0.30;
 
-// Boxes are DECODED at YOLO_CONF_THRESHOLD (0.10) so the zoomed tile pass can still catch
-// small litter, but a 10-20% box is noise, not evidence. Only boxes above these floors
-// are scored - and only those are drawn, so the picture always matches the number.
-const LITTER_MIN_SCORE = 0.25;     // the Ultralytics default confidence for predictions
-const CONTEXT_MIN_SCORE = 0.25;    // boats, birds, rocks, vegetation...
-// A litter item is an object. A single "trash" box covering a third of the photo is the
-// model misfiring on a whole forest or riverbank, so it needs very high confidence to count.
-const LITTER_BIG_BOX_AREA = 0.30;       // fraction of the whole image
+const LITTER_MIN_SCORE = 0.25;
+const CONTEXT_MIN_SCORE = 0.25;
+const LITTER_BIG_BOX_AREA = 0.30;
 const LITTER_BIG_BOX_MIN_SCORE = 0.75;
 
 function filterDetections(detections, imgW, imgH) {
@@ -1205,10 +1187,9 @@ function decodeYoloOutput(outputTensor, scale, padX, padY, origW, origH, classNa
 
 const YOLO_INPUT_SIZES = [YOLO_INPUT_SIZE, 640];
 
-// ---- Tiled (zoomed-in) detection for small litter ----
-const YOLO_TILING = true;          // set to false to turn the extra tile pass off
-const YOLO_TILE_MIN_SIDE = 700;    // only tile photos at least this big
-const YOLO_TILE_FRACTION = 0.6;    // each tile covers 60% of the width/height (2x2 overlapping tiles)
+const YOLO_TILING = true;
+const YOLO_TILE_MIN_SIDE = 700;
+const YOLO_TILE_FRACTION = 0.6;
 
 async function detectTiles(session, inputName, outputName, img, size, classNames, skipLabels) {
     const tw = Math.round(img.width * YOLO_TILE_FRACTION);
@@ -1230,7 +1211,7 @@ async function detectTiles(session, inputName, outputName, img, size, classNames
             const results = await session.run({ [inputName]: tensor });
             const boxes = decodeYoloOutput(results[outputName], scale, padX, padY, tw, th, classNames);
             boxes.forEach(function (b) {
-                if (!POLLUTION_CLASS_INFO[b.label]) return;   // tiles are only for litter objects
+                if (!POLLUTION_CLASS_INFO[b.label]) return;
                 if (skipLabels && skipLabels.indexOf(b.label) !== -1) return;
                 found.push({
                     x1: b.x1 + tx, y1: b.y1 + ty, x2: b.x2 + tx, y2: b.y2 + ty,
@@ -1347,19 +1328,13 @@ function scoreDetections(detections) {
              sceneItems: sceneItems, sceneScore: sceneScore, topScene: topScene };
 }
 
-// Fallback colour read, used only when the trained water classifier is unsure.
-// It must not punish water for being green-ish or for being photographed in shade:
-// clean rivers reflect vegetation and are often dark, and the old formula charged
-// points for both, which is why genuinely clean water never reached Healthy.
-const SURFACE_CAST_FLOOR = 25;   // tint below this is normal water, worth 0 points
+const SURFACE_CAST_FLOOR = 25;
 
 function scoreSurface(stats) {
     const { r, g, b } = stats.avgColor;
     const brightness = (r + g + b) / 3;
     const greenBrownBias = (g + r) - (b * 2);
 
-    // Colour cast is the only primary signal. Darkness is lighting, not pollution, so it
-    // can add a little but ONLY to water that is already visibly tinted.
     const castPoints = Math.max(0, greenBrownBias - SURFACE_CAST_FLOOR) / 4;
     const darkPoints = castPoints > 0 ? Math.max(0, (90 - brightness) / 10) : 0;
 
@@ -1373,8 +1348,6 @@ function scoreSurface(stats) {
         ? 'Bright — some overexposure'
         : (brightness < 60 ? 'Low light — retake in daylight if possible' : 'Even, natural light');
 
-    // 'tinted' is true exactly when the label above says the water is discoloured,
-    // so the clean-water decision can never disagree with what the user is shown.
     const tinted = colorCast !== 'Minimal discoloration';
     return { surfaceScore: surfaceScore, colorCast: colorCast, lighting: lighting, tinted: tinted };
 }
@@ -1435,10 +1408,6 @@ function computeClutterStats(imageDataUrl) {
     });
 }
 
-// Edge density stands in for "surface looks full of broken-up junk". Ripples, sun
-// sparkle, pebbles in a clear shallow stream and bank vegetation all produce hard
-// edges too, so the floor starts well above a plain rippling-water reading and the
-// ceiling is lower: this heuristic supports the detector, it should not outvote it.
 function scoreClutter(clutterStats) {
     const ratio = clutterStats.hardEdgeRatio;
 
@@ -1535,13 +1504,8 @@ function buildWarnings(blurStats, sceneCheck) {
 
 const WATER_MODEL_URL = 'models/water_quality.onnx';
 const WATER_INPUT_SIZE = 224;
-// MUST be the same classes, in the same alphabetical order, as the folders you trained on
-// (Colab prints them as CLASSES). If you train with fewer classes, delete the ones you don't have.
-// Your CURRENT water_quality.onnx has 4 classes, so keep these 4. Only when you retrain the classifier with
-// more folders, replace this list with the new alphabetical class list (e.g. add 'foam','garbage_covered','sewage').
 const WATER_CLASSES = ['algae', 'clean', 'discolored', 'oil'];
 
-// Pollution points each water class adds to the score (max 25)
 const WATER_CLASS_POINTS = {
     clean: 0,
     foam: 14,
@@ -1552,7 +1516,6 @@ const WATER_CLASS_POINTS = {
     oil: 25
 };
 
-// Plain-language text shown in the assessment
 const WATER_CLASS_TEXT = {
     clean: 'clean-looking water',
     foam: 'foam on the surface (possible detergent or sewage)',
@@ -1563,9 +1526,6 @@ const WATER_CLASS_TEXT = {
     oil: 'oil sheen or oil contamination'
 };
 const WATER_MIN_CONFIDENCE = 0.4;
-// The classifier sees the whole frame, and on photos dominated by forest or grass it drifts
-// toward "discolored" at 50-60%. A pollution verdict therefore needs more than a coin flip;
-// below this it is treated as unsure and the colour read decides instead.
 const WATER_POLLUTED_MIN_CONFIDENCE = 0.6;
 
 const WATER_USE_IMAGENET_NORM = true;
@@ -1683,8 +1643,6 @@ function buildAssessment(items, contextItems, surface, clutter, modelAvailable, 
     if (!modelAvailable) {
         parts.push('Object detection is unavailable right now (the model failed to load), so this reading is based on color and texture only.');
     }
-    // Lead with the verdict when the water reads clean, so a healthy result is stated
-    // positively instead of only as a list of things that were not found.
     if (cleanEvidence) {
         parts.push('This river looks healthy: no litter, no surface contamination and no discoloration were found.');
     }
@@ -1730,19 +1688,8 @@ async function runRiverCheck(imageDataUrl, waitMs) {
     return withTimeout(clip.checkRiverPhoto(imageDataUrl), waitMs, 'River-photo check');
 }
 
-/* =====================================================================
-   WATER TINT - how brown / muddy the water itself is
-   The old colour read averaged the WHOLE photo, so sky and trees drowned out the
-   water: a plainly brown river came back "minimal discoloration". This looks only
-   at the lower part of the frame, throws away sky, vegetation and deep shadow, and
-   measures how much of what is left (the water) is brown/tan versus blue or grey.
-   Brown water = suspended sediment / turbidity, a water-quality concern in its own
-   right, so it is scored as a pollution variable of its own (up to 35 points).
-   Calibrated on real photos: a muddy khaki river measures ~58% brown -> 33 pts,
-   a clear blue-green river 0%, grey overcast water 20% -> 0 pts.
-   ===================================================================== */
 const TINT_SAMPLE_W = 160;
-const TINT_TOP = 0.40;            // ignore the top 40%: in a river photo that is sky / far bank
+const TINT_TOP = 0.40;
 const TINT_MIN_WATER_SHARE = 0.15;
 const TINT_CLEAR_MAX = 0.25;
 const TINT_HEAVY_MIN = 0.60;
@@ -1766,14 +1713,13 @@ function measureWaterTint(pixels, w, h) {
         for (let x = 0; x < w; x++) {
             const o = (y * w + x) * 4;
             const c = rgbToHsv(pixels[o], pixels[o + 1], pixels[o + 2]);
-            // river water usually sits in the middle of the frame; edges are often banks
             const wt = (x > w * 0.2 && x < w * 0.8) ? 1 : 0.5;
-            if (c.v < 0.10) continue;                                            // deep shadow
-            if (c.v > 0.88 && c.s < 0.12) { other += wt; continue; }             // sky / white glare
-            if (c.h >= 70 && c.h <= 165 && c.s >= 0.20) { other += wt; continue; } // vegetation
+            if (c.v < 0.10) continue;
+            if (c.v > 0.88 && c.s < 0.12) { other += wt; continue; }
+            if (c.h >= 70 && c.h <= 165 && c.s >= 0.20) { other += wt; continue; }
             if (c.h >= 15 && c.h <= 60 && c.s >= 0.16) { brown += wt; brownSat += c.s * wt; continue; }
             if (c.h >= 165 && c.h <= 260 && c.s >= 0.10) { clear += wt; continue; }
-            neutral += wt;                                                       // grey water / overcast reflection
+            neutral += wt;
         }
     }
     const water = brown + clear + neutral;
@@ -1783,7 +1729,6 @@ function measureWaterTint(pixels, w, h) {
     }
     const murkyShare = brown / water;
     const meanBrownSat = brown ? brownSat / brown : 0;
-    // strong mud counts more than a faint beige cast
     const strength = Math.max(0.5, Math.min(1, (meanBrownSat - 0.12) / (0.30 - 0.12)));
     const ramp = Math.max(0, Math.min(1, (murkyShare - TINT_CLEAR_MAX) / (TINT_HEAVY_MIN - TINT_CLEAR_MAX)));
     const points = Math.round(ramp * strength * TINT_MAX_POINTS);
@@ -1824,18 +1769,9 @@ function computeWaterTint(imageDataUrl) {
     });
 }
 
-/* =====================================================================
-   LITTER DOUBLE-CHECK - is that "trash" box really trash?
-   The litter model has a single class ("trash"), so it cannot say "boat": every
-   object it notices comes out as trash. Each trash box is cropped and shown to
-   CLIP (the same model as the river-photo check), which does know boats, people,
-   rocks and plants. If CLIP is clearly more confident the crop is one of those than
-   any kind of litter, the box is relabelled - it is then drawn green and not scored.
-   If CLIP is not loaded yet the boxes are kept as they are (and the scan says so).
-   ===================================================================== */
-const CLIP_VERIFY_WAIT_MS = 8000;     // extra wait for CLIP if it is still loading
-const CLIP_VERIFY_MAX_BOXES = 6;      // check the strongest boxes only, to keep scans quick
-const CLIP_VERIFY_MIN_OBJECT = 0.5;   // the non-litter reading must be at least this sure
+const CLIP_VERIFY_WAIT_MS = 8000;
+const CLIP_VERIFY_MAX_BOXES = 6;
+const CLIP_VERIFY_MIN_OBJECT = 0.5;
 
 const CLIP_LITTER_CAPTIONS = [
     'a photo of trash or garbage',
@@ -1923,44 +1859,29 @@ async function verifyLitterWithClip(imageDataUrl, detections) {
     return { needed: true, ran: true, relabelled: relabelled };
 }
 
-// Combines every signal into the final score and status. Kept as a pure function (no
-// DOM, no models) so the scoring rules can be tested on their own.
 function combineScores(p) {
     const items = p.items, surface = p.surface, clutter = p.clutter;
     const water = p.water, waterScoring = p.waterScoring;
 
     const waterUsable = !!(water && water.available && waterScoring.usable);
     const classifierPoints = waterUsable ? waterScoring.points : surface.surfaceScore;
-    // Water pollution = the strongest of: the water classifier, the scene model, and the
-    // measured brown tint. Taking the max (not the sum) avoids counting one cue twice.
     const tintPoints = p.tint && p.tint.available ? p.tint.points : 0;
     const waterPoints = Math.max(classifierPoints, p.sceneScore, tintPoints);
 
-    // ---- Clean-water path ---------------------------------------------
-    // "Healthy" is the absence of pollution evidence, so it has to be reachable when
-    // the detectors genuinely find nothing. Three independent checks have to agree:
-    //   1. the litter detector ran and found no litter,
-    //   2. the scene model flagged no polluted-water class,
-    //   3. the water classifier called it clean (or, if it was unsure, the colour
-    //      read found no tint).
-    // When they do, the leftover texture score is ripples, rocks and bank greenery,
-    // not debris - so it is capped instead of pushing a clean river into Moderate.
     const noLitter = items.length === 0;
     const noSceneFlag = p.sceneScore === 0;
-    // brown, muddy water is never 'clean', whatever the classifier says
     const tintClear = !(p.tint && p.tint.available && p.tint.level !== 'clear');
-    const waterLooksClean = tintClear && (waterUsable ? waterScoring.label === 'clean' : !surface.tinted);
+    const tintStronglyClear = !!(p.tint && p.tint.available && p.tint.level === 'clear' && p.tint.waterShare >= 0.3);
+    const waterLooksClean = tintClear && (waterUsable ? (waterScoring.label === 'clean' || (tintStronglyClear && waterScoring.label === 'discolored')) : !surface.tinted);
     const cleanEvidence = !!p.modelAvailable && noLitter && noSceneFlag && waterLooksClean;
 
     let clutterPoints = clutter.clutterScore;
     if (cleanEvidence) clutterPoints = Math.min(clutterPoints, 8);
-    else if (noLitter && noSceneFlag) clutterPoints = Math.min(clutterPoints, 15);
+    else if (noLitter && noSceneFlag) clutterPoints = Math.min(clutterPoints, 8);
 
     let score = Math.max(0, Math.min(100, p.litterScore + waterPoints + clutterPoints));
     if (cleanEvidence) score = Math.min(score, 20);
 
-    // A river with litter actually in the frame is never "healthy", however smooth the
-    // water looks - but a single low-weight hit may be a false positive and not flip it.
     const litterCount = items.reduce(function (sum, i) { return sum + (i.count || 0); }, 0);
     if (!cleanEvidence && score <= 30 && (litterCount >= 2 || p.litterScore >= 8)) {
         score = 31;
@@ -1976,9 +1897,7 @@ function combineScores(p) {
 }
 
 async function analyzeRiverImage(imageDataUrl) {
-    // Step 1: CLIP gate - is this even a river photo? Fails open if CLIP is unavailable or slow.
     updateScanLabel('Checking that this is a river photo…');
-    // If it is taking a while, say why instead of looking frozen.
     const slowNote = setTimeout(function () {
         updateScanLabel('Checking that this is a river photo… the first scan downloads the checker, which can take a minute.');
     }, 6000);
@@ -2005,10 +1924,7 @@ async function analyzeRiverImage(imageDataUrl) {
         computeWaterTint(imageDataUrl)
     ]);
     const water = await runWaterClassification(imageDataUrl);
-    // Low-confidence and implausibly large boxes are dropped here, before scoring.
-    // analysis.detections is this filtered list, so the drawn boxes match the score.
     const detections = filterDetections(yoloResult.detections, yoloResult.width, yoloResult.height);
-    // a 'trash' box may really be a boat, person or rock - ask CLIP before it is scored
     if (detections.some(function (d) { return !!POLLUTION_CLASS_INFO[d.label]; })) {
         updateScanLabel('Double-checking detected items\u2026');
     }
@@ -2016,7 +1932,6 @@ async function analyzeRiverImage(imageDataUrl) {
 
     const { litterScore, items, contextItems, sceneItems, sceneScore, topScene } = scoreDetections(detections);
     const surface = scoreSurface(stats);
-    // the water's own tint replaces the whole-photo colour average
     if (tint.available) {
         surface.colorCast = tint.text;
         surface.tinted = tint.level !== 'clear';
@@ -2057,8 +1972,6 @@ async function analyzeRiverImage(imageDataUrl) {
     const score = combined.score;
     const status = combined.status;
 
-    // On a clean river, dense texture is foliage, ripples or rocks. Don't print
-    // "likely cluttered with litter" under a Healthy verdict.
     if (cleanEvidence && clutter.clutterReading !== 'Smooth, low-clutter surface') {
         clutter.clutterReading = 'Detailed natural texture (vegetation, ripples or rocks), not debris';
     }
@@ -2066,8 +1979,6 @@ async function analyzeRiverImage(imageDataUrl) {
     const detScores = detections.map(function (d) { return d.score; });
     const avgDetScore = detScores.length ? detScores.reduce(function (a, b) { return a + b; }, 0) / detScores.length : 0;
     let confidence = Math.round(detScores.length ? (avgDetScore * 70 + 30) : (yoloResult.modelAvailable ? 45 : 30));
-    // A clean read is a real result, not a failed one: let the water classifier's own
-    // certainty carry the confidence instead of reporting a flat 45%.
     if (!detScores.length && waterUsable) {
         confidence = Math.round(Math.min(95, water.topProb * 60 + 40));
     }
@@ -2271,9 +2182,7 @@ function renderWarnings(warnings) {
     box.hidden = false;
 }
 
-/* ---------- Access code gate (replaces Submit.html) ---------- */
 
-// who sees what (guest / not verified / verified) is decided in scanner-steps.js
 function refreshVerifyUI() {
     return refreshGate();
 }

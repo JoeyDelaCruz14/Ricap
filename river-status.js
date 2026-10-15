@@ -108,7 +108,6 @@ function compute(docs, rivers) {
             officialName: latest.officialName || '',
             latestScore: latest.score,
 
-            // extra fields for the full-analysis modal
             reportName: latest.reportName || '',
             reporterName: latest.reporterName || '',
             reporterRole: latest.reporterRole || '',

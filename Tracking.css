@@ -1,18 +1,8 @@
-/* =====================================================================
-   RiCap · Tracking
-   Loaded after Image_Processing.css and Responsive.css, so the rules
-   here are the last word for this page only. Palette is the page's
-   existing one: #0b0c10 / #14151b / #0f1016 surfaces, white alphas
-   for text and lines, rgba(160, 90, 240, …) + #a63bf7 purple accents,
-   and the status colours #4fae8c / #e6b207 / #d6574a.
-   ===================================================================== */
 
-/* anything the page script hides must stay hidden, whatever its display */
 #listState[hidden], #detailState[hidden], .record-grid[hidden],
 .timeline-table-wrap[hidden], .docs-empty[hidden], .trend-note[hidden],
 .trend-empty[hidden], .docs-clear-btn[hidden], .result-actions .btn[hidden] { display: none !important; }
 
-/* one focus ring for every control on the page */
 .btn:focus-visible,
 .back-link:focus-visible,
 .record-card:focus-visible,
@@ -26,7 +16,6 @@
     outline-offset: 2px;
 }
 
-/* ---------- shared rhythm: hero, toolbar and content share one edge ---------- */
 
 .scan-hero,
 .docs-shell {
@@ -37,7 +26,6 @@
 
 .docs-section { padding: 0 clamp(16px, 5vw, 72px) 96px; }
 
-/* ---------- hero: compact two-column header ---------- */
 
 .scan-hero {
     display: grid;
@@ -68,7 +56,6 @@
     line-height: 1.6;
 }
 
-/* ---------- shared card + buttons on this page ---------- */
 
 .card { border-radius: 18px; padding: clamp(18px, 2.2vw, 28px); }
 
@@ -81,7 +68,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .btn { line-height: 1.2; }
 .btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 
-/* ---------- records header + toolbar ---------- */
 
 .docs-list-header {
     display: flex;
@@ -166,7 +152,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: #f08a80;
 }
 
-/* ---------- view toggle (Cards / Table) ---------- */
 
 .view-toggle {
     display: flex;
@@ -199,7 +184,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: #fff;
 }
 
-/* ---------- empty state ---------- */
 
 .docs-empty {
     background: #14151b;
@@ -218,10 +202,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     padding: 12px 26px;
 }
 
-/* ---------- record cards ----------
-   A 12-track grid: cards span 3 (4 across), 4 (3 across) or 6 (2 across).
-   The last row always stretches to the full width, and a lone last card
-   turns into a wide photo-beside-details card, so no row ends in a gap. */
 
 .record-grid {
     display: grid;
@@ -351,7 +331,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: #fff;
 }
 
-/* 4 across */
 @media (min-width: 1180px) {
     .record-item:nth-child(4n+1):nth-last-child(3),
     .record-item:nth-child(4n+2):nth-last-child(2),
@@ -365,7 +344,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     .record-item:nth-child(4n+1):last-child .record-thumb { width: calc(25% - 12px); height: auto; min-height: 168px; }
 }
 
-/* 3 across */
 @media (min-width: 820px) and (max-width: 1179px) {
     .record-item { grid-column: span 4; }
 
@@ -377,7 +355,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     .record-item:nth-child(3n+1):last-child .record-thumb { width: calc(33.333% - 11px); height: auto; min-height: 168px; }
 }
 
-/* 2 across */
 @media (min-width: 520px) and (max-width: 819px) {
     .record-item { grid-column: span 6; }
 
@@ -386,14 +363,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     .record-item:nth-child(2n+1):last-child .record-thumb { width: calc(50% - 8px); height: auto; min-height: 168px; }
 }
 
-/* 1 across */
 @media (max-width: 519px) {
     .record-grid { gap: 12px; }
     .record-item { grid-column: 1 / -1; }
     .record-thumb { height: auto; aspect-ratio: 16 / 9; }
 }
 
-/* ---------- table view ---------- */
 
 .timeline-table-wrap {
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -432,7 +407,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     white-space: nowrap;
 }
 
-/* date + time read as secondary, river leads, score lines up */
 .timeline-table td:nth-child(1),
 .timeline-table td:nth-child(2) { color: rgba(255, 255, 255, 0.6); }
 .timeline-table td:nth-child(3) { color: #fff; font-weight: 600; white-space: normal; }
@@ -476,7 +450,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     padding: 28px 16px;
 }
 
-/* phones: each row becomes a compact two-line block, no sideways scroll */
 @media (max-width: 640px) {
     .timeline-table thead {
         position: absolute;
@@ -522,7 +495,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     .timeline-table-empty td { grid-column: 1 / -1; }
 }
 
-/* ---------- monthly river map card ---------- */
 
 .trend-card { margin-bottom: 40px; }
 
@@ -603,7 +575,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     margin: 0;
 }
 
-/* timeline list + map: one grid, equal heights */
 .trend-timeline-wrap {
     --trend-h: clamp(380px, 46vh, 500px);
     display: grid;
@@ -623,7 +594,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     background: #0f1016;
 }
 
-/* dark basemap: invert the light OpenStreetMap tiles (markers are not affected) */
 .trend-map .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.7);
 }
@@ -765,7 +735,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* legend + river chips share one band under the map */
 .trend-legend {
     display: flex;
     flex-wrap: wrap;
@@ -822,7 +791,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .river-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .river-chip span { color: rgba(255, 255, 255, 0.55); font-variant-numeric: tabular-nums; }
 
-/* map popups */
 .trend-map .leaflet-popup-content-wrapper {
     background: #14151b;
     color: #fff;
@@ -850,7 +818,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .pop-up { color: #f08a80; }
 .pop-down { color: #6fd3b0; }
 
-/* ---------- detail view ---------- */
 
 .back-link {
     display: inline-flex;
@@ -875,8 +842,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     background: rgba(160, 90, 240, 0.1);
 }
 
-/* photo and verdict share the top row at equal height; the visual
-   indicators run full width underneath, so neither column ends early */
 .detail-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
@@ -890,7 +855,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .detail-analysis-panel { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; }
 .detail-indicators-panel { grid-column: 1 / -1; grid-row: 2; }
 
-/* the action buttons sit on the bottom edge when the photo card is taller */
 .detail-analysis-panel .result-actions { margin-top: auto; }
 .detail-analysis-panel .disclaimer-box { margin-bottom: 18px; }
 
@@ -1115,9 +1079,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: rgba(255, 255, 255, 0.6);
 }
 
-/* =====================================================================
-   Responsive
-   ===================================================================== */
 
 @media (max-width: 1100px) {
     .trend-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1136,7 +1097,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     .docs-header-actions { justify-content: flex-start; }
 
     .detail-grid { grid-template-columns: minmax(0, 1fr); }
-    /* phone/tablet order: photo, then the verdict, then the indicators */
     .detail-image-panel { grid-column: 1; grid-row: 1; }
     .detail-analysis-panel { grid-column: 1; grid-row: 2; }
     .detail-indicators-panel { grid-column: 1; grid-row: 3; }
@@ -1155,7 +1115,6 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     .docs-section { padding-bottom: 72px; }
     .trend-card { margin-bottom: 28px; }
 
-    /* toolbar: a tidy two-column grid instead of a tall stack */
     .docs-header-actions {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));

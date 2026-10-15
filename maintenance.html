@@ -16,15 +16,21 @@
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks" data-nav-toggle>
+                <span></span><span></span><span></span>
+            </button>
             <ul class="nav-links" id="navLinks">
                 <li><a href="Home.html">Home</a></li>
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
                 <li><a href="Tracking.html">Tracking</a></li>
-                <li><a href="main.html#features">About</a></li>
+                <li><a href="main.html#features">Features</a></li>
+                <li><a href="main.html#how-it-works">How It Works</a></li>
                 <li><a href="main.html#contact">Contact</a></li>
-                <li><a href="Admin.html">Admin</a></li>
-                <li><a href="maintenance.html" class="nav-link--active" aria-current="page">Maintenance</a></li>
+                <li><a href="main.html#loginbutton">Login</a></li>
+                <li><a href="Apply.html">Verify</a></li>
+                <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+                <li data-admin-only hidden><a href="maintenance.html" class="nav-link--active" aria-current="page">Maintenance</a></li>
             </ul>
         </div>
     </nav>
@@ -46,7 +52,6 @@
                 <p class="access-error" id="mLoginError" hidden></p>
             </section>
 
-            <!-- ===================== MODULE ===================== -->
             <section id="mPanel" hidden>
                 <header class="maint-head">
                     <div>
@@ -71,13 +76,11 @@
                     <button type="button" class="m-tab" data-tab="system">System records</button>
                 </div>
 
-                <!-- Flagged -->
                 <div class="m-pane is-active" id="pane-flagged">
                     <p class="m-empty" id="flaggedEmpty">Nothing is flagged right now.</p>
                     <div class="m-list" id="flaggedList"></div>
                 </div>
 
-                <!-- All reports -->
                 <div class="m-pane" id="pane-reports">
                     <div class="m-toolbar">
                         <input type="search" id="reportSearch" placeholder="Search name, river, reporter…">
@@ -94,7 +97,6 @@
                     <div class="m-list" id="reportList"></div>
                 </div>
 
-                <!-- Rivers -->
                 <div class="m-pane" id="pane-rivers">
                     <form id="riverForm" class="m-form" autocomplete="off">
                         <h2 id="riverFormTitle">Add river location</h2>
@@ -147,7 +149,6 @@
                     </div>
                 </div>
 
-                <!-- System -->
                 <div class="m-pane" id="pane-system">
                     <h2 class="m-h2">Official access codes</h2>
                     <p class="m-empty" id="codesEmpty">No access codes issued yet.</p>
@@ -169,5 +170,6 @@
 
     <script src="mapping-data.js"></script>
     <script type="module" src="maintenance.js"></script>
+    <script type="module" src="admin-nav.js"></script>
 </body>
 </html>

@@ -68,21 +68,22 @@ const ICON = {
 
 const state = {
     reports: [],
-    votes: new Map(),      // reportId -> { count, mine }
-    comments: new Map(),   // reportId -> [comment]
+    votes: new Map(),
+    comments: new Map(),
     filter: 'all',
     sort: 'newest',
     uid: null,
     loaded: false,
-    error: null
+    error: null,
+    page: 1
 };
+const PAGE_SIZE = 9;
 const expanded = new Set();
 let saved = new Set();
 try { saved = new Set(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]')); } catch (e) {}
 
 const $ = id => document.getElementById(id);
 
-/* ---------------- boot ---------------- */
 
 initNav();
 mountAuthNav();
@@ -104,7 +105,6 @@ function initNav() {
     });
 }
 
-/* ---------------- Firestore listeners ---------------- */
 
 function startListeners() {
     onSnapshot(
@@ -155,13 +155,13 @@ function startListeners() {
     );
 }
 
-/* ---------------- sidebar ---------------- */
 
 function initSidebarControls() {
     $('statusChips').addEventListener('click', e => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
         state.filter = chip.dataset.status;
+        state.page = 1;
         document.querySelectorAll('#statusChips .chip')
             .forEach(c => c.classList.toggle('is-active', c === chip));
         render();
@@ -169,6 +169,7 @@ function initSidebarControls() {
 
     $('sortSelect').addEventListener('change', e => {
         state.sort = e.target.value;
+        state.page = 1;
         render();
     });
 
@@ -185,7 +186,6 @@ function initSidebarControls() {
         } else if (await requestNotifications()) {
             setAllNotifications(true);
         }
-        // logged-in account: alerts are also sent by email
         if (isLocalLoggedIn() && getAccount()) {
             try { await setEmailAlerts(turnOn); } catch (err) { console.warn('Email alert toggle failed', err); }
             renderAuthBlock();
@@ -282,7 +282,6 @@ function renderStatsAndOfficials() {
         .join('');
 }
 
-/* ---------------- feed rendering ---------------- */
 
 function renderAll() {
     renderStatsAndOfficials();
@@ -307,7 +306,6 @@ function render() {
     const feed = $('forumFeed');
     if (!feed) return;
 
-    // keep whatever the user was typing
     const drafts = {};
     feed.querySelectorAll('.post-add-comment input').forEach(i => {
         if (i.value) drafts[i.dataset.id] = i.value;
@@ -331,7 +329,10 @@ function render() {
         return;
     }
 
-    feed.innerHTML = list.map(postHtml).join('');
+    const pages = Math.ceil(list.length / PAGE_SIZE);
+    state.page = Math.min(Math.max(state.page, 1), pages);
+    const start = (state.page - 1) * PAGE_SIZE;
+    feed.innerHTML = list.slice(start, start + PAGE_SIZE).map(postHtml).join('') + pagerHtml(pages);
 
     feed.querySelectorAll('.post-add-comment input').forEach(i => {
         if (drafts[i.dataset.id]) i.value = drafts[i.dataset.id];
@@ -340,6 +341,20 @@ function render() {
         const el = feed.querySelector(`.post-add-comment input[data-id="${CSS.escape(focusId)}"]`);
         if (el) { el.focus(); try { el.setSelectionRange(caret, caret); } catch (e) {} }
     }
+}
+
+function pagerHtml(pages) {
+    if (pages <= 1) return '';
+    const p = state.page;
+    const nums = Array.from({ length: pages }, (_, i) => i + 1).map(n =>
+        `<button type="button" class="pager-btn${n === p ? ' is-active' : ''}" data-act="page" data-page="${n}"${n === p ? ' aria-current="page"' : ''}>${n}</button>`
+    ).join('');
+    return `
+    <nav class="feed-pager" aria-label="Report pages">
+        <button type="button" class="pager-btn" data-act="page" data-page="${p - 1}"${p === 1 ? ' disabled' : ''}>Prev</button>
+        ${nums}
+        <button type="button" class="pager-btn" data-act="page" data-page="${p + 1}"${p === pages ? ' disabled' : ''}>Next</button>
+    </nav>`;
 }
 
 function postHtml(r) {
@@ -417,7 +432,6 @@ function postHtml(r) {
     </article>`;
 }
 
-/* ---------------- actions ---------------- */
 
 const feedEl = $('forumFeed');
 
@@ -441,6 +455,11 @@ feedEl.addEventListener('click', async e => {
             try { localStorage.setItem(SAVED_KEY, JSON.stringify([...saved])); } catch (err) {}
             return render();
         case 'share': return sharePost(id, btn);
+        case 'page':
+            state.page = Number(btn.dataset.page);
+            render();
+            feedEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
         case 'post-comment': {
             const input = feedEl.querySelector(`.post-add-comment input[data-id="${CSS.escape(id)}"]`);
             return submitComment(id, input);
@@ -511,5 +530,5 @@ async function sharePost(reportId, btn) {
             btn.textContent = 'Copied';
             setTimeout(() => { btn.innerHTML = old; }, 1200);
         }
-    } catch (err) { /* user cancelled */ }
+    } catch (err) {  }
 }

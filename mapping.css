@@ -33,11 +33,10 @@ body {
     background: #0b0c10;
 }
 
-/* navigation: styled only in style.css (the one nav for every page) */
 
 .map-page {
     position: fixed;
-    top: 64px;                 /* height of the shared nav bar (nav.css) */
+    top: 64px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -79,13 +78,6 @@ body {
     font-family: var(--font);
 }
 
-/* =========================
-   SIDEBAR
-   One flat panel docked to the left edge: a single surface colour, hairline
-   rules between sections, and real reading sizes. No glass blur, gradient
-   header, or gold letter-spaced labels - those decorative layers were what
-   made it read like a generated template rather than a working map tool.
-========================= */
 
 .map-sidebar {
     --sb-bg: #111318;
@@ -94,8 +86,8 @@ body {
     --sb-text: #e6e8ec;
     --sb-muted: #8a909b;
     --sb-faint: #5f6570;
-    --sb-accent: #8c3cf0;      /* focus rings */
-    --sb-check: #6f4fc9;       /* checkboxes: muted so eleven of them don't shout */
+    --sb-accent: #8c3cf0;
+    --sb-check: #6f4fc9;
 
     position: absolute;
     top: 0;
@@ -115,7 +107,6 @@ body {
     z-index: 500;
 }
 
-/* ---------- header ---------- */
 
 .sidebar-header {
     padding: 18px 18px 14px;
@@ -137,7 +128,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* ---------- search ---------- */
 
 .sidebar-search {
     padding: 0 18px 14px;
@@ -170,7 +160,6 @@ body {
     box-shadow: 0 0 0 3px rgba(140, 60, 240, 0.18);
 }
 
-/* ---------- river groups ---------- */
 
 .sidebar-groups {
     flex: 1;
@@ -201,7 +190,6 @@ body {
     border-top: 1px solid var(--sb-line);
 }
 
-/* Group headings are quiet labels, not filled bars. */
 .sidebar-group-header {
     display: flex;
     align-items: center;
@@ -212,7 +200,6 @@ body {
     user-select: none;
 }
 
-/* The coloured coast dot is redundant next to the heading text. */
 .sidebar-group-color {
     display: none;
 }
@@ -242,7 +229,6 @@ body {
     text-align: center;
 }
 
-/* ---------- river rows ---------- */
 
 .sidebar-river-list {
     padding: 0 8px 8px;
@@ -277,7 +263,6 @@ body {
     cursor: pointer;
 }
 
-/* A river hidden from the map dims in the list, so the checkbox state is legible. */
 .sidebar-river-item:has(input:not(:checked)) .sidebar-river-name {
     color: var(--sb-faint);
 }
@@ -290,8 +275,6 @@ body {
     white-space: nowrap;
 }
 
-/* Status is written out ("Moderate") with a small swatch, instead of a bare dot
-   you have to decode against the legend. Rivers without reports show a dash. */
 .sidebar-river-status {
     display: inline-flex;
     align-items: center;
@@ -313,7 +296,6 @@ body {
     background: var(--status-color, #7f8792);
 }
 
-/* ---------- legend (for the map markers) ---------- */
 
 .map-legend {
     flex: 0 0 auto;
@@ -338,7 +320,6 @@ body {
     border-radius: 50%;
 }
 
-/* ---------- footer ---------- */
 
 .sidebar-footer {
     flex: 0 0 auto;
@@ -379,9 +360,6 @@ body {
     line-height: 1.5;
 }
 
-/* =========================
-   SIDEBAR MOBILE BUTTON
-========================= */
 
 .sidebar-toggle {
     position: absolute;
@@ -407,9 +385,6 @@ body {
     transition: left 0.25s ease;
 }
 
-/* =========================
-   LEAFLET ZOOM
-========================= */
 
 #map .leaflet-top.leaflet-left {
     left: auto !important;
@@ -455,9 +430,6 @@ body {
     color: #ffffff !important;
 }
 
-/* =========================
-   LEAFLET ATTRIBUTION
-========================= */
 
 #map .leaflet-bottom.leaflet-right {
     right: 0;
@@ -476,9 +448,6 @@ body {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* =========================
-   RIVER POPUP
-========================= */
 
 .leaflet-popup-content-wrapper {
     padding: 0 !important;
@@ -637,9 +606,6 @@ body {
     color: #70d4ac;
 }
 
-/* =========================
-   MARKER
-========================= */
 
 .ricap-marker {
     display: flex;
@@ -707,7 +673,6 @@ body {
         display: block;
     }
 
-    /* When the panel is open the button sits just outside it and doubles as close. */
     .sidebar-toggle[aria-expanded="true"] {
         left: calc(min(300px, 100vw - 60px) + 10px);
     }
@@ -726,9 +691,7 @@ body {
     }
 }
 
-/* Append this to the END of mapping.css (delete the previous version first) */
 
-/* The container owns all the padding; children are reset so nothing is offset */
 .leaflet-popup-content { margin: 0 !important; }
 
 .river-popup {
@@ -801,9 +764,6 @@ body {
     color: #fff; font-size: 1.6rem; cursor: pointer;
 }
 
-/* =========================
-   RIVER LINES — layers control (bottom right)
-========================= */
 
 .leaflet-control-layers {
     background: #111318 !important;
@@ -814,11 +774,6 @@ body {
 }
 .leaflet-control-layers label { color: #fff; margin: 2px 0; }
 
-/* =========================
-   BATAAN-ONLY MAP
-   The map fills everything beside the sidebar (desktop) or the whole page (phones),
-   and its empty background matches the mask outside the province.
-========================= */
 
 #map.leaflet-container,
 .map-canvas {
@@ -826,7 +781,6 @@ body {
 }
 
 @media (min-width: 801px) {
-    /* map starts at the sidebar's edge instead of sliding under it */
     .map-page #map.map-canvas {
         left: 300px;
         width: auto !important;
@@ -838,14 +792,12 @@ body {
     outline-offset: -2px;
 }
 
-/* river markers are reachable with Tab; show where focus is */
 #map .leaflet-marker-icon:focus { outline: none; }
 #map .leaflet-marker-icon:focus-visible .ricap-marker {
     box-shadow: 0 0 0 3px #0b0c10, 0 0 0 5px #8c3cf0;
     transform: scale(1.12);
 }
 
-/* ---------- jump-to search results ---------- */
 
 .sidebar-search { position: relative; }
 
@@ -907,7 +859,6 @@ body {
     font-size: 11px;
 }
 
-/* ---------- small on-map legend (phones only; desktop has the sidebar legend) ---------- */
 
 .map-legend-mini {
     display: none;
@@ -942,7 +893,6 @@ body {
     }
 }
 
-/* bigger zoom buttons for fingers */
 @media (pointer: coarse) {
     #map .leaflet-control-zoom a {
         width: 44px !important;
@@ -951,11 +901,7 @@ body {
     }
 }
 
-/* =========================
-   RIVER SEGMENTS (4 per river)
-========================= */
 
-/* numbered dot where each segment starts (1 = source) */
 .seg-divider-icon { background: none; border: 0; }
 
 .seg-divider {
@@ -976,7 +922,6 @@ body {
 
 .seg-divider-icon .seg-divider { width: 20px; height: 20px; font-size: 11px; }
 
-/* hover tooltip on a segment */
 .leaflet-tooltip.seg-tooltip {
     display: flex;
     flex-direction: column;
@@ -1011,7 +956,6 @@ body {
     border-radius: 50%;
 }
 
-/* segment popup: same card as the river popup, plus the part line */
 .seg-popup-part {
     display: flex;
     align-items: center;
@@ -1023,7 +967,6 @@ body {
 
 .popup-badge.none { background: #7f8792; }
 
-/* legend: the 4 segment names */
 .legend-segments {
     display: flex;
     flex-wrap: wrap;
@@ -1056,12 +999,7 @@ body {
 
 .legend-mini-segs .seg-divider { width: 15px; height: 15px; font-size: 9px; }
 
-/* =========================
-   LAYOUT POLISH
-========================= */
 
-/* The sidebar scrolls as ONE column (search stays pinned), so the river list is never
-   squeezed between the legend and footer. */
 .map-sidebar {
     overflow-y: auto;
     overflow-x: hidden;
@@ -1084,7 +1022,6 @@ body {
 
 .map-sidebar .sidebar-footer { margin-top: auto; }
 
-/* "Other waterways" switch (replaces the box that sat on the map) */
 .waterways-toggle {
     display: flex;
     align-items: center;
@@ -1137,7 +1074,6 @@ body {
     outline-offset: 2px;
 }
 
-/* ---------- month bar, floating over the map's empty top-left ---------- */
 
 .month-bar {
     position: absolute;
@@ -1207,7 +1143,6 @@ body {
     border-radius: 50%;
 }
 
-/* ---------- lighter river markers ---------- */
 
 .ricap-marker {
     border-width: 2px;
@@ -1216,10 +1151,8 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-/* ---------- phones / small tablets ---------- */
 
 @media (max-width: 800px) {
-    /* labelled "Rivers" pill instead of a second hamburger next to the site menu */
     .sidebar-toggle {
         display: inline-flex;
         align-items: center;
@@ -1238,7 +1171,6 @@ body {
     .sidebar-toggle .st-open { display: inline-flex; align-items: center; gap: 8px; }
     .sidebar-toggle .st-close { display: none; }
 
-    /* open: the same button becomes a close (×) inside the panel's top-right corner */
     .sidebar-toggle[aria-expanded="true"] {
         left: calc(min(300px, 100vw - 60px) - 56px);
         top: 12px;
@@ -1273,16 +1205,10 @@ body {
 }
 
 @media (max-width: 800px) {
-    /* the open river panel covers the left of the map; the month bar steps aside */
     .sidebar-toggle[aria-expanded="true"] ~ .month-bar { display: none; }
 }
 
 
-/* =========================
-   SEGMENT MARKERS
-   One per river segment, at its middle: the segment number on a dark disc,
-   ringed in that segment's status colour (readable on every status).
-========================= */
 
 .seg-marker-icon { background: none; border: 0; }
 
@@ -1311,7 +1237,6 @@ body {
     transform: scale(1.15);
 }
 
-/* small dot where one segment ends and the next begins */
 .seg-joint {
     display: block;
     width: 12px;
@@ -1327,11 +1252,9 @@ body {
     .seg-marker { transition: none; }
 }
 
-/* province-wide view: the segment markers shrink so 48 of them do not pile up */
 #map.seg-compact .seg-marker { transform: scale(0.62); }
 #map.seg-compact .seg-marker-icon:hover .seg-marker { transform: scale(0.85); }
 
-/* the "whole river" part of a segment popup (what the river pin used to show) */
 .seg-popup-river {
     margin-top: 12px;
     padding-top: 12px;
@@ -1347,7 +1270,6 @@ body {
     text-transform: uppercase;
 }
 
-/* the popup resets side margins on its direct children only; the whole-river block nests one level deeper */
 .seg-popup-river > * {
     box-sizing: border-box;
     max-width: 100%;

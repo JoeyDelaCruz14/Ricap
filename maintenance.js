@@ -14,14 +14,12 @@ const COAST_LABELS = { east: 'Manila Bay (east)', west: 'South China Sea (west)'
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 
-/* ---------- state ---------- */
-let reports = [];          // [{id, ...data}]
-let riverRecords = [];     // Firestore riverLocations
-let codes = [];            // RTDB accessCodes
+let reports = [];
+let riverRecords = [];
+let codes = [];
 let pendingApps = 0;
 let unsubs = [];
 
-/* ---------- helpers ---------- */
 function staticRivers() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) { }
     try { if (typeof RICAP_RIVERS !== 'undefined' && Array.isArray(RICAP_RIVERS)) return RICAP_RIVERS; } catch (e) { }
@@ -50,7 +48,6 @@ function toast(msg) {
     toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
 }
 
-/* ---------- auth ---------- */
 $('mLoginForm').addEventListener('submit', async e => {
     e.preventDefault();
     $('mLoginError').hidden = true;
@@ -77,7 +74,6 @@ onAuthStateChanged(auth, user => {
     }
 });
 
-/* ---------- listeners ---------- */
 function startListeners(user) {
     currentAdmin = user.email;
 
@@ -114,7 +110,6 @@ function onLoadError(what, err) {
     toast('Could not load ' + what + ' — check your Firebase rules.');
 }
 
-/* ---------- render ---------- */
 function renderAll() {
     renderStats();
     renderFlagged();
@@ -245,7 +240,6 @@ function renderIntegrity() {
         `<li class="${n ? 'warn' : 'ok'}"><span>${esc(label)}</span><strong>${n}</strong></li>`).join('') + '</ul>';
 }
 
-/* ---------- report actions ---------- */
 async function flagReport(r) {
     const reason = prompt('Why is this report being flagged?', '');
     if (reason === null) return;
@@ -289,7 +283,6 @@ async function deleteReport(r) {
     toast('Report deleted.');
 }
 
-/* ---------- river actions ---------- */
 function resetRiverForm() {
     $('riverForm').reset();
     $('riverDocId').value = '';
@@ -355,7 +348,6 @@ async function deleteRiver(r) {
     catch (err) { fail('Delete failed', err); }
 }
 
-/* ---------- access codes ---------- */
 async function toggleCode(c) {
     const next = !c.active;
     if (!next && !confirm('Revoke code ' + c.code + '? ' + (c.officialName || 'This official') + ' will no longer be able to submit reports.')) return;
@@ -365,13 +357,12 @@ async function toggleCode(c) {
     } catch (err) { fail('Could not update code', err); }
 }
 
-/* ---------- export ---------- */
 $('exportReportsBtn').addEventListener('click', () => {
     if (!reports.length) return toast('No reports to export.');
     const cols = ['recordId', 'reportName', 'riverId', 'status', 'score', 'lat', 'lng', 'reporterName', 'reporterRole', 'flagged', 'assessment', 'recommendation', 'imageUrl'];
     const cell = v => {
         let s = String(v == null ? '' : v);
-        if (/^[=+\-@]/.test(s)) s = "'" + s; // avoid spreadsheet formula injection
+        if (/^[=+\-@]/.test(s)) s = "'" + s;
         return '"' + s.replace(/"/g, '""') + '"';
     };
     const rows = [cols.concat('createdAt').join(',')].concat(reports.map(r =>
@@ -384,7 +375,6 @@ $('exportReportsBtn').addEventListener('click', () => {
     URL.revokeObjectURL(url);
 });
 
-/* ---------- ui wiring ---------- */
 document.querySelectorAll('.m-tab').forEach(tab => tab.addEventListener('click', () => {
     document.querySelectorAll('.m-tab').forEach(t => t.classList.toggle('is-active', t === tab));
     document.querySelectorAll('.m-pane').forEach(p => p.classList.toggle('is-active', p.id === 'pane-' + tab.dataset.tab));

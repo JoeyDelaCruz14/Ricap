@@ -15,24 +15,19 @@
     --current-wash: rgba(124, 10, 231, 0.24);
     --current-edge: rgba(169, 110, 255, 0.7);
 
-    /* data only */
     --status-healthy: #4fae8c;
     --status-moderate: #d9a441;
     --status-polluted: #bf5b2e;
     --status-critical: #c1443c;
 
-    /* legacy names kept so nothing that reads them falls back to purple */
     --gold: var(--current-fill);
     --purple: #610beb;
     --accent-text: var(--current-hi);
 
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-    --nav-h: 64px;             /* same bar height as the other pages (nav.css) */
+    --nav-h: 64px;
 }
 
-/* overflow-x clips horizontal scroll; overflow-y MUST stay explicit "visible" or the
-   browser auto-computes it to "auto", which turns html/body into a scroll container
-   and silently breaks position:sticky on every descendant (e.g. .forum-sidebar). */
 html, body.forum-page { overflow-x: clip; overflow-y: visible; }
 
 html:has(body.forum-page) {
@@ -70,7 +65,6 @@ body.forum-page :focus-visible {
     outline-offset: 3px;
 }
 
-/* programmatic focus targets (title, feed) should not draw a ring */
 .forum-title:focus,
 .forum-feed:focus { outline: none; }
 
@@ -144,7 +138,6 @@ body.forum-page :focus-visible {
 
 .btn:hover .btn-icon { transform: translateY(3px); }
 
-/* ===== hero ===== */
 
 .forum {
     width: 100%;
@@ -167,7 +160,6 @@ body.forum-page :focus-visible {
     border-bottom: 1px solid var(--line);
 }
 
-/* the old eyebrow class, kept harmless if anything re-adds it */
 .forum-eyebrow { display: none; }
 
 .forum-title {
@@ -201,8 +193,6 @@ body.forum-page :focus-visible {
     margin-top: 32px;
 }
 
-/* stats read like a river staff gauge: a tick ruler on the left,
-   a water line that rises on load, readings logged to the right */
 .forum-stats {
     grid-area: stats;
     position: relative;
@@ -278,7 +268,6 @@ body.forum-page :focus-visible {
     color: var(--text-faint);
 }
 
-/* ===== layout ===== */
 
 .forum-body {
     display: grid;
@@ -288,11 +277,7 @@ body.forum-page :focus-visible {
     margin-top: 48px;
 }
 
-/* ===== sidebar ===== */
 
-/* A normal column: it sits beside the feed and scrolls away with the rest of the
-   page. Deliberately NOT sticky or fixed, and with no max-height, so it never
-   pins to the viewport and never grows its own inner scrollbar. */
 .forum-sidebar {
     position: static;
     display: flex;
@@ -495,7 +480,6 @@ body.forum-page :focus-visible {
     color: var(--current-hi);
 }
 
-/* the guest "Enter access code" link is rendered as a.preview-btn with inline padding */
 .forum-sidebar a.preview-btn {
     display: flex !important;
     align-items: center;
@@ -512,16 +496,14 @@ body.forum-page :focus-visible {
 
 .preview-note strong { color: var(--text); }
 
-/* ===== feed ===== */
 
 .forum-feed {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
     gap: clamp(18px, 2vw, 28px);
-    align-items: stretch;          /* every card in a row is the same height */
+    align-items: stretch;
 }
 
-/* only one post: photo on the left, details stacked from the top on the right */
 .forum-feed:has(.post:only-child) { grid-template-columns: 1fr; }
 
 .forum-feed:has(.post:only-child) .post {
@@ -552,6 +534,43 @@ body.forum-page :focus-visible {
     font-size: 0.95rem;
 }
 
+.feed-pager {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+.pager-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.pager-btn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--current-edge);
+}
+
+.pager-btn.is-active {
+    background: var(--current-wash);
+    border-color: var(--current);
+    color: var(--current-hi);
+}
+
+.pager-btn:disabled { opacity: 0.4; cursor: default; }
+
 .post {
     --rx: 0deg;
     --ry: 0deg;
@@ -572,7 +591,6 @@ body.forum-page :focus-visible {
         border-color: var(--line-strong);
         box-shadow: 0 22px 44px -22px rgba(0, 0, 0, 0.75);
     }
-    /* while the pointer steers the tilt, follow it quickly */
     .post.is-tilting { transition: transform 0.12s linear, border-color 0.25s ease, box-shadow 0.4s var(--ease-out); }
 }
 
@@ -598,7 +616,6 @@ body.forum-page :focus-visible {
     padding: 14px 12px 14px 16px;
 }
 
-/* avatar: a static status ring around an ink disc */
 .post-avatar {
     position: relative;
     isolation: isolate;
@@ -717,7 +734,6 @@ body.forum-page :focus-visible {
     font-size: 0.9rem;
 }
 
-/* readable on every photo and every status: ink pill, status shown as a dot */
 .status-pill {
     position: absolute;
     top: 12px;
@@ -907,7 +923,7 @@ body.forum-page :focus-visible {
     gap: 10px;
     padding: 6px 12px 6px 16px;
     border-top: 1px solid var(--line);
-    margin-top: auto;              /* comment box always sits at the bottom of the card */
+    margin-top: auto;
     transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
@@ -925,7 +941,7 @@ body.forum-page :focus-visible {
     color: var(--text);
     font-family: var(--font);
     font-size: 0.9rem;
-    outline: none;                 /* the row above shows focus instead */
+    outline: none;
 }
 
 .post-add-comment input::placeholder { color: var(--text-faint); }
@@ -956,7 +972,6 @@ body.forum-page :focus-visible {
 .post-add-comment button[disabled],
 .post-add-comment input[disabled] { opacity: .5; }
 
-/* ===== floating buttons ===== */
 
 .fab-submit {
     position: fixed;
@@ -1025,7 +1040,6 @@ body.forum-page :focus-visible {
 
 .back-to-top svg { width: 20px; height: 20px; transition: transform 0.35s var(--ease-out); }
 
-/* when the "New report" button is showing, stack above it */
 .fab-submit:not([hidden]) ~ .back-to-top { bottom: calc(max(24px, env(safe-area-inset-bottom)) + 64px); }
 
 .back-to-top.is-visible {
@@ -1038,7 +1052,6 @@ body.forum-page :focus-visible {
 .back-to-top:hover { border-color: var(--current-edge); background: #221d30; }
 .back-to-top:hover svg { transform: translateY(-3px); }
 
-/* ===== motion ===== */
 
 @keyframes hpRise {
     from { opacity: 0; translate: 0 18px; }
@@ -1060,14 +1073,12 @@ body.forum-page :focus-visible {
     to  { transform: scale(1); }
 }
 
-/* the one authored moment: the hero settles in and the gauge water line rises */
 .forum-title   { animation: hpRise 0.9s var(--ease-out) both; }
 .forum-sub     { animation: hpRise 0.9s var(--ease-out) 0.08s both; }
 .forum-actions { animation: hpRise 0.9s var(--ease-out) 0.16s both; }
 .forum-stats   { animation: hpFade 0.8s ease 0.2s both; }
 .forum-stats::after { animation: hpFill 1.6s var(--ease-out) 0.35s both; }
 
-/* scroll reveals (classes added by home-page-interactive.js; without JS nothing is hidden) */
 html.hp-js .hp-reveal {
     opacity: 0;
     translate: 0 20px;
@@ -1080,12 +1091,9 @@ html.hp-js .hp-reveal.is-in {
     translate: 0 0;
 }
 
-/* a post that was already on screen before a feed refresh appears in place */
 html.hp-js .hp-reveal.is-settled { transition: none; }
 
-/* ===== responsive ===== */
 
-/* Below 1100px the two columns stack, with the feed above the sidebar. */
 @media (max-width: 1100px) {
     .forum-header {
         grid-template-columns: 1fr;

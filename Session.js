@@ -12,18 +12,15 @@ export function getOfficial() {
 export function isVerified() { return !!getOfficial(); }
 
 
-// The access code is checked by the redeemAccessCode Cloud Function, which marks this Firebase
-// user as an official (custom claim) so the database rules accept their reports. Until that
-// function is deployed, the old browser-side check is used so the Scanner keeps working.
 export async function verifyCode(code) {
     code = String(code || '').trim().toUpperCase();
     await ensureAuth();
     let official;
     try {
-        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') throw { code: 'functions/not-found' };   // local testing: skip the undeployed function, use the browser-side check
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') throw { code: 'functions/not-found' };
         const redeem = httpsCallable(getFunctions(app, 'asia-southeast1'), 'redeemAccessCode');
         const res = await redeem({ code });
-        await auth.currentUser.getIdToken(true);          // pick up the new "official" claim now
+        await auth.currentUser.getIdToken(true);
         const v = res.data || {};
         official = { code, name: v.name, role: v.role, organization: v.organization, uid: auth.currentUser.uid };
     } catch (err) {
@@ -42,7 +39,6 @@ export async function verifyCode(code) {
     return official;
 }
 
-// true when this browser's Firebase user carries the server-set "official" claim
 export async function hasOfficialClaim() {
     try {
         await ensureAuth();
@@ -53,11 +49,10 @@ export async function hasOfficialClaim() {
     }
 }
 
-// "Not you?": forget the official here AND drop the Firebase user that holds the claim
 export async function signOutOfficial() {
-    try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem(KEY); } catch (e) {  }
     authPromise = null;
-    try { if (auth.currentUser && auth.currentUser.isAnonymous) await signOut(auth); } catch (e) { /* ignore */ }
+    try { if (auth.currentUser && auth.currentUser.isAnonymous) await signOut(auth); } catch (e) {  }
 }
 
 export async function revalidate() {
@@ -66,7 +61,7 @@ export async function revalidate() {
     try {
         const snap = await get(ref(rtdb, 'accessCodes/' + o.code));
         if (!snap.exists() || !snap.val().active) { localStorage.removeItem(KEY); return null; }
-    } catch (e) { /* offline: keep session */ }
+    } catch (e) {  }
     return o;
 }
 

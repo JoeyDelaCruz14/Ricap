@@ -15,15 +15,21 @@
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks" data-nav-toggle>
+                <span></span><span></span><span></span>
+            </button>
             <ul class="nav-links" id="navLinks">
                 <li><a href="Home.html">Home</a></li>
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
                 <li><a href="Tracking.html">Tracking</a></li>
-                <li><a href="main.html#features">About</a></li>
+                <li><a href="main.html#features">Features</a></li>
+                <li><a href="main.html#how-it-works">How It Works</a></li>
                 <li><a href="main.html#contact">Contact</a></li>
-                <li><a href="Admin.html" class="nav-link--active" aria-current="page">Admin</a></li>
-                <li><a href="maintenance.html">Maintenance</a></li>
+                <li><a href="main.html#loginbutton">Login</a></li>
+                <li><a href="Apply.html">Verify</a></li>
+                <li data-admin-only hidden><a href="Admin.html" class="nav-link--active" aria-current="page">Admin</a></li>
+                <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
             </ul>
         </div>
     </nav>
@@ -46,7 +52,6 @@
                 <p class="access-error" id="adminLoginError" hidden></p>
             </section>
 
-            <!-- ===================== APPLICATIONS LIST ===================== -->
             <section class="submit-form-section" id="adminPanel" hidden>
                 <p class="form-eyebrow">Signed in as <span id="adminEmailLabel"></span> · <button type="button" id="adminSignOutBtn" class="link-btn">sign out</button></p>
                 <h1 class="form-title">Pending Applications</h1>
@@ -58,6 +63,7 @@
         </div>
     </main>
 
-    <script type="module" src="admin.js"></script>
+    <script type="module" src="Admin.js"></script>
+    <script type="module" src="admin-nav.js"></script>
 </body>
 </html>

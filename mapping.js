@@ -33,28 +33,27 @@ const COAST_LABELS = {
 };
 
 let map = null;
-let bataan = null;            // boundary helpers from bataan-mask.js, once loaded
-const outsideBataan = new Set(); // river ids whose pin falls outside the province
-const hiddenRivers = new Set();  // river ids switched off in the sidebar
+let bataan = null;
+const outsideBataan = new Set();
+const hiddenRivers = new Set();
 let statuses = {};
-let segments = {};            // river id -> 4 segment objects from river-lines.js
-let segmentStatuses = {};     // segment id (riverId-segN) -> status, same shape as statuses
-let dividerGroups = {};       // river id -> dots at the joints between segments
-let segmentMarkerGroups = {}; // river id -> one numbered marker per segment
-let lastReports = null;       // this month's + earlier reports, kept to place them on segments
-let selectedRiver = null;     // river picked in the search (its dividers stay visible)
+let segments = {};
+let segmentStatuses = {};
+let dividerGroups = {};
+let segmentMarkerGroups = {};
+let lastReports = null;
+let selectedRiver = null;
 let suppressOverviewUntil = 0;
 let markers = {};
 let riverLayers = {};
 let currentSearch = '';
 
-// month being shown on the map (defaults to the current month)
 const NOW = new Date();
 let viewYear = NOW.getFullYear();
 let viewMonth = NOW.getMonth();
-let monthUnsub = null;       // Firestore listener for the current month
-let monthLoadId = 0;         // ignores late answers after the user changed month
-let fallbackStarted = false; // river-status.js is used only if monthly loading fails
+let monthUnsub = null;
+let monthLoadId = 0;
+let fallbackStarted = false;
 
 const statusColors = {
     healthy: '#45ad91',
@@ -74,10 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startReportAlerts();
 });
 
-/* ---------------- Map ---------------- */
 
-// Bataan bounds come from mapping-data.js (BATAAN_BOUNDS = [[south, west], [north, east]]);
-// once bataan-mask.js has loaded the real boundary, its exact bounds are used instead.
 const BOUNDS = (typeof BATAAN_BOUNDS !== 'undefined')
     ? L.latLngBounds(BATAAN_BOUNDS).pad(0.05)
     : null;
@@ -90,8 +86,6 @@ function provinceBounds() {
     return (bataan && bataan.bounds) || BOUNDS;
 }
 
-// The whole province always fits; you can zoom out a little past that and pan a short
-// way beyond the border (the mask covers the rest), but never wander off.
 function lockToBataan() {
     const b = provinceBounds();
     if (!b) return;
@@ -102,7 +96,6 @@ function lockToBataan() {
     map.options.maxBoundsViscosity = 0.85;
 }
 
-// Full-province view. animate = smooth fly (load, Reset view, after closing a popup).
 function showBataan(animate) {
     const b = provinceBounds();
     if (!b) {
@@ -114,7 +107,6 @@ function showBataan(animate) {
     else map.fitBounds(b, { ...FIT_OPTIONS, animate: false });
 }
 
-// Pins that fall outside the province are taken off the map (they would sit under the mask)
 function hidePinsOutsideBataan() {
     if (!bataan) return;
     rivers.forEach(rv => {
@@ -138,17 +130,16 @@ function initMap() {
         zoomDelta: 0.5,
         wheelPxPerZoomLevel: 90,
         maxZoom: MAX_ZOOM,
-        keyboard: true,           // arrow keys pan, +/- zoom when the map has focus
+        keyboard: true,
         keyboardPanDelta: 120
     });
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: MAX_ZOOM,
-        keepBuffer: 4,            // keeps nearby tiles around so panning never shows blanks
+        keepBuffer: 4,
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // start a little zoomed out, then fly in to the province once its outline is ready
     if (BOUNDS) {
         map.fitBounds(BOUNDS, { animate: false });
         if (!reduceMotion) map.setZoom(map.getZoom() - 1.5, { animate: false });
@@ -167,8 +158,6 @@ function initMap() {
 
     createRiverMarkers();
 
-    // Only Bataan is shown: solid mask outside the province, outline, municipality
-    // hover labels (see bataan-mask.js)
     const maskReady = BOUNDS
         ? loadBataanMask(map, BATAAN_BOUNDS, {
             onOverview: () => { if (Date.now() >= suppressOverviewUntil) showBataan(true); }
@@ -184,26 +173,22 @@ function initMap() {
 
     map.on('zoomend', updateDividers);
 
-    // Real river lines from OpenStreetMap (see river-lines.js), each main channel split
-    // into 4 segments that carry their own status
     maskReady
         .then(() => loadRiverLines(map, rivers, bataan ? {
             contains: p => bataan.contains(p),
             coastKm: p => bataan.distanceToEdgeKm(p)
         } : {}))
         .then(res => {
-            Object.assign(riverLayers, res.byRiver);   // sidebar checkboxes now hide the real river lines too
+            Object.assign(riverLayers, res.byRiver);
             segments = res.segments || {};
             dividerGroups = res.dividers || {};
             segmentMarkerGroups = res.segmentMarkers || {};
             wireSegments();
             computeSegmentStatuses();
-            // move each marker onto its river line (location comes from the real river geometry)
             Object.keys(res.anchors).forEach(id => {
                 if (markers[id]) markers[id].setLatLng(res.anchors[id]);
             });
-            hidePinsOutsideBataan();                    // re-check pins at their final spots
-            // "Other waterways" on/off: a switch in the sidebar (falls back to a map control)
+            hidePinsOutsideBataan();
             const otherToggle = document.getElementById('otherWaterways');
             if (otherToggle) {
                 const applyOther = () => {
@@ -217,13 +202,13 @@ function initMap() {
                 L.control.layers(null, { 'Other waterways': res.other },
                     { position: 'bottomright', collapsed: false }).addTo(map);
             }
-            updateMarkerStatuses();                     // colour the lines by status
+            updateMarkerStatuses();
             updateDividers();
             showFallbackPins();
         })
         .catch(err => {
             console.warn('RiCap: could not load river lines', err);
-            showFallbackPins();                         // no lines at all: fall back to the river pins
+            showFallbackPins();
         });
 }
 
@@ -236,7 +221,6 @@ function createRiverMarkers() {
             title: rv.name || rv.officialName || 'River'
         });
 
-        // bindPopup is what makes the marker clickable
         marker.bindPopup(buildRiverPopup(rv), {
             minWidth: 220,
             maxWidth: 250,
@@ -246,8 +230,6 @@ function createRiverMarkers() {
             autoPanPaddingBottomRight: [20, 20]
         });
 
-        // not added to the map here: each river is shown by its 4 segment markers, and a
-        // pin only appears for a river without a mapped line (see showFallbackPins)
         markers[rv.id] = marker;
 
         if (Array.isArray(rv.path)) {
@@ -270,7 +252,6 @@ function createRiverMarkers() {
     updateMarkerStatuses();
 }
 
-// Circle colour = status; circle size and number = how many scans this month
 function createMarkerIcon(status, count) {
     const safeStatus = statusColors[status] ? status : 'none';
     const color = statusColors[safeStatus];
@@ -286,7 +267,6 @@ function createMarkerIcon(status, count) {
     });
 }
 
-/* ---------------- Popup ---------------- */
 
 function initPopupEvents() {
     map.on('popupopen', event => {
@@ -296,13 +276,11 @@ function initPopupEvents() {
         const btn = el.querySelector('.river-popup-action');
         if (btn) paintRiverNotificationButton(btn, btn.dataset.riverId);
 
-        // popup height changes once the photo finishes loading
         const img = el.querySelector('.river-popup-img');
         if (img && !img.complete) {
             img.addEventListener('load', () => event.popup.update(), { once: true });
         }
 
-        // one delegated listener per popup container (survives content refreshes)
         if (el.dataset.bound) return;
         el.dataset.bound = '1';
 
@@ -335,7 +313,6 @@ function monthLabel() {
     return new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
-// "Last month avg 54 -> 12 worse" compared with the previous calendar month
 function comparisonLine(status) {
     if (typeof status.prevAvg !== 'number' || typeof status.score !== 'number') {
         return '<p class="river-popup-trend">No reports here last month.</p>';
@@ -401,9 +378,6 @@ function updateMarkerStatuses() {
         marker.setIcon(createMarkerIcon(currentStatus, status ? status.count : 0));
         marker.setPopupContent(buildRiverPopup(rv));
 
-        // colour the river line by its pollution status.
-        // Rivers with no report yet still show in default blue at the same prominence,
-        // so everyone (not just reports with a status) can see every mapped river.
         const line = riverLayers[rv.id];
         const hasStatus = currentStatus !== 'none';
         const lineStyle = {
@@ -412,21 +386,17 @@ function updateMarkerStatuses() {
             opacity: hasStatus ? 1 : 0.9
         };
         if (segments[rv.id]) {
-            // the river line is 4 segments, each coloured by its own assessment
             segments[rv.id].forEach(seg => {
                 const st = segmentStatuses[seg.id];
                 seg.setColor(st && statusColors[st.status] ? statusColors[st.status] : statusColors.none);
             });
         } else if (line) {
             if (typeof line.eachLayer === 'function') {
-                // real OSM river line: a featureGroup of [dark halo, status line].
-                // Only recolour the layer marked statusLine so the halo stays dark.
                 line.eachLayer(sub => {
                     if (sub.options && sub.options.statusLine && sub.setStyle) sub.setStyle(lineStyle);
                 });
                 if (hasStatus && line.bringToFront) line.bringToFront();
             } else if (line.setStyle) {
-                // fallback hand-typed polyline (rv.path in mapping-data.js)
                 line.setStyle(lineStyle);
             }
         }
@@ -439,9 +409,8 @@ function updateMarkerStatuses() {
     });
 }
 
-/* ---------------- River segments (4 per river) ---------------- */
 
-const SEGMENT_MATCH_KM = 1.5;   // a report counts for a segment if it was taken this close to it
+const SEGMENT_MATCH_KM = 1.5;
 
 function distanceToLineKm(p, coords) {
     const kx = 111.32 * Math.cos(p[0] * Math.PI / 180), ky = 110.57;
@@ -456,13 +425,9 @@ function distanceToLineKm(p, coords) {
     return best;
 }
 
-// Which of its river's 4 segments a report belongs to, from the GPS position the scanner
-// already saves with every report (lat/lng). Reports without a position, or taken far
-// from the river line, still count for the river as a whole but not for a segment.
 function placeReport(report) {
     const segs = segments[report.riverId];
     if (!segs) return { seg: null, why: 'river has no line' };
-    // the segment the official picked in the Scanner (saved as segmentId) wins over GPS
     if (report.segmentId) {
         const chosen = segs.find(seg => seg.id === report.segmentId);
         if (chosen) return { seg: chosen.id, km: 0 };
@@ -482,7 +447,6 @@ function segmentIdForReport(report) {
     return placeReport(report).seg;
 }
 
-// Same averaging as the river status (aggregateReports), just grouped per segment
 function computeSegmentStatuses() {
     segmentStatuses = {};
     if (!lastReports || !Object.keys(segments).length) return;
@@ -497,7 +461,6 @@ function computeSegmentStatuses() {
     });
     segmentStatuses = current;
 
-    // one-line summary in the console, so it is easy to see why a report is not on a segment
     const unplaced = lastReports.sel.filter(rep => rep.riverId)
         .map(rep => ({ river: rep.riverId, report: rep.reportName || '', ...placeReport(rep) }))
         .filter(x => !x.seg);
@@ -544,8 +507,6 @@ function buildSegmentPopup(seg) {
         </div>`;
 }
 
-// The river as a whole (what the river pin's popup used to show): overall status for the
-// month, the river analysis, and the river's notification switch.
 function riverSummary(riverId) {
     const st = statuses[riverId];
     const id = escapeHtml(String(riverId));
@@ -590,7 +551,6 @@ function wireSegments() {
     });
 }
 
-// numbered boundary dots: shown when zoomed in, and always for the river picked in the search
 const SEGMENT_MARKER_ZOOM = 11.5;
 const JOINT_DOT_ZOOM = 12.5;
 
@@ -610,12 +570,11 @@ function updateDividers() {
     });
 }
 
-// zoom to one river and show its 4 segments
 function selectRiver(riverId) {
     const segs = segments[riverId];
     if (!segs) return;
     selectedRiver = riverId;
-    suppressOverviewUntil = Date.now() + 800;   // closing an open marker popup must not fly back out
+    suppressOverviewUntil = Date.now() + 800;
     map.closePopup();
     const bounds = L.latLngBounds([]);
     segs.forEach(seg => bounds.extend(seg.bounds));
@@ -626,7 +585,6 @@ function selectRiver(riverId) {
     setTimeout(() => segs.forEach(seg => { if (!seg.hit.isPopupOpen()) seg.highlight(false); }), 1600);
 }
 
-/* ---------------- Full analysis modal ---------------- */
 
 function openFullAnalysis(riverId, segmentId) {
     const rv = rivers.find(r => String(r.id) === String(riverId));
@@ -671,7 +629,6 @@ function openFullAnalysis(riverId, segmentId) {
     document.body.appendChild(overlay);
 }
 
-/* ---------------- Monthly data (Firestore reports) ---------------- */
 
 function statusFromScore(score) {
     if (score > 65) return 'polluted';
@@ -685,7 +642,6 @@ function docDate(d) {
     return t ? new Date(t) : null;
 }
 
-// Turns a list of report documents into one entry per river (same shape the popup already uses)
 function aggregateReports(reports) {
     const byRiver = {};
     reports.forEach(r => {
@@ -746,7 +702,6 @@ async function loadMonth() {
     const loadId = ++monthLoadId;
     if (monthUnsub) { monthUnsub(); monthUnsub = null; }
 
-    // clear the old month straight away so stale colours never linger
     statuses = {};
     segmentStatuses = {};
     lastReports = null;
@@ -758,7 +713,7 @@ async function loadMonth() {
     const year = viewYear;
     const month = viewMonth;
     const isCurrent = year === NOW.getFullYear() && month === NOW.getMonth();
-    const windowStart = new Date(year, month - 1, 1);          // previous month is loaded too, for the comparison
+    const windowStart = new Date(year, month - 1, 1);
     const windowEnd = new Date(year, month + 1, 1);
 
     try {
@@ -776,7 +731,6 @@ async function loadMonth() {
         };
 
         if (isCurrent) {
-            // live: new official reports appear on the map without a refresh
             monthUnsub = onSnapshot(q, handle, err => monthLoadFailed(err, isCurrent));
         } else {
             handle(await getDocs(q));
@@ -791,7 +745,6 @@ function monthLoadFailed(err, isCurrent) {
     const sub = document.getElementById('monthSub');
     if (sub) sub.textContent = 'Could not load reports for this month';
 
-    // safety net: the current month falls back to the original 30-day watcher
     if (isCurrent && !fallbackStarted && rivers.length) {
         fallbackStarted = true;
         watchRiverStatuses(rivers, newStatuses => {
@@ -805,7 +758,6 @@ function monthLoadFailed(err, isCurrent) {
     }
 }
 
-/* ---------------- Month bar ---------------- */
 
 function initMonthBar() {
     const prev = document.getElementById('monthPrev');
@@ -819,7 +771,7 @@ function initMonthBar() {
 
 function shiftMonth(delta) {
     const d = new Date(viewYear, viewMonth + delta, 1);
-    if (d > new Date(NOW.getFullYear(), NOW.getMonth(), 1)) return;   // no future months
+    if (d > new Date(NOW.getFullYear(), NOW.getMonth(), 1)) return;
     viewYear = d.getFullYear();
     viewMonth = d.getMonth();
     loadMonth();
@@ -855,7 +807,6 @@ function updateMonthBar() {
         `<span class="month-dot" style="background:${statusColors.polluted}"></span>${counts.polluted}`;
 }
 
-/* ---------------- Sidebar ---------------- */
 
 function initSidebar() {
     const sidebar = document.getElementById('mapSidebar');
@@ -877,7 +828,6 @@ function updateSidebar() {
     const container = document.getElementById('sidebarGroups');
     if (!container) return;
 
-    // remember which riversare hidden so re-rendering keeps checkboxes in sync
     const groups = groupRivers(rivers);
     container.innerHTML = '';
 
@@ -932,8 +882,6 @@ function updateSidebar() {
             name.className = 'sidebar-river-name';
             name.textContent = rv.name || rv.officialName || 'Unknown River';
 
-            // Status written out with a small swatch, so the list can be read
-            // without cross-checking a legend. No report this month -> a dash.
             const statusDot = document.createElement('span');
             statusDot.className = 'sidebar-river-status';
             const status = statuses[rv.id];
@@ -996,8 +944,6 @@ function setRiverVisibility(riverId, visible) {
     updateDividers();
 }
 
-// River pins only for rivers that have no segmented line (none today, but keeps a river
-// visible if its line ever fails to load), never outside Bataan or when switched off.
 function showFallbackPins() {
     rivers.forEach(rv => {
         const marker = markers[rv.id];
@@ -1020,9 +966,6 @@ function initSearch() {
     initJumpSearch(search);
 }
 
-/* ---------------- Jump-to search (rivers + municipalities) ---------------- */
-// The search box still filters the sidebar list as before; it also offers a short list of
-// matches to jump to with the mouse, or with Up/Down + Enter from the keyboard.
 
 let jumpState = null;
 
@@ -1069,7 +1012,6 @@ function initJumpSearch(input) {
     });
     input.addEventListener('blur', () => setTimeout(closeJumpResults, 150));
 
-    // mousedown (not click) so the choice lands before the input blurs
     list.addEventListener('mousedown', e => {
         const li = e.target.closest('[data-index]');
         if (!li) return;
@@ -1121,7 +1063,6 @@ function jumpTo(item) {
     if (!item) return;
     closeJumpResults();
 
-    // on phones the river panel covers the map: close it first
     const sidebar = document.getElementById('mapSidebar');
     const toggle = document.getElementById('sidebarToggle');
     if (sidebar && sidebar.classList.contains('open') && toggle && getComputedStyle(toggle).display !== 'none') {
@@ -1139,7 +1080,7 @@ function jumpTo(item) {
         if (segments[item.id]) {
             selectRiver(item.id);
         } else {
-            marker.openPopup();   // no river line: bataan-mask.js flies in to the marker instead
+            marker.openPopup();
         }
     } else if (bataan) {
         map.closePopup();
@@ -1147,13 +1088,12 @@ function jumpTo(item) {
     }
 }
 
-/* ---------------- Map legend (phones, where the sidebar legend is tucked away) ---------------- */
 
 function addMapLegend() {
     const control = L.control({ position: 'bottomleft' });
     control.onAdd = () => {
         const el = L.DomUtil.create('div', 'map-legend-mini');
-        el.setAttribute('aria-hidden', 'true');   // the sidebar legend is the accessible one
+        el.setAttribute('aria-hidden', 'true');
         el.innerHTML = [['healthy', 'Healthy'], ['moderate', 'Moderate'], ['polluted', 'Polluted'], ['critical', 'Critical'], ['none', 'No assessment']]
             .map(([k, t]) => `<span><i style="background:${statusColors[k]}"></i>${t}</span>`).join('') +
             `<span class="legend-mini-segs"><b class="seg-divider">1</b>→<b class="seg-divider">4</b> Upstream to Downstream</span>`;

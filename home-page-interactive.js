@@ -1,7 +1,3 @@
-/* RiCap · Home (River Watch Forum) interactions.
-   Works alongside Home.js and admin-nav.js without changing them:
-   Home.js owns the menu toggle, the feed render and the stat values;
-   this file only layers motion and convenience on top. */
 (function () {
     'use strict';
 
@@ -19,7 +15,6 @@
     const backToTop = document.getElementById('backToTop');
     const title = document.querySelector('.forum-title');
 
-    /* ---------- sticky nav + back-to-top, one rAF-throttled scroll handler ---------- */
 
     let ticking = false;
     function onScroll() {
@@ -35,7 +30,6 @@
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 
-    /* ---------- smooth in-page scrolling (focus follows for keyboard users) ---------- */
 
     function scrollToTarget(target) {
         target.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
@@ -59,7 +53,6 @@
         });
     }
 
-    /* ---------- mobile menu: Home.js toggles it; we add close paths + focus care ---------- */
 
     function menuOpen() {
         return !!links && links.classList.contains('open');
@@ -76,7 +69,6 @@
     }
 
     if (links && toggle) {
-        // mirror the open state onto <body> for the scrim, whoever opened it
         new MutationObserver(() => {
             const open = menuOpen();
             document.body.classList.toggle('hp-menu-open', open);
@@ -92,7 +84,7 @@
 
         document.addEventListener('click', (e) => {
             if (!menuOpen()) return;
-            if (toggle.contains(e.target)) return;          // Home.js handles the toggle itself
+            if (toggle.contains(e.target)) return;
             if (e.target.closest('#navLinks a') || !links.contains(e.target)) closeMenu(false);
         });
 
@@ -101,7 +93,6 @@
         });
     }
 
-    /* ---------- scroll reveals ---------- */
 
     const seenPosts = new Set();
 
@@ -124,13 +115,10 @@
         revealObserver.observe(el);
     }
 
-    // sidebar blocks: only those that start below the fold, so nothing visible blinks
     document.querySelectorAll('.forum-sidebar .sidebar-block').forEach((block, i) => {
         if (block.getBoundingClientRect().top > window.innerHeight) reveal(block, Math.min(i, 4) * 70);
     });
 
-    // posts: Home.js re-renders the whole feed on every vote/comment, so a post that has
-    // already been revealed must re-appear in place instead of animating again
 
     function prepareFeed() {
         let fresh = 0;
@@ -150,7 +138,6 @@
         prepareFeed();
     }
 
-    /* ---------- card tilt (fine pointers only) ---------- */
 
     if (feed) {
         let tiltCard = null;
@@ -187,9 +174,6 @@
         feed.addEventListener('focusin', (e) => resetTilt(e.target.closest('.post')));
     }
 
-    /* ---------- animated counters ---------- */
-    // Home.js writes the real totals into these elements whenever Firestore updates.
-    // We catch each write and roll the number from what is on screen to the new value.
 
     const statIds = ['statReports', 'statRivers', 'statOfficials'];
     const easeOutExpo = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
@@ -204,7 +188,7 @@
 
         function write(text) {
             el.textContent = text;
-            observer.takeRecords();         // ignore our own writes
+            observer.takeRecords();
         }
 
         function onWrite() {
@@ -221,7 +205,7 @@
             const from = shown;
             const duration = Math.min(1600, 700 + Math.abs(target - from) * 12);
             const start = performance.now();
-            write(from.toLocaleString());   // hold the old value this frame
+            write(from.toLocaleString());
 
             const step = (now) => {
                 const t = Math.min(1, (now - start) / duration);
@@ -233,7 +217,6 @@
         }
 
         observer.observe(el, { childList: true, characterData: true, subtree: true });
-        // in case Home.js already filled it in before this file ran
         if (el.textContent.trim() !== '0') onWrite();
     });
 })();

@@ -1,6 +1,3 @@
-// Email alert subscription. The browser only records WHO wants alerts (Firestore: alertSubscribers/{uid});
-// the emails are sent by the Cloud Function in functions/index.js.
-// (Pop-up notifications are handled by Notify.js while the site is open.)
 import { db } from './firebase-config.js';
 import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ensureAuth } from './Session.js';
@@ -17,13 +14,12 @@ async function writeSubscriber(account, enabled) {
     await setDoc(doc(db, 'alertSubscribers', uid), {
         name: String(account.name || '').slice(0, 80),
         email: String(account.email).slice(0, 120),
-        phone: normalizePhone(account.phone) || '',      // optional
+        phone: normalizePhone(account.phone) || '',
         emailEnabled: !!enabled,
         updatedAt: serverTimestamp()
     }, { merge: true });
 }
 
-// Turn email alerts on/off for the logged-in account
 export async function setEmailAlerts(on) {
     const a = getAccount();
     if (!a) throw new Error('No account found.');
@@ -32,7 +28,6 @@ export async function setEmailAlerts(on) {
     saveAccount(a);
 }
 
-// Call after sign-up / login / page load so the current (anonymous) uid has a subscriber record.
 export async function resyncIfOptedIn() {
     if (!isLocalLoggedIn()) return;
     const a = getAccount();

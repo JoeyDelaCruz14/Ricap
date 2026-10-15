@@ -32,6 +32,7 @@ body::before {
 .scan-hero {
     padding: 18vh 8vw 6vh;
     max-width: 900px;
+    
 }
 
 .scan-eyebrow {
@@ -39,6 +40,7 @@ body::before {
     font-weight: 600;
     letter-spacing: 0.22em;
     text-transform: uppercase;
+    align-items: left;
     color: #c0a1ee;
     margin: 0 0 16px;
 }
@@ -50,6 +52,7 @@ body::before {
     letter-spacing: -0.005em;
     line-height: 1.2;
     margin: 0 0 18px;
+    align-items: left;
     text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
 }
 
@@ -162,7 +165,7 @@ body::before {
     left: 0; right: 0;
     height: 2px;
     background: linear-gradient(90deg, transparent, #8d07e6 50%, transparent);
-    box-shadow: 0 0 12px 2px rgba(230, 178, 7, 0.6);
+    box-shadow: 0 0 12px 2px rgba(62, 5, 73, 0.6);
     top: 0;
     opacity: 0;
     z-index: 2;
@@ -187,9 +190,7 @@ body::before {
 }
 
 .scan-file-input { display: none; }
-
 .scanner-actions { display: flex; gap: 12px; }
-
 .scanner-actions--secondary { margin-top: 12px; }
 
 .btn {
@@ -438,7 +439,7 @@ body::before {
     background: none;
     border: none;
     padding: 0;
-    color: #d4af6a;
+    color: #f0eef1;
     font: inherit;
     text-decoration: underline;
     cursor: pointer;
@@ -471,7 +472,7 @@ body::before {
 
 .scanner-page .scan-hero {
     max-width: 1300px;
-    margin: 0 auto;
+    margin: 0;
     box-sizing: content-box;
     padding: 132px 8vw 28px;
 }
@@ -492,7 +493,6 @@ body::before {
     white-space: nowrap;
 }
 
-/* ---------- focus + buttons ---------- */
 
 .scanner-page .btn:focus-visible,
 .scanner-page .field-input:focus-visible,
@@ -515,7 +515,6 @@ body::before {
 .scanner-page .btn:active:not(:disabled) { transform: scale(0.98); }
 .scanner-page .btn-solid:hover:not(:disabled) { background: #8d07e6; }
 
-/* the Submit Official Report button (created by Image_Processing.js) */
 .scanner-page .btn-primary {
     background: linear-gradient(135deg, #7c3aed, #6021d6);
     color: #fff;
@@ -527,7 +526,6 @@ body::before {
 
 .scanner-page .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
-/* ---------- gate ---------- */
 
 .gate-card { margin-bottom: 20px; }
 
@@ -619,10 +617,8 @@ body::before {
     box-shadow: 0 0 8px #4fae8c;
 }
 
-/* not verified yet: the steps stay visible but are locked */
 .scan-steps.is-locked { opacity: 0.45; filter: saturate(0.6); pointer-events: none; }
 
-/* ---------- step headers ---------- */
 
 .step-head {
     display: flex;
@@ -656,7 +652,6 @@ body::before {
 
 .scanner-page .scan-grid { max-width: none; }
 
-/* ---------- step 1 ---------- */
 
 .step-river-grid {
     display: grid;
@@ -763,7 +758,6 @@ body::before {
     background: #0b0c10;
 }
 
-/* same dark basemap treatment as the Tracking map */
 .step-map .leaflet-tile-pane {
     filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.7);
 }
@@ -799,7 +793,6 @@ body::before {
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
-/* ---------- step 2 ---------- */
 
 .scanner-page .scanner-viewport { margin-bottom: 12px; min-height: 320px; }
 
@@ -850,7 +843,6 @@ body::before {
 
 .file-meta[hidden], .file-error[hidden] { display: none; }
 
-/* ---------- step 3 ---------- */
 
 .result-segment {
     margin: 10px 0 14px;
@@ -863,8 +855,8 @@ body::before {
 }
 
 .result-segment.is-missing {
-    background: rgba(230, 178, 7, 0.1);
-    border-color: rgba(230, 178, 7, 0.45);
+    background: rgba(253, 253, 253, 0.1);
+    border-color: rgba(57, 10, 85, 0.45);
     font-weight: 500;
 }
 
@@ -890,7 +882,6 @@ body::before {
 .submit-status.is-success { background: rgba(79, 174, 140, 0.12); border-color: rgba(79, 174, 140, 0.5); }
 .submit-status.is-error { background: rgba(214, 87, 74, 0.12); border-color: rgba(214, 87, 74, 0.5); }
 
-/* ---------- submit dialog ---------- */
 
 .report-dialog-backdrop {
     position: fixed;
@@ -933,7 +924,6 @@ body::before {
 .report-dialog-warn { margin: 0 0 14px; font-size: 0.82rem; line-height: 1.5; color: #e6b207; }
 .report-dialog-actions { display: flex; gap: 10px; margin-top: 6px; }
 
-/* ---------- responsive ---------- */
 
 @media (max-width: 900px) {
     .gate-guest,
@@ -960,5 +950,4 @@ body::before {
     .step-seg-num, .scanner-page .btn { transition: none; }
 }
 
-/* anything the page script hides stays hidden, whatever display its class sets */
 .scanner-page [hidden] { display: none !important; }

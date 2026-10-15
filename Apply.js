@@ -33,10 +33,11 @@ let stream = null;
 let photoBlob = null;
 let previewUrl = null;
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024; // 8 MB
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
 
 navToggle?.addEventListener('click', () => {
     const open = navLinks.classList.toggle('open');
+    navToggle.classList.toggle('open', open);
     navToggle.setAttribute('aria-expanded', String(open));
 });
 
