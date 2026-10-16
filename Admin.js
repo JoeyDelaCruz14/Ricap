@@ -1,6 +1,7 @@
 import { rtdb as db, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { ref, query, orderByChild, equalTo, onValue, set, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { emailKey } from './account.js';
 const EMAILJS_SERVICE_ID = 'service_qcgez2j';
 const EMAILJS_TEMPLATE_ID = 'template_3fet77r';
 const EMAILJS_PUBLIC_KEY = 'D1LTqshDzk5V-D4ug';
@@ -104,6 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Not fatal: the approval itself must still go through if this write is refused.
+    function markEmail(email, status) {
+        set(ref(db, 'applicationEmails/' + emailKey(email)), status)
+            .catch(err => console.warn('RiCap: could not record application status (check the applicationEmails rule)', err));
+    }
+
     function generateAccessCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         const buf = new Uint32Array(6);
@@ -144,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     organization: data.organization, applicationId: id, createdAt: serverTimestamp()
                 });
                 await update(ref(db, 'officialApplications/' + id), { status: 'approved', accessCode: code });
+                markEmail(data.email, 'approved');
             } catch (err) {
                 console.error(err);
                 btn.disabled = false;
@@ -168,7 +176,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         card.querySelector('.reject-btn').addEventListener('click', async (e) => {
             e.target.disabled = true;
-            try { await update(ref(db, 'officialApplications/' + id), { status: 'rejected' }); }
+            try {
+                await update(ref(db, 'officialApplications/' + id), { status: 'rejected' });
+                markEmail(data.email, 'rejected');
+            }
             catch (err) { e.target.disabled = false; alert('Reject failed: ' + err.message); }
         });
 

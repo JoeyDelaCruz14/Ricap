@@ -6,6 +6,8 @@ import {
     uploadBytes,
     getDownloadURL
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
+import { isVerifiedUser } from './account.js';
+import { getApplicationStatus, setApplicationStatus } from './registry.js';
 
 const $ = id => document.getElementById(id);
 const navToggle = $('navToggle');
@@ -34,6 +36,14 @@ let photoBlob = null;
 let previewUrl = null;
 
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
+
+if (isVerifiedUser()) {
+    formSection.hidden = true;
+    successSection.hidden = false;
+    successSection.querySelector('.success-title').textContent = "You're already verified";
+    successSection.querySelector('.success-copy').textContent =
+        'Your account already has official access, so there is no need to apply again.';
+}
 
 navToggle?.addEventListener('click', () => {
     const open = navLinks.classList.toggle('open');
@@ -179,8 +189,9 @@ form.addEventListener('submit', async e => {
         return;
     }
 
-    const phone = normalizePhone(phoneEl.value);
-    if (!phone) {
+    const phoneRaw = phoneEl.value.trim();
+    const phone = phoneRaw ? normalizePhone(phoneRaw) : '';
+    if (phoneRaw && !phone) {
         showError('Please enter a valid mobile number (e.g. 09171234567).');
         phoneEl.focus();
         return;
@@ -194,6 +205,19 @@ form.addEventListener('submit', async e => {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
 
+    const email = $('emailInput').value.trim().toLowerCase();
+    let status = null;
+    try { status = await getApplicationStatus(email); }
+    catch (err) { console.warn('RiCap: could not check application status', err); }
+    if (status === 'approved' || status === 'pending') {
+        showError(status === 'approved'
+            ? 'This email is already verified. Log in with it to use official access.'
+            : 'An application for this email is already waiting for admin review.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit application';
+        return;
+    }
+
     try {
         const ext = photoBlob.type === 'image/png' ? 'png' : 'jpg';
         const name = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -204,13 +228,15 @@ form.addEventListener('submit', async e => {
             fullName: $('fullName').value.trim(),
             role: $('roleInput').value,
             organization: $('orgInput').value.trim(),
-            email: $('emailInput').value.trim().toLowerCase(),
-            phone,                    
+            email,
+            phone,
             photoURL,
             photoPath: photoRef.fullPath,
             status: 'pending',
             submittedAt: serverTimestamp()
         });
+        try { await setApplicationStatus(email, 'pending'); }
+        catch (err) { console.warn('RiCap: could not record application status', err); }
         formSection.hidden = true;
         successSection.hidden = false;
         window.scrollTo({ top: 0, behavior: 'smooth' });

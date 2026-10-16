@@ -3,15 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Review</title>
+    <title>     Admin Review</title>
 
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="Responsive.css">
-    <link rel="stylesheet" href="Apply.css">
     <link rel="stylesheet" href="Admin.css">
 </head>
-<body class="submit-page">
-
+<body class="admin-page">
+ 
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -23,22 +21,19 @@
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
                 <li><a href="Tracking.html">Tracking</a></li>
-                <li><a href="main.html#features">Features</a></li>
-                <li><a href="main.html#how-it-works">How It Works</a></li>
-                <li><a href="main.html#contact">Contact</a></li>
                 <li><a href="main.html#loginbutton">Login</a></li>
-                <li><a href="Apply.html">Verify</a></li>
+                <li><a href="Verify.html">Verify</a></li>
                 <li data-admin-only hidden><a href="Admin.html" class="nav-link--active" aria-current="page">Admin</a></li>
                 <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
             </ul>
         </div>
     </nav>
 
-    <main class="submit-main">
-        <div class="submit-shell admin-shell">
+    <main class="page-main">
+        <div class="page-shell">
 
             <section class="access-gate" id="adminGate">
-                <p class="gate-eyebrow">Admin</p>
+                <p class="eyebrow">Admin</p>
                 <h1 class="gate-title">Sign in to review applications</h1>
                 <p class="gate-copy">Restricted to RiCap admin accounts created in Firebase Authentication.</p>
 
@@ -52,10 +47,12 @@
                 <p class="access-error" id="adminLoginError" hidden></p>
             </section>
 
-            <section class="submit-form-section" id="adminPanel" hidden>
-                <p class="form-eyebrow">Signed in as <span id="adminEmailLabel"></span> · <button type="button" id="adminSignOutBtn" class="link-btn">sign out</button></p>
-                <h1 class="form-title">Pending Applications</h1>
-                <p class="form-sub" id="adminEmptyState">No pending applications right now.</p>
+            <section id="adminPanel" hidden>
+                <header class="admin-head">
+                    <p class="eyebrow">Signed in as <span id="adminEmailLabel"></span> · <button type="button" id="adminSignOutBtn" class="link-btn">sign out</button></p>
+                    <h1 class="admin-title">Pending Applications</h1>
+                </header>
+                <p class="admin-empty" id="adminEmptyState">No pending applications right now.</p>
 
                 <div class="app-list" id="appList"></div>
             </section>

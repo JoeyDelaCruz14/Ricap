@@ -15,6 +15,17 @@ export function getOfficialSession() { return readJSON(OFFICIAL_KEY); }
 export function isLocalLoggedIn() {
     try { return localStorage.getItem(LOGGED_KEY) === 'true' && !!getAccount(); } catch (e) { return false; }
 }
+export function emailKey(email) {
+    return String(email || '').trim().toLowerCase().replace(/[.#$\[\]\/]/g, ',');
+}
+
+// Verified = redeemed an access code, or logged in with an account whose application was approved.
+export function isVerifiedUser() {
+    if (getOfficialSession()) return true;
+    const a = getAccount();
+    return isLocalLoggedIn() && !!(a && a.verified);
+}
+
 export function clearLocalLogin() {
     try { localStorage.removeItem(LOGGED_KEY); } catch (e) {  }
 }

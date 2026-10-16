@@ -1,6 +1,7 @@
 import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { resyncIfOptedIn } from './alerts.js';
+import { getApplicationStatus } from './registry.js';
 
 const LOGIN_REDIRECT = 'Home.html';
 const REDIRECT_DELAY_MS = 700;
@@ -51,6 +52,12 @@ if (loginForm) {
             if (btn) btn.disabled = false;
             showToast('Incorrect email or password.');
             return;
+        }
+        try {
+            account.verified = (await getApplicationStatus(account.email)) === 'approved';
+            localStorage.setItem('ricapAccount', JSON.stringify(account));
+        } catch (e) {
+            console.warn('RiCap: could not check verification status', e);
         }
         localStorage.setItem('ricapLoggedIn', 'true');
         resyncIfOptedIn();

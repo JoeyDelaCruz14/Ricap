@@ -13,6 +13,7 @@
         { el: $('emailInput'), msg: 'Enter a valid email address, e.g. you@example.com.' },
         { el: $('phoneInput'), msg: 'Enter a PH mobile number, e.g. 09171234567.' }
     ].filter(f => f.el);
+    const requiredFields = fields.filter(f => f.el.required);
 
     const capturePreview = $('capturePreview');
     const captureBox = $('captureBox');
@@ -33,7 +34,7 @@
     syncFullName();
 
     function isValid(el) {
-        if (el.id === 'phoneInput') return /^(09|\+639)\d{9}$/.test(el.value.replace(/[\s-]/g, ''));
+        if (el.id === 'phoneInput') return el.value.trim() === '' || /^(09|\+639)\d{9}$/.test(el.value.replace(/[\s-]/g, ''));
         return el.value.trim() !== '' && el.checkValidity();
     }
 
@@ -68,10 +69,10 @@
     }
 
     function update() {
-        const doneFields = fields.filter(f => isValid(f.el)).length;
+        const doneFields = requiredFields.filter(f => isValid(f.el)).length;
         const photo = hasPhoto();
         const done = doneFields + (photo ? 1 : 0);
-        const total = fields.length + 1;
+        const total = requiredFields.length + 1;
 
         if (fill) fill.style.width = Math.round((done / total) * 100) + '%';
         if (text) {
@@ -82,7 +83,7 @@
         form.classList.toggle('is-complete', done === total);
 
         if (steps) {
-            const detailsDone = doneFields === fields.length;
+            const detailsDone = doneFields === requiredFields.length && fields.every(f => isValid(f.el));
             const state = {
                 details: detailsDone ? 'done' : 'current',
                 photo: photo ? 'done' : (detailsDone ? 'current' : ''),

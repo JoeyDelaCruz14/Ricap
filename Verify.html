@@ -7,10 +7,15 @@
 
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="Responsive.css">
-    <link rel="stylesheet" href="submit.css">
-    <link rel="stylesheet" href="Apply.css">
+    <link rel="stylesheet" href="Verify.css">
 </head>
 <body class="submit-page">
+    <div class="video-background">
+    <video autoplay muted loop playsinline id="bg-video">
+      <source src="images&vids/Sequence_01_3_1_1 (1).mp4" type="video/mp4">
+    </video>
+    <div class="video-overlay"></div>
+  </div>
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -22,11 +27,8 @@
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
                 <li><a href="Tracking.html">Tracking</a></li>
-                <li><a href="main.html#features">Features</a></li>
-                <li><a href="main.html#how-it-works">How It Works</a></li>
-                <li><a href="main.html#contact">Contact</a></li>
                 <li><a href="main.html#loginbutton">Login</a></li>
-                <li><a href="Apply.html" class="nav-link--active" aria-current="page">Verify</a></li>
+                <li><a href="Verify.html" class="nav-link--active" aria-current="page">Verify</a></li>
                 <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
                 <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
             </ul>
@@ -97,7 +99,7 @@
                         </div>
 
                         <div class="field">
-                            <label for="phoneInput">Phone</label>
+                            <label for="phoneInput">Phone <span class="field-optional">(optional)</span></label>
                             <input
                                 type="tel"
                                 id="phoneInput"
@@ -106,10 +108,7 @@
                                 inputmode="numeric"
                                 autocomplete="tel"
                                 pattern="^(09|\+639)\d{9}$"
-                                title="Enter a valid PH mobile number, e.g. 09171234567 or +639171234567"
-                                required>
-                            <small class="field-hint">Used for SMS notifications.</small>
-                        </div>
+                                title="Enter a valid PH mobile number, e.g. 09171234567 or +639171234567">                        </div>
                     </div>
 
                     <div class="field field-wide">
@@ -145,7 +144,7 @@
 
                     <div class="apply-progress" aria-live="polite">
                         <div class="apply-progress-bar" aria-hidden="true"><span id="applyProgressFill"></span></div>
-                        <p class="apply-progress-text" id="applyProgressText">0 of 6 complete</p>
+                        <p class="apply-progress-text" id="applyProgressText">0 of 5 complete</p>
                     </div>
 
                     <p class="form-error" id="applyError" role="alert" hidden></p>
@@ -172,7 +171,7 @@
         </div>
     </main>
 
-    <script type="module" src="Apply.js"></script>
+    <script type="module" src="Verify.js"></script>
     <script type="module" src="admin-nav.js"></script>
     <script src="apply-enhance.js" defer></script>
 </body>

@@ -1,4 +1,5 @@
-import { saveAccount, normalizePhone } from './account.js';
+import { saveAccount, getAccount, normalizePhone } from './account.js';
+import { isEmailRegistered, registerEmail } from './registry.js';
 import { setEmailAlerts } from './alerts.js';
 import { requestNotifications, setAllNotifications } from './Notify.js';
 
@@ -31,6 +32,26 @@ if (form) {
         if (phoneRaw) {
             phone = normalizePhone(phoneRaw);
             if (!phone) { showToast('Enter a valid Philippine mobile number, e.g. 09171234567, or leave it blank.'); return; }
+        }
+
+        const existing = getAccount();
+        if (existing && String(existing.email || '').toLowerCase() === email.toLowerCase()) {
+            showToast('An account with this email already exists. Please log in instead.');
+            return;
+        }
+
+        const submitBtn = form.querySelector('.auth-submit');
+        if (submitBtn) submitBtn.disabled = true;
+        try {
+            if (await isEmailRegistered(email)) {
+                showToast('An account with this email already exists. Please log in instead.');
+                return;
+            }
+            await registerEmail(email);
+        } catch (e) {
+            console.warn('RiCap: could not check the account registry', e);
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
 
         const name = `${firstName} ${lastName}`;

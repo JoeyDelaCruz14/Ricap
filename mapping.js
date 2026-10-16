@@ -149,6 +149,7 @@ function initMap() {
 
     initPopupEvents();
     addMapLegend();
+    addLocateControl();
 
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -1101,6 +1102,142 @@ function addMapLegend() {
         return el;
     };
     control.addTo(map);
+}
+
+// "My location": live GPS dot with an accuracy ring. Click again to re-center, or to stop when already centered.
+const LOCATE_ZOOM = 16;
+
+function addLocateControl() {
+    let watchId = null;
+    let dot = null;
+    let ring = null;
+    let follow = false;
+    let hasFix = false;
+    let msgTimer = null;
+
+    map.createPane('userLocation');
+    map.getPane('userLocation').style.zIndex = 650;
+
+    const control = L.control({ position: 'topleft' });
+    let button, msg;
+    control.onAdd = () => {
+        const wrap = L.DomUtil.create('div', 'leaflet-bar locate-control');
+        button = L.DomUtil.create('a', 'locate-btn', wrap);
+        button.href = '#';
+        button.setAttribute('role', 'button');
+        button.setAttribute('aria-label', 'Show my location');
+        button.title = 'Show my location';
+        button.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+            '<circle cx="12" cy="12" r="4" fill="currentColor"/>' +
+            '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/>' +
+            '<path d="M12 1v3M12 20v3M1 12h3M20 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+        msg = L.DomUtil.create('p', 'locate-msg', wrap);
+        msg.setAttribute('role', 'status');
+        msg.hidden = true;
+        L.DomEvent.disableClickPropagation(wrap);
+        L.DomEvent.on(button, 'click', e => { L.DomEvent.preventDefault(e); onClick(); });
+        return wrap;
+    };
+    control.addTo(map);
+
+    map.on('dragstart', () => { follow = false; });
+
+    function say(text, ms) {
+        clearTimeout(msgTimer);
+        msg.textContent = text;
+        msg.hidden = !text;
+        if (text && ms) msgTimer = setTimeout(() => { msg.hidden = true; }, ms);
+    }
+
+    function setState(state) {
+        button.classList.toggle('is-loading', state === 'loading');
+        button.classList.toggle('is-active', state === 'active');
+        button.setAttribute('aria-pressed', String(state !== 'off'));
+    }
+
+    function inArea(latlng) {
+        const limit = map.options.maxBounds;
+        return !limit || limit.contains(latlng);
+    }
+
+    function centerOn(latlng) {
+        if (!inArea(latlng)) {
+            say('You are outside Bataan, so the map cannot center on you.', 5000);
+            return;
+        }
+        follow = true;
+        const zoom = Math.max(map.getZoom(), LOCATE_ZOOM);
+        if (reduceMotion) map.setView(latlng, zoom);
+        else map.flyTo(latlng, zoom, { duration: 0.9 });
+    }
+
+    function onPosition(p) {
+        const latlng = L.latLng(p.coords.latitude, p.coords.longitude);
+        const accuracy = Math.round(p.coords.accuracy);
+        if (!dot) {
+            ring = L.circle(latlng, {
+                pane: 'userLocation', radius: accuracy, interactive: false,
+                color: '#3b82f6', weight: 1, opacity: 0.6, fillColor: '#3b82f6', fillOpacity: 0.12
+            }).addTo(map);
+            dot = L.circleMarker(latlng, {
+                pane: 'userLocation', radius: 8, weight: 3,
+                color: '#ffffff', fillColor: '#3b82f6', fillOpacity: 1
+            }).addTo(map);
+        } else {
+            ring.setLatLng(latlng).setRadius(accuracy);
+            dot.setLatLng(latlng);
+        }
+        dot.bindTooltip('You are here (±' + accuracy + ' m)');
+        setState('active');
+        if (!hasFix) {
+            hasFix = true;
+            say(accuracy > 150 ? 'Location is rough (±' + accuracy + ' m). Move outdoors for a better fix.' : '', 5000);
+            centerOn(latlng);
+        } else if (follow && inArea(latlng)) {
+            map.panTo(latlng, { animate: !reduceMotion });
+        }
+    }
+
+    function onError(err) {
+        if (hasFix && err.code !== 1) return;   // keep the last fix through brief signal drops
+        stop();
+        say(err.code === 1
+            ? 'Location access is blocked. Allow location for this site in your browser settings.'
+            : 'Could not get your location. Turn on GPS and try again outdoors.', 6000);
+    }
+
+    function start() {
+        if (!window.isSecureContext) {
+            say('Location only works when the site is opened over HTTPS.', 6000);
+            return;
+        }
+        if (!navigator.geolocation) {
+            say('This browser does not support location.', 6000);
+            return;
+        }
+        setState('loading');
+        say('Finding your location…');
+        watchId = navigator.geolocation.watchPosition(onPosition, onError,
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
+    }
+
+    function stop() {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        if (dot) { map.removeLayer(dot); map.removeLayer(ring); }
+        dot = ring = null;
+        hasFix = follow = false;
+        setState('off');
+        say('');
+    }
+
+    function onClick() {
+        if (watchId === null) return start();
+        if (!dot) return;
+        const here = dot.getLatLng();
+        if (follow && map.getBounds().contains(here)) stop();
+        else centerOn(here);
+    }
 }
 
 function initReset() {

@@ -1,6 +1,6 @@
 import { auth } from './firebase-config.js';
 import { startReportAlerts } from './Notify.js';
-import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession } from './account.js';
+import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount } from './account.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const LOGOUT_REDIRECT = 'main.html';
@@ -78,6 +78,8 @@ function apply(user) {
     const greet = ensureGreeting();
     document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !isAdmin; });
     loginItems().forEach(li => { li.hidden = loggedIn; });
+    const verified = isVerifiedUser();
+    document.querySelectorAll('#navLinks a[href="Verify.html"]').forEach(a => { a.closest('li').hidden = verified; });
     const logout = document.querySelector('#navLinks [data-logout]');
     if (logout) logout.hidden = !loggedIn;
     if (greet) {
@@ -108,7 +110,22 @@ function start() {
     apply(auth.currentUser);
     onAuthStateChanged(auth, apply);
     window.addEventListener('storage', () => apply(auth.currentUser));
+    refreshVerified();
     startReportAlerts();
+}
+
+// Picks up an approval that happened after the user logged in.
+async function refreshVerified() {
+    const a = getAccount();
+    if (!isLocalLoggedIn() || !a || !a.email || a.verified) return;
+    try {
+        const { getApplicationStatus } = await import('./registry.js');
+        if ((await getApplicationStatus(a.email)) !== 'approved') return;
+        saveAccount({ ...a, verified: true });
+        apply(auth.currentUser);
+    } catch (e) {
+        console.warn('RiCap: could not check verification status', e);
+    }
 }
 
 if (document.readyState === 'loading') {

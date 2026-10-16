@@ -6,12 +6,9 @@
     <title>RiCap — Maintenance Module</title>
 
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="Responsive.css">
-    <link rel="stylesheet" href="Apply.css">
-    <link rel="stylesheet" href="Admin.css">
     <link rel="stylesheet" href="maintenance.css">
 </head>
-<body class="submit-page maintenance-page">
+<body class="maintenance-page">
 
     <nav class="nav" id="nav">
         <div class="nav-inner">
@@ -24,22 +21,19 @@
                 <li><a href="mapping.html">Mapping</a></li>
                 <li><a href="Image_Processing.html">Scanner</a></li>
                 <li><a href="Tracking.html">Tracking</a></li>
-                <li><a href="main.html#features">Features</a></li>
-                <li><a href="main.html#how-it-works">How It Works</a></li>
-                <li><a href="main.html#contact">Contact</a></li>
                 <li><a href="main.html#loginbutton">Login</a></li>
-                <li><a href="Apply.html">Verify</a></li>
+                <li><a href="Verify.html">Verify</a></li>
                 <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
                 <li data-admin-only hidden><a href="maintenance.html" class="nav-link--active" aria-current="page">Maintenance</a></li>
             </ul>
         </div>
     </nav>
 
-    <main class="submit-main">
-        <div class="submit-shell maint-shell">
+    <main class="page-main">
+        <div class="page-shell">
 
             <section class="access-gate" id="mGate">
-                <p class="gate-eyebrow">Admin</p>
+                <p class="eyebrow">Admin</p>
                 <h1 class="gate-title">Maintenance Module</h1>
                 <p class="gate-copy">Restricted to RiCap admin accounts created in Firebase Authentication.</p>
                 <form id="mLoginForm" class="access-form" autocomplete="off">
@@ -54,12 +48,10 @@
 
             <section id="mPanel" hidden>
                 <header class="maint-head">
-                    <div>
-                        <p class="form-eyebrow">Signed in as <span id="mEmailLabel"></span> ·
-                            <button type="button" id="mSignOut" class="link-btn">sign out</button></p>
-                        <h1 class="form-title">Maintenance Module</h1>
-                        <p class="form-sub">Review flagged content, manage river location records, and maintain system records.</p>
-                    </div>
+                    <p class="eyebrow">Signed in as <span id="mEmailLabel"></span> ·
+                        <button type="button" id="mSignOut" class="link-btn">sign out</button></p>
+                    <h1 class="maint-title">Maintenance Module</h1>
+                    <p class="maint-sub">Review flagged content, manage river location records, and maintain system records.</p>
                 </header>
 
                 <div class="maint-stats" id="mStats">

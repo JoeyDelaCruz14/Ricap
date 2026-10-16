@@ -3,6 +3,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { performLogout } from './admin-nav.js';
+import { isVerifiedUser } from './account.js';
 
 const KEY = 'ricap_official';
 
@@ -83,10 +84,10 @@ export function ensureAuth() {
 
 export function mountAuthNav() {
     const links = document.getElementById('navLinks');
-    if (!links || document.getElementById('navAuthItem')) return;
-    if (links.querySelector('a[href="Apply.html"]')) return;   
+    if (!links || document.getElementById('navAuthItem') || isVerifiedUser()) return;
+    if (links.querySelector('a[href="Verify.html"]')) return;   
     const li = document.createElement('li');
     li.id = 'navAuthItem';
-    li.innerHTML = '<a href="Apply.html">Verify</a>';
+    li.innerHTML = '<a href="Verify.html">Verify</a>';
     links.appendChild(li);
 }

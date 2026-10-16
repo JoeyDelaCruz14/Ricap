@@ -1276,3 +1276,46 @@ body {
     margin-left: 0 !important;
     margin-right: 0 !important;
 }
+
+
+/* ---------- My location control ---------- */
+.locate-control { position: relative; }
+
+.leaflet-bar a.locate-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    color: #4a4f59;
+}
+.leaflet-bar a.locate-btn.is-active { color: #3b82f6; }
+.leaflet-bar a.locate-btn.is-loading svg { animation: locatePulse 1s ease-in-out infinite; }
+
+.locate-msg {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 8px);
+    width: max-content;
+    max-width: min(260px, 70vw);
+    margin: 0;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: rgba(17, 19, 24, 0.92);
+    color: #f1f2f4;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+@keyframes locatePulse {
+    50% { opacity: 0.35; }
+}
+
+@media (pointer: coarse) {
+    .leaflet-bar a.locate-btn { width: 44px; height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .leaflet-bar a.locate-btn.is-loading svg { animation: none; }
+}

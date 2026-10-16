@@ -1,4 +1,4 @@
-let GEMINI_KEY = 'AQ.Ab8RN6L2Qy1ZyZ0wStTLIcvLkDUn4KCPa-YopiDu0Tn6u9X3ZA';
+let GEMINI_KEY = '';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 const GEMINI_TIMEOUT_MS = 20000;
 const GEMINI_DAILY_LIMIT = 20;  
