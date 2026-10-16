@@ -1,7 +1,7 @@
 :root {
     --bg: #0f0f11;
-    --card: #17171a;
-    --card-raised: #1d1d21;
+    --card: rgba(23, 23, 26, 0.82);
+    --card-raised: rgba(29, 29, 33, 0.9);
     --ink: #ecebef;
     --muted: #a8a4b3;
     --line: #2c2c32;
@@ -22,7 +22,7 @@
 
 body.maintenance-page {
     min-height: 100vh;
-    background: var(--bg);
+    background: transparent;
     color: var(--ink);
     line-height: 1.5;
 }
@@ -36,6 +36,27 @@ body.maintenance-page ::selection { background: rgba(139, 92, 246, 0.4); color: 
 .maintenance-page select:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+}
+
+/* Background video */
+.video-background {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: -10;
+    background: var(--bg);
+}
+.maintenance-page #bg-video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+.video-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(11, 12, 16, .75) 0%, rgba(11, 12, 16, .6) 40%, rgba(11, 12, 16, .9) 100%);
 }
 
 .page-main { padding: 104px 24px 80px; }
@@ -394,4 +415,15 @@ body.maintenance-page ::selection { background: rgba(139, 92, 246, 0.4); color: 
 
 @media (prefers-reduced-motion: reduce) {
     .maintenance-page * { transition: none !important; }
+}
+
+/* Frosted surfaces over the background video */
+.access-gate,
+.m-stat,
+.m-card,
+.m-form,
+.m-table-wrap,
+.m-check {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
 }
