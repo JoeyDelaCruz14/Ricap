@@ -4,13 +4,14 @@ import { getOfficial, hasOfficialClaim, verifyCode } from './Session.js';
 import { isLocalLoggedIn } from './account.js';
 import { computeRiverSegments, nearestSegment, SEGMENT_NAMES } from './river-lines.js';
 import { loadCoastDistance } from './bataan-mask.js';
+import { matchLocation, SUGGEST_MAX_DISTANCE_M } from './location-match.js';
 
 const FAR_KM = 3;
-const AUTO_SELECT_KM = 0.02;
 
 const state = {
     riverId: '',
     segment: 0,
+    autoSelected: false,
     loc: null,
     gate: 'checking',
 };
@@ -50,16 +51,6 @@ function distanceToRiverKm(riverId, lat, lng) {
     return hit ? hit.km : Infinity;
 }
 
-function nearestRiverSegment(lat, lng) {
-    if (!parts) return null;
-    let best = null;
-    Object.keys(parts).forEach(id => {
-        const hit = nearestSegment(parts, id, lat, lng, Infinity);
-        if (hit && (!best || hit.km < best.km)) best = { riverId: id, index: hit.index, km: hit.km };
-    });
-    return best;
-}
-
 function midpoint(coords) {
     return coords[Math.floor(coords.length / 2)];
 }
@@ -93,6 +84,7 @@ function buildSegmentSelect() {
 }
 
 function selectRiver(id, opts = {}) {
+    state.autoSelected = false;
     state.riverId = id ? String(id) : '';
     if (!opts.keepSegment) state.segment = 0;
     $('stepRiver').value = state.riverId;
@@ -101,7 +93,8 @@ function selectRiver(id, opts = {}) {
     renderSummary();
 }
 
-function selectSegment(n) {
+function selectSegment(n, opts = {}) {
+    state.autoSelected = !!opts.auto;
     state.segment = Number(n) || 0;
     $('stepSegment').value = state.segment ? String(state.segment) : '';
     drawMap(false);
@@ -227,61 +220,68 @@ async function setLocation(loc) {
     state.loc = loc;
     showLocationOnMap();
     const box = $('stepSuggestion');
-    const src = loc.source === 'photo-exif' ? 'This photo was taken' : loc.source === 'manual' ? 'The pinned spot is' : 'You are';
-
-    if (deps.inBataan && !deps.inBataan(loc.lat, loc.lng)) {
-        box.className = 'step-suggestion is-warning';
-        box.innerHTML = `<p><strong>${src} outside Bataan.</strong> This location will still be saved with the report. Choose the river and segment yourself.</p>`;
+    const where = loc.source === 'photo-exif' ? 'where this photo was taken (from the photo’s GPS data)'
+        : loc.source === 'manual' ? 'the spot you pinned' : 'your location';
+    const segText = s => `${esc(riverName(s.riverId))}, Segment ${s.index} (${esc(SEGMENT_NAMES[s.index - 1])})`;
+    const show = (html, warn) => {
+        box.className = 'step-suggestion' + (warn ? ' is-warning' : '');
+        box.innerHTML = html;
         box.hidden = false;
         renderLocationWarning();
-        return;
-    }
+    };
 
     await loadGeometry().catch(() => null);
-    const near = nearestRiverSegment(loc.lat, loc.lng);
-    if (!near || near.km > FAR_KM) {
-        box.className = 'step-suggestion is-warning';
-        box.innerHTML = `<p><strong>No mapped river nearby.</strong> ${src} ${near ? near.km.toFixed(1) + ' km from the nearest river line' : 'away from the river lines'}. This location will still be saved with the report. Choose the river and segment yourself.</p>`;
-        box.hidden = false;
-        renderLocationWarning();
+    const result = matchLocation(parts, loc, deps.inBataan);
+    if (result.kind !== 'match') clearAutoSelection();
+
+    if (result.kind === 'outside') {
+        show(`<p><strong>${where.charAt(0).toUpperCase() + where.slice(1)} is outside Bataan.</strong> Nothing was selected. This location will still be saved with the report. Choose the river and segment yourself.</p>`, true);
         return;
     }
 
-    const already = near.riverId === state.riverId && near.index === state.segment;
-    const distText = near.km < 1 ? Math.round(near.km * 1000) + ' m' : near.km.toFixed(1) + ' km';
-    if (near.km <= AUTO_SELECT_KM) {
-        if (!already) {
-            selectRiver(near.riverId, { fit: true });
-            selectSegment(near.index);
-        }
-        box.className = 'step-suggestion';
-        box.innerHTML = `
-            <p><strong>Selected automatically:</strong> ${esc(riverName(near.riverId))}, Segment ${near.index} (${esc(SEGMENT_NAMES[near.index - 1])})
-               <span class="step-suggestion-km">${src} ${distText} from it. You can still change it.</span></p>`;
-        box.hidden = false;
-        renderLocationWarning();
+    if (result.kind === 'inaccurate') {
+        show(`<p><strong>GPS accuracy is about ${Math.round(result.accuracy)} m</strong>, which is not precise enough to match a river line within ${SUGGEST_MAX_DISTANCE_M} m. Move to an open area and try again, or choose manually.</p>
+            <div class="step-suggestion-actions"><button type="button" class="btn btn-solid" id="retryLocation">Try again</button></div>`, true);
+        $('retryLocation').addEventListener('click', useDeviceLocation);
         return;
     }
 
-    box.className = 'step-suggestion';
-    box.innerHTML = `
-        <p><strong>Suggested:</strong> ${esc(riverName(near.riverId))}, Segment ${near.index} (${esc(SEGMENT_NAMES[near.index - 1])})
-           <span class="step-suggestion-km">${src} ${distText} from it.</span></p>
-        ${already
-            ? '<p class="step-suggestion-ok">This matches your choice.</p>'
-            : `<div class="step-suggestion-actions">
-                 <button type="button" class="btn btn-solid" id="useSuggestion">Use this segment</button>
-                 <button type="button" class="btn btn-outline" id="keepChoice">Keep my choice</button>
-               </div>`}`;
-    box.hidden = false;
-    const use = $('useSuggestion'), keep = $('keepChoice');
-    if (use) use.addEventListener('click', () => {
-        selectRiver(near.riverId, { fit: true });
-        selectSegment(near.index);
-        box.innerHTML = '<p class="step-suggestion-ok">Suggestion applied. You can still change it.</p>';
-    });
-    if (keep) keep.addEventListener('click', () => { box.hidden = true; });
-    renderLocationWarning();
+    if (result.kind === 'none') {
+        const n = result.nearest;
+        show(`<p><strong>No river line within ${SUGGEST_MAX_DISTANCE_M} m of ${where}.</strong>
+            ${n ? `The nearest is ${esc(riverName(n.riverId))} (${formatMeters(n.m)} away).` : ''}
+            Choose the river and segment yourself if needed.</p>`, true);
+        return;
+    }
+
+    if (result.kind === 'choices') {
+        show(`<p><strong>Did you mean…?</strong> More than one river line is within ${SUGGEST_MAX_DISTANCE_M} m of ${where}.</p>
+            <div class="step-suggestion-actions">${result.hits.map((s, i) =>
+                `<button type="button" class="btn btn-outline" data-choice="${i}">${segText(s)} · ${formatMeters(s.m)}</button>`).join('')}</div>`);
+        box.querySelectorAll('[data-choice]').forEach(btn => btn.addEventListener('click', () => {
+            const s = result.hits[Number(btn.dataset.choice)];
+            selectRiver(s.riverId, { fit: true });
+            selectSegment(s.index);
+            show(`<p class="step-suggestion-ok">Saved to ${segText(s)}. You can still change it.</p>`);
+        }));
+        return;
+    }
+
+    const hit = result.hit;
+    if (hit.riverId !== state.riverId || hit.index !== state.segment) {
+        selectRiver(hit.riverId, { fit: true });
+        selectSegment(hit.index, { auto: true });
+    }
+    show(`<p><strong>Selected automatically:</strong> ${segText(hit)}
+        <span class="step-suggestion-km">${formatMeters(hit.m)} from ${where}. You can still change it.</span></p>`);
+}
+
+function formatMeters(m) {
+    return m < 1000 ? Math.round(m) + ' m' : (m / 1000).toFixed(1) + ' km';
+}
+
+function clearAutoSelection() {
+    if (state.autoSelected) selectRiver('', { fit: false });
 }
 
 function renderLocationWarning() {
@@ -306,6 +306,8 @@ async function useDeviceLocation() {
         status.textContent = loc.accuracy ? `Location found (±${Math.round(loc.accuracy)} m).` : 'Location found.';
         await setLocation({ lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy || null, source: 'gps' });
     } catch (err) {
+        clearAutoSelection();
+        $('stepSuggestion').hidden = true;
         status.textContent = (err && err.message) || 'Could not get your location. Choose the river and segment yourself.';
     } finally {
         btn.disabled = false;

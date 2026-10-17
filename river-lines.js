@@ -326,6 +326,17 @@ export function nearestSegment(parts, riverId, lat, lng, maxKm) {
     return best && best.km <= maxKm ? best : null;
 }
 
+export function segmentDistances(parts, lat, lng) {
+    const out = [];
+    Object.keys(parts || {}).forEach(riverId => {
+        parts[riverId].forEach((coords, n) => {
+            const d = nearestOnLine([lat, lng], coords).d;
+            if (isFinite(d)) out.push({ riverId, index: n + 1, km: d });
+        });
+    });
+    return out.sort((a, b) => a.km - b.km);
+}
+
 export async function loadRiverLines(map, rivers, options = {}) {
     const { ways, assigned, how, waysOf, stems, parts } = await computeRiverSegments(rivers, options);
 

@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { ref as storageRef, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 import { ref as rtRef, onValue, update as rtUpdate } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { isAdminUser } from './admin-role.js';
 
 const STORAGE_FOLDER = 'Submitted images';
 const BATAAN = { south: 14.33, west: 120.02, north: 14.97, east: 120.66 };
@@ -62,8 +63,14 @@ $('mLoginForm').addEventListener('submit', async e => {
 });
 $('mSignOut').addEventListener('click', () => signOut(auth));
 
-onAuthStateChanged(auth, user => {
-    if (user && !user.isAnonymous) {
+onAuthStateChanged(auth, async user => {
+    const isAdmin = await isAdminUser(user);
+    if (user !== auth.currentUser) return;
+    if (user && !user.isAnonymous && !isAdmin) {
+        $('mLoginError').textContent = 'This account does not have admin access.';
+        $('mLoginError').hidden = false;
+    }
+    if (isAdmin) {
         $('mGate').hidden = true;
         $('mPanel').hidden = false;
         $('mEmailLabel').textContent = user.email;

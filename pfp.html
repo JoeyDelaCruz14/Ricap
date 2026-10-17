@@ -52,7 +52,7 @@
             <section class="pf-card pf-hero" id="pfHero" hidden>
                 <div class="pf-hero-top">
                     <button type="button" class="pf-avatar" id="pfAvatar" aria-label="Change profile picture">
-                        <span class="pf-initials" id="pfInitials">?</span>
+                        <span class="pf-initials" id="pfInitials" aria-hidden="true">?</span>
                         <span class="pf-avatar-edit" aria-hidden="true">Change</span>
                     </button>
                     <div class="pf-identity">
@@ -85,16 +85,16 @@
                         <div class="pf-field pf-field-wide">
                             <span class="pf-field-label">Profile picture</span>
                             <div class="pf-photo-row">
-                                <div class="pf-photo-thumb" id="pfThumb"><span class="pf-initials" id="pfThumbInitials">?</span></div>
+                                <div class="pf-photo-thumb" id="pfThumb" role="img" aria-label="Your profile picture"><span class="pf-initials" id="pfThumbInitials" aria-hidden="true">?</span></div>
                                 <div>
                                     <div class="pf-actions">
-                                        <button type="button" class="pf-btn is-small" id="pfPhotoBtn">Upload photo</button>
-                                        <button type="button" class="pf-btn is-small is-danger" id="pfPhotoRemove" hidden>Remove</button>
+                                        <button type="button" class="pf-btn is-small" id="pfPhotoBtn">Change photo</button>
+                                        <button type="button" class="pf-btn is-small is-danger" id="pfPhotoRemove" hidden>Remove photo</button>
                                     </div>
-                                    <p class="pf-hint">JPG or PNG. It is cropped to a square.</p>
+                                    <p class="pf-hint">JPEG, PNG or WebP, up to 2 MB. Location data is removed.</p>
                                 </div>
                             </div>
-                            <input type="file" id="pfPhotoInput" accept="image/*" hidden>
+                            <input type="file" id="pfPhotoInput" accept="image/jpeg,image/png,image/webp" aria-label="Choose a profile picture" hidden>
                         </div>
                         <div class="pf-field">
                             <label for="pfFirst">First name</label>
@@ -149,6 +149,23 @@
             </section>
         </div>
     </main>
+
+    <dialog class="pf-card pf-crop" id="pfCropDialog" aria-labelledby="pfCropTitle">
+        <div class="pf-card-head"><h2 id="pfCropTitle">Adjust your photo</h2></div>
+        <div class="pf-crop-stage" id="pfCropStage" tabindex="0" role="img" aria-label="Preview of your new profile picture" aria-describedby="pfCropHint">
+            <canvas id="pfCropCanvas" width="512" height="512"></canvas>
+        </div>
+        <p class="pf-hint" id="pfCropHint">Drag the photo to move it. Use the slider, or the arrow keys and + / − on the preview.</p>
+        <label class="pf-crop-zoom" for="pfCropZoom">
+            <span>Zoom</span>
+            <input type="range" id="pfCropZoom" min="1" max="4" step="0.01" value="1">
+        </label>
+        <p class="pf-crop-status" id="pfCropStatus" role="status" aria-live="polite"></p>
+        <div class="pf-actions">
+            <button type="button" class="pf-btn is-primary" id="pfCropSave">Save photo</button>
+            <button type="button" class="pf-btn" id="pfCropCancel">Cancel</button>
+        </div>
+    </dialog>
 
     <div class="pf-toast" id="pfToast" role="status" hidden></div>
 

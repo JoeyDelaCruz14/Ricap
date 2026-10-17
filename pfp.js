@@ -6,7 +6,11 @@ import { ensureAuth, signOutOfficial } from './Session.js';
 import { performLogout } from './admin-nav.js';
 import { setEmailAlerts, emailAlertsEnabled, resyncIfOptedIn } from './alerts.js';
 import { getApplicationStatus } from './registry.js';
-import { getAvatar, setAvatar, resizeAvatar, syncProfile, knownUids, rememberUid } from './profile-sync.js';
+import {
+    getAvatar, syncProfile, knownUids, rememberUid, canHaveAvatar, legacyAvatar,
+    checkAvatarFile, renderAvatar, uploadAvatar, removeAvatar, avatarErrorMessage
+} from './profile-sync.js';
+import { isAdminUser } from './admin-role.js';
 
 const RECORDS_KEY = 'ricap_river_records';
 const RECENT_LIMIT = 8;
@@ -64,8 +68,7 @@ function publish() {
 let editing = false;
 let reportsLoaded = false;
 
-function currentState(user) {
-    const isAdmin = !!user && !user.isAnonymous;
+function currentState(user, isAdmin) {
     const account = isLocalLoggedIn() ? getAccount() : null;
     const official = getOfficialSession();
     return { user, isAdmin, account, official, signedIn: isAdmin || !!account || !!official };
@@ -84,7 +87,8 @@ function renderHeader(s) {
     paintAvatar($('pfAvatar'), $('pfInitials'), name);
     paintAvatar($('pfThumb'), $('pfThumbInitials'), name);
     $('pfPhotoRemove').hidden = !getAvatar();
-    $('pfAvatar').disabled = !s.account && !s.official;
+    $('pfAvatar').disabled = !s.account && !s.official && !canHaveAvatar();
+    $('pfThumb').setAttribute('aria-label', getAvatar() ? 'Your profile picture' : 'No profile picture yet, showing your initials');
     $('pfName').textContent = name;
     $('pfEmail').textContent = email;
     $('pfEmail').hidden = !email;
@@ -220,8 +224,11 @@ async function loadMyReports(s) {
     mine.slice(0, RECENT_LIMIT).forEach(r => list.appendChild(reportCard(r)));
 }
 
-function refresh() {
-    const s = currentState(auth.currentUser);
+async function refresh() {
+    const user = auth.currentUser;
+    const isAdmin = await isAdminUser(user);
+    if (user !== auth.currentUser) return;
+    const s = currentState(user, isAdmin);
     $('pfGate').hidden = s.signedIn;
     ['pfHero', 'pfGrid', 'pfReportsCard'].forEach(id => { $(id).hidden = !s.signedIn; });
     if (!s.signedIn) return;
@@ -229,6 +236,7 @@ function refresh() {
     renderForm(s);
     renderOfficial(s);
     renderAlerts(s);
+    moveLegacyAvatar();
     if (!reportsLoaded) {
         reportsLoaded = true;
         loadMyReports(s).finally(() => { reportsLoaded = false; });
@@ -291,32 +299,203 @@ $('pfForm').addEventListener('submit', async e => {
     toast('Profile saved.');
 });
 
-function pickPhoto() { $('pfPhotoInput').click(); }
+// The old version kept the picture as base64 on this device; move it to Storage once.
+let legacyMoving = false;
+async function moveLegacyAvatar() {
+    const old = legacyAvatar();
+    if (legacyMoving || !old || !canHaveAvatar() || getAvatar()) return;
+    legacyMoving = true;
+    try {
+        await uploadAvatar(await (await fetch(old)).blob());
+    } catch (err) {
+        console.warn('RiCap: could not move the old profile picture', err && err.code);
+    } finally {
+        legacyMoving = false;
+    }
+}
+
+function setBusy(btn, busy, label) {
+    btn.disabled = busy;
+    btn.setAttribute('aria-busy', String(busy));
+    if (label) btn.textContent = label;
+}
+
+function pickPhoto() {
+    if (!canHaveAvatar()) {
+        toast('Log in with your RiCap account to change your profile picture.');
+        return;
+    }
+    $('pfPhotoInput').click();
+}
 $('pfAvatar').addEventListener('click', pickPhoto);
 $('pfPhotoBtn').addEventListener('click', pickPhoto);
+
+// Crop state, in source-image pixels: the square shown is `side` wide around (cx, cy).
+const crop = { img: null, url: '', zoom: 1, cx: 0, cy: 0, busy: false, drag: null };
+const cropCanvas = $('pfCropCanvas');
+
+function cropSide() {
+    return Math.min(crop.img.naturalWidth, crop.img.naturalHeight) / crop.zoom;
+}
+
+function cropRect() {
+    const side = cropSide();
+    const half = side / 2;
+    crop.cx = Math.min(Math.max(crop.cx, half), crop.img.naturalWidth - half);
+    crop.cy = Math.min(Math.max(crop.cy, half), crop.img.naturalHeight - half);
+    return { x: crop.cx - half, y: crop.cy - half, side };
+}
+
+function drawCrop() {
+    if (!crop.img) return;
+    const r = cropRect();
+    const ctx = cropCanvas.getContext('2d');
+    const n = cropCanvas.width;
+    ctx.clearRect(0, 0, n, n);
+    ctx.drawImage(crop.img, r.x, r.y, r.side, r.side, 0, 0, n, n);
+    // Darkens the corners so the preview matches the round avatar.
+    ctx.save();
+    ctx.fillStyle = 'rgba(11, 12, 16, 0.55)';
+    ctx.beginPath();
+    ctx.rect(0, 0, n, n);
+    ctx.arc(n / 2, n / 2, n / 2, 0, Math.PI * 2, true);
+    ctx.fill();
+    ctx.restore();
+}
+
+function setCropStatus(msg, isError) {
+    const el = $('pfCropStatus');
+    el.textContent = msg || '';
+    el.classList.toggle('is-error', !!isError);
+}
+
+function closeCrop() {
+    if (crop.url) URL.revokeObjectURL(crop.url);
+    crop.img = null;
+    crop.url = '';
+    if ($('pfCropDialog').open) $('pfCropDialog').close();
+}
+
+function loadImage(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => resolve({ img, url });
+        img.onerror = () => { URL.revokeObjectURL(url); reject(Object.assign(new Error('That image could not be read.'), { code: 'avatar/unreadable' })); };
+        img.src = url;
+    });
+}
 
 $('pfPhotoInput').addEventListener('change', async e => {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!file) return;
     try {
-        const dataUrl = await resizeAvatar(file);
-        if (!setAvatar(dataUrl)) throw new Error('Your browser storage is full or blocked.');
-        refresh();
-        publish();
-        toast('Profile picture updated.');
+        await checkAvatarFile(file);
+        const { img, url } = await loadImage(file);
+        closeCrop();
+        Object.assign(crop, { img, url, zoom: 1, cx: img.naturalWidth / 2, cy: img.naturalHeight / 2 });
+        $('pfCropZoom').value = '1';
+        setCropStatus('');
+        drawCrop();
+        $('pfCropDialog').showModal();
+        $('pfCropStage').focus();
     } catch (err) {
-        toast(err.message || 'Could not update the profile picture.');
+        toast(avatarErrorMessage(err));
     }
 });
 
-$('pfPhotoRemove').addEventListener('click', () => {
-    if (!confirm('Remove your profile picture?')) return;
-    setAvatar('');
-    refresh();
-    publish();
-    toast('Profile picture removed.');
+$('pfCropZoom').addEventListener('input', e => {
+    crop.zoom = Number(e.target.value) || 1;
+    drawCrop();
 });
+
+function nudgeZoom(delta) {
+    const z = Math.min(4, Math.max(1, crop.zoom + delta));
+    crop.zoom = z;
+    $('pfCropZoom').value = String(z);
+    drawCrop();
+}
+
+const stage = $('pfCropStage');
+stage.addEventListener('pointerdown', e => {
+    if (!crop.img) return;
+    stage.setPointerCapture(e.pointerId);
+    crop.drag = { x: e.clientX, y: e.clientY };
+});
+stage.addEventListener('pointermove', e => {
+    if (!crop.drag) return;
+    const scale = cropSide() / stage.clientWidth;
+    crop.cx -= (e.clientX - crop.drag.x) * scale;
+    crop.cy -= (e.clientY - crop.drag.y) * scale;
+    crop.drag = { x: e.clientX, y: e.clientY };
+    drawCrop();
+});
+['pointerup', 'pointercancel'].forEach(t => stage.addEventListener(t, () => { crop.drag = null; }));
+stage.addEventListener('wheel', e => {
+    if (!crop.img) return;
+    e.preventDefault();
+    nudgeZoom(e.deltaY < 0 ? 0.1 : -0.1);
+}, { passive: false });
+stage.addEventListener('keydown', e => {
+    if (!crop.img) return;
+    const step = cropSide() * 0.05;
+    const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (moves[e.key]) {
+        crop.cx += moves[e.key][0];
+        crop.cy += moves[e.key][1];
+        drawCrop();
+    } else if (e.key === '+' || e.key === '=') nudgeZoom(0.1);
+    else if (e.key === '-') nudgeZoom(-0.1);
+    else return;
+    e.preventDefault();
+});
+
+$('pfCropCancel').addEventListener('click', () => { if (!crop.busy) closeCrop(); });
+// Esc closes the dialog, except while an upload is running.
+$('pfCropDialog').addEventListener('cancel', e => { if (crop.busy) e.preventDefault(); });
+$('pfCropDialog').addEventListener('close', () => { if (!crop.busy) closeCrop(); });
+
+$('pfCropSave').addEventListener('click', async () => {
+    if (!crop.img || crop.busy) return;
+    const save = $('pfCropSave');
+    crop.busy = true;
+    setBusy(save, true, 'Uploading…');
+    $('pfCropCancel').disabled = true;
+    setCropStatus('Uploading your photo…');
+    try {
+        await uploadAvatar(await renderAvatar(crop.img, cropRect()));
+        crop.busy = false;
+        closeCrop();
+        refresh();
+        toast('Profile picture updated.');
+    } catch (err) {
+        console.warn('RiCap: profile picture upload failed', err && err.code);
+        setCropStatus(avatarErrorMessage(err), true);
+    } finally {
+        crop.busy = false;
+        setBusy(save, false, 'Save photo');
+        $('pfCropCancel').disabled = false;
+    }
+});
+
+$('pfPhotoRemove').addEventListener('click', async () => {
+    if (!confirm('Remove your profile picture?')) return;
+    const btn = $('pfPhotoRemove');
+    setBusy(btn, true, 'Removing…');
+    try {
+        await removeAvatar();
+        refresh();
+        toast('Profile picture removed.');
+    } catch (err) {
+        console.warn('RiCap: could not remove profile picture', err && err.code);
+        toast(avatarErrorMessage(err));
+    } finally {
+        setBusy(btn, false, 'Remove photo');
+    }
+});
+
+window.addEventListener('ricap:avatar-change', () => refresh());
 
 $('pfEmailAlerts').addEventListener('change', async e => {
     const box = e.target;

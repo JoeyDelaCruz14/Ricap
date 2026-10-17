@@ -2,6 +2,7 @@ import { auth } from './firebase-config.js';
 import { startReportAlerts } from './Notify.js';
 import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount } from './account.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { isAdminUser } from './admin-role.js';
 
 const LOGOUT_REDIRECT = 'main.html';
 const OFFICIAL_KEY = 'ricap_official';  
@@ -58,6 +59,14 @@ function ensureGreeting() {
         span.style.cssText = 'display:inline-block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
             'vertical-align:bottom;color:#d9c2ff;font-size:0.9rem;font-weight:600;letter-spacing:0.08em;text-decoration:none;';
         li.appendChild(span);
+        const img = document.createElement('img');
+        img.setAttribute('data-nav-avatar', '');
+        img.alt = '';
+        img.width = img.height = 24;
+        img.hidden = true;
+        img.style.cssText = 'width:24px;height:24px;margin-right:8px;border-radius:50%;object-fit:cover;vertical-align:middle;';
+        span.prepend(img);
+        span.append(document.createElement('span'));
         const logout = links.querySelector('[data-logout]');
         links.insertBefore(li, logout || null);
     }
@@ -71,8 +80,9 @@ function loginItems() {
         li.textContent.trim().toLowerCase() === 'login');
 }
 
-function apply(user) {
-    const isAdmin = !!user && !user.isAnonymous;
+async function apply(user) {
+    const isAdmin = await isAdminUser(user);
+    if (user !== auth.currentUser) return;
     const loggedIn = isAdmin || isLocalLoggedIn() || !!getOfficialSession();
     ensureAdminLinks();
     ensureLogoutLink();
@@ -86,9 +96,18 @@ function apply(user) {
     if (greet) {
         const name = displayName(user);
         greet.hidden = !name;
-        greet.firstChild.textContent = name ? 'Hi, ' + name : '';
+        greet.firstChild.lastChild.textContent = name ? 'Hi, ' + name : '';
         greet.firstChild.title = name || '';
+        paintNavAvatar(user && !user.isAnonymous ? user.photoURL : '');
     }
+}
+
+function paintNavAvatar(url) {
+    const img = document.querySelector('#navLinks [data-nav-avatar]');
+    if (!img) return;
+    img.hidden = !url;
+    if (url) img.src = url;
+    else img.removeAttribute('src');
 }
 
 // Pages without their own menu script mark the toggle with data-nav-toggle.
@@ -111,6 +130,7 @@ function start() {
     apply(auth.currentUser);
     onAuthStateChanged(auth, apply);
     window.addEventListener('storage', () => apply(auth.currentUser));
+    window.addEventListener('ricap:avatar-change', e => paintNavAvatar(e.detail && e.detail.url));
     refreshVerified().then(publishProfile);
     startReportAlerts();
 }

@@ -5,6 +5,7 @@ import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/fir
 import { getOfficial, verifyCode, signOutOfficial } from './Session.js';
 import { initSteps, onImageFile, getSelection, refreshGate, isGateVerified } from './scanner-steps.js';
 import { getRecommendation, DISCLAIMER } from './Gemini.js';
+import { SUGGEST_MAX_DISTANCE_M } from './location-match.js';
 
 let clipModPromise = null;
 function getClipGate() {
@@ -143,7 +144,7 @@ function inBataan(lat, lng) {
     return lat >= BATAAN.south && lat <= BATAAN.north && lng >= BATAAN.west && lng <= BATAAN.east;
 }
 
-const GOOD_ACCURACY_M = 25;    
+const GOOD_ACCURACY_M = SUGGEST_MAX_DISTANCE_M;
 const WARN_ACCURACY_M = 150;    
 const LOCATION_WAIT_MS = 15000;  
 const MAX_ACCEPT_ACCURACY_M = 1000;  
@@ -190,7 +191,7 @@ function getUserLocation() {
                 clearTimeout(timer);
                 if (watchId !== null) navigator.geolocation.clearWatch(watchId);
                 reject(new Error(err.code === 1
-                    ? 'Location permission was denied. Allow location access to submit an official report.'
+                    ? 'Location permission was denied. Allow location access in your browser settings and try again, or choose the river and segment yourself.'
                     : 'Could not get your location. Try again outdoors.'));
             },
             { enableHighAccuracy: true, timeout: LOCATION_WAIT_MS, maximumAge: 0 }

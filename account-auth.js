@@ -1,3 +1,5 @@
+import { auth } from './firebase-config.js';
+import { createUserWithEmailAndPassword, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { saveAccount, getAccount, normalizePhone } from './account.js';
 import { isEmailRegistered, registerEmail } from './registry.js';
 import { setEmailAlerts } from './alerts.js';
@@ -42,20 +44,37 @@ if (form) {
 
         const submitBtn = form.querySelector('.auth-submit');
         if (submitBtn) submitBtn.disabled = true;
+        const name = `${firstName} ${lastName}`;
         try {
-            if (await isEmailRegistered(email)) {
-                showToast('An account with this email already exists. Please log in instead.');
+            try {
+                if (await isEmailRegistered(email)) {
+                    showToast('An account with this email already exists. Please log in instead.');
+                    return;
+                }
+            } catch (e) {
+                console.warn('RiCap: could not check the account registry', e);
+            }
+            // The Firebase account gives the user one uid on every browser; the password is never kept locally.
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(cred.user, { displayName: name }).catch(() => {});
+            } catch (e) {
+                const c = String(e && e.code || '');
+                showToast(c === 'auth/email-already-in-use' ? 'An account with this email already exists. Please log in instead.'
+                    : c === 'auth/weak-password' ? 'Use a password with at least 6 characters.'
+                    : c === 'auth/invalid-email' ? 'Enter a valid email address.'
+                    : c === 'auth/network-request-failed' ? 'No connection. Check your internet and try again.'
+                    : 'Could not create the account. Try again.');
                 return;
             }
-            await registerEmail(email);
-        } catch (e) {
-            console.warn('RiCap: could not check the account registry', e);
+            try { await registerEmail(email); } catch (e) { console.warn('RiCap: could not update the account registry', e); }
+            // Sign-up leaves the user on the login tab, as before.
+            try { await signOut(auth); } catch (e) {  }
         } finally {
             if (submitBtn) submitBtn.disabled = false;
         }
 
-        const name = `${firstName} ${lastName}`;
-        saveAccount({ name, firstName, lastName, email, password, phone, emailAlerts: false });
+        saveAccount({ name, firstName, lastName, email, phone, emailAlerts: false });
 
         let alertMsg = '';
         if (alertsOptIn) {

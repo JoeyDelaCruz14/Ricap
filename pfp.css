@@ -226,6 +226,48 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-photo-row .pf-actions { flex: 1 1 auto; }
 .pf-hint { color: var(--muted); font-size: .8rem; }
 
+/* Photo crop dialog */
+.pf-crop {
+    width: min(400px, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+    margin: auto;
+    overflow-y: auto;
+    color: var(--ink);
+    background: var(--card-raised);
+    border-color: var(--line-strong);
+}
+.pf-crop::backdrop { background: rgba(5, 5, 8, 0.72); }
+.pf-crop-stage {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    margin-bottom: 12px;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    touch-action: none;
+    cursor: grab;
+}
+.pf-crop-stage:active { cursor: grabbing; }
+.pf-crop-stage:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pf-crop-stage canvas { display: block; width: 100%; height: 100%; }
+.pf-crop-zoom { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: .85rem; font-weight: 600; }
+.pf-crop-zoom input { flex: 1 1 auto; min-height: 44px; accent-color: var(--accent); }
+.pf-crop-status { min-height: 1.5em; margin: 6px 0 4px; color: var(--muted); font-size: .86rem; }
+.pf-crop-status.is-error { color: var(--danger); }
+.pf-crop .pf-actions .pf-btn { flex: 1 1 auto; min-height: 44px; }
+.pf-btn[aria-busy="true"]::before {
+    content: "";
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: pf-spin .7s linear infinite;
+}
+@keyframes pf-spin { to { transform: rotate(360deg); } }
+
 .pf-error {
     margin-top: 14px;
     padding: 10px 12px;
@@ -355,4 +397,5 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 
 @media (prefers-reduced-motion: reduce) {
     .profile-page * { transition: none !important; }
+    .pf-btn[aria-busy="true"]::before { animation-duration: 2s; }
 }

@@ -2,6 +2,7 @@ import { rtdb as db, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { ref, query, orderByChild, equalTo, onValue, set, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { emailKey } from './account.js';
+import { isAdminUser } from './admin-role.js';
 const EMAILJS_SERVICE_ID = 'service_qcgez2j';
 const EMAILJS_TEMPLATE_ID = 'template_3fet77r';
 const EMAILJS_PUBLIC_KEY = 'D1LTqshDzk5V-D4ug';
@@ -76,8 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('adminSignOutBtn').addEventListener('click', () => signOut(auth));
 
-    onAuthStateChanged(auth, (user) => {
-        if (user && !user.isAnonymous) {
+    onAuthStateChanged(auth, async (user) => {
+        const isAdmin = await isAdminUser(user);
+        if (user !== auth.currentUser) return;
+        if (user && !user.isAnonymous && !isAdmin) {
+            adminLoginError.textContent = 'This account does not have admin access.';
+            adminLoginError.hidden = false;
+        }
+        if (isAdmin) {
             adminGate.hidden = true;
             adminPanel.hidden = false;
             adminEmailLabel.textContent = user.email;
