@@ -427,3 +427,45 @@ body.maintenance-page ::selection { background: rgba(139, 92, 246, 0.4); color: 
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
 }
+
+/* Verified users */
+.m-users { display: flex; flex-direction: column; gap: 14px; }
+.m-users:empty { display: none; }
+.m-user {
+    padding: 16px 18px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+}
+.m-user:hover { border-color: var(--line-strong); }
+.m-user-head { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.m-avatar {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--accent-strong) center / cover no-repeat;
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    border-radius: 50%;
+}
+.m-user-info { flex: 1 1 auto; min-width: 0; }
+.m-user-info .m-meta { margin: 2px 0 0; overflow-wrap: anywhere; }
+.m-user-count { flex: 0 0 auto; text-align: center; }
+.m-user-count span { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.m-user-count small { color: var(--muted); font-size: .75rem; }
+.m-user .m-actions a { text-decoration: none; }
+.m-user-last { margin: 0 0 0 auto; }
+.m-user-reports { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.m-user-reports .m-card { background: var(--card-raised); }
+
+@media (max-width: 720px) {
+    .m-user-head { flex-wrap: wrap; }
+    .m-avatar { width: 52px; height: 52px; font-size: 1.1rem; }
+    .m-user-last { flex: 1 1 100%; margin: 4px 0 0; }
+}

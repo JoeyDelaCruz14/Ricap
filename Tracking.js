@@ -7,7 +7,24 @@ const SCOPE_KEY = 'ricap_tracking_scope';
 const VIEW_KEY = 'ricap_tracking_view'; 
 
 
+const FIRESTORE_URL = 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+const SHARED_CACHE_MS = 30000;
+let myUid = '';
+let sharedCache = null;
+
+function readStoredJSON(key) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
+}
+
 function getCurrentUser() {
+    const official = readStoredJSON('ricap_official');
+    if (official && (official.code || official.name)) {
+        return { id: String(official.code || official.name), name: String(official.name || official.code), code: String(official.code || '') };
+    }
+    const account = readStoredJSON('ricapAccount');
+    if (account && account.email && localStorage.getItem('ricapLoggedIn') === 'true') {
+        return { id: String(account.email), name: String(account.name || account.email) };
+    }
     try {
         const raw = localStorage.getItem(USER_KEY);
         if (!raw) return { id: '', name: '' };
@@ -26,13 +43,17 @@ function getCurrentUser() {
 
 
 function isMine(record) {
-    const me = getCurrentUser().id;
+    const me = getCurrentUser();
+    if (record.uid && myUid && String(record.uid) === myUid) return true;
+    if (record.reporterCode && me.code && String(record.reporterCode) === me.code) return true;
+    if (record.remote) return false;
     if (!record.userId) return true;
-    return !!me && String(record.userId) === me;
+    return !!me.id && String(record.userId) === me.id;
 }
 
 function reporterLabel(record) {
     if (record.reporter) return record.reporter;
+    if (record.reporterName) return record.reporterName + (record.reporterRole ? ' (' + record.reporterRole + ')' : '');
     if (record.userId) return String(record.userId);
     return 'Anonymous';
 }
@@ -81,8 +102,59 @@ function saveRecords(records) {
     }
 }
 
+function toIso(ts) {
+    try {
+        const d = ts && typeof ts.toDate === 'function' ? ts.toDate() : (ts ? new Date(ts) : null);
+        return d && !isNaN(d.getTime()) ? d.toISOString() : '';
+    } catch (e) { return ''; }
+}
+
+function fromReportDoc(docId, r) {
+    return {
+        id: String(r.recordId || docId),
+        docId: docId,
+        remote: true,
+        reported: true,
+        timestamp: toIso(r.createdAt) || new Date().toISOString(),
+        name: r.reportName || '',
+        riverId: r.riverId,
+        segmentId: r.segmentId,
+        image: r.imageUrl || '',
+        lat: typeof r.lat === 'number' ? r.lat : undefined,
+        lng: typeof r.lng === 'number' ? r.lng : undefined,
+        status: r.status || 'moderate',
+        score: r.score != null ? r.score : 0,
+        assessment: r.assessment || '',
+        recommendation: r.recommendation || '',
+        reporterName: r.reporterName || '',
+        reporterRole: r.reporterRole || '',
+        reporterCode: r.reporterCode || '',
+        uid: r.uid || ''
+    };
+}
+
+async function fetchFirestoreReports() {
+    if (sharedCache && Date.now() - sharedCache.at < SHARED_CACHE_MS) return sharedCache.result;
+    try {
+        const [{ db }, { ensureAuth }, fs] = await Promise.all([
+            import('./firebase-config.js'),
+            import('./Session.js'),
+            import(FIRESTORE_URL)
+        ]);
+        try { myUid = String(await ensureAuth() || ''); } catch (e) { console.warn('Could not sign in to load reports:', e); }
+        const snap = await fs.getDocs(fs.query(fs.collection(db, 'reports'), fs.orderBy('createdAt', 'desc')));
+        const records = snap.docs.map(function (d) { return fromReportDoc(d.id, d.data({ serverTimestamps: 'estimate' })); });
+        const result = { records: records, shared: true };
+        sharedCache = { at: Date.now(), result: result };
+        return result;
+    } catch (err) {
+        console.error('Could not load shared reports:', err);
+        return { records: [], shared: false, failed: true };
+    }
+}
+
 async function fetchSharedReports() {
-    if (!REPORTS_API) return { records: [], shared: false };
+    if (!REPORTS_API) return fetchFirestoreReports();
     try {
         const res = await fetch(REPORTS_API, { headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -97,18 +169,33 @@ async function fetchSharedReports() {
 
 async function getDataset(scope) {
     const local = loadRecords();
-
-    if (scope === 'mine') {
-        return { records: local.filter(isMine), shared: false };
-    }
-
     const remote = await fetchSharedReports();
     const byId = new Map();
     remote.records.forEach(function (r) { if (r && r.id != null) byId.set(String(r.id), r); });
     local.forEach(function (r) {
-        if (r.reported && !byId.has(String(r.id))) byId.set(String(r.id), r);
+        const key = String(r.id);
+        const shared = byId.get(key);
+        // The browser copy has the full scan details; the shared copy has who reported it.
+        if (shared) byId.set(key, Object.assign({}, shared, r, { image: r.image || shared.image, remote: false }));
+        else if (r.reported || scope === 'mine') byId.set(key, r);
     });
-    return { records: Array.from(byId.values()), shared: remote.shared, failed: !!remote.failed };
+    let records = Array.from(byId.values());
+    if (scope === 'mine') records = records.filter(isMine);
+    return { records: records, shared: remote.shared, failed: !!remote.failed };
+}
+
+async function deleteSharedReport(record) {
+    if (REPORTS_API) return deleteReportOnServer(record.id);
+    if (!record.docId) return true;
+    try {
+        const [{ db }, fs] = await Promise.all([import('./firebase-config.js'), import(FIRESTORE_URL)]);
+        await fs.deleteDoc(fs.doc(db, 'reports', record.docId));
+        sharedCache = null;
+        return true;
+    } catch (err) {
+        console.error('Could not delete report:', err);
+        return false;
+    }
 }
 
 async function sendReportToServer(record) {
@@ -181,7 +268,7 @@ function formatTimestamp(iso) {
         ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted' };
+const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted', critical: 'Critical' };
 
 
 const STATUS_COLORS = { healthy: '#4fae8c', moderate: '#e6b207', polluted: '#d6574a' };
@@ -563,9 +650,8 @@ function initTracking() {
     trendNext.addEventListener('click', function () { shiftMonth(1); });
 
     function describeSource(result) {
-        if (scope === 'mine') return 'Showing only your own scans from this browser.';
-        if (result.failed) return 'Could not reach the reports server, so only official reports saved in this browser are shown.';
-        if (!result.shared) return 'No shared reports server is connected yet, so only official reports from this browser are shown. Connect REPORTS_API in Tracking.js to see every account’s reports.';
+        if (result.failed) return 'Could not reach the reports server, so only records saved in this browser are shown.';
+        if (scope === 'mine') return 'Showing only the reports and scans you submitted.';
         return '';
     }
 
@@ -577,7 +663,7 @@ function initTracking() {
             card.className = 'record-card';
             card.dataset.id = record.id;
             card.innerHTML =
-                '<div class="record-thumb"><img src="' + esc(record.image) + '" alt="Processed river photo"></div>' +
+                '<div class="record-thumb"><img src="' + esc(record.image || record.firebaseUrl || '') + '" alt="Processed river photo" loading="lazy"></div>' +
                 '<div class="record-body">' +
                     '<div class="record-status">' +
                         '<span class="status-dot ' + esc(record.status) + '"></span>' +
@@ -701,9 +787,9 @@ function initTracking() {
         }
         if (!confirm('Delete this record? This cannot be undone.')) return false;
 
-        if (target && target.reported && REPORTS_API) {
-            if (!(await deleteReportOnServer(id))) {
-                alert('Could not delete the report from the server.');
+        if (target && target.reported) {
+            if (!(await deleteSharedReport(target))) {
+                alert('Could not delete the report from the server. Submitted official reports can only be removed by an admin in the Maintenance module.');
                 return false;
             }
         }
@@ -753,33 +839,38 @@ function initTracking() {
         detailState.hidden = false;
         history.replaceState(null, '', PAGE_PATH + '?id=' + encodeURIComponent(record.id));
 
-        document.getElementById('detailImage').src = record.image;
+        const dash = function (v) { return v == null || v === '' ? '—' : v; };
+        const hasConfidence = isFinite(Number(record.confidence)) && record.confidence !== null && record.confidence !== '';
+        const confidence = hasConfidence ? Number(record.confidence) : 0;
+
+        document.getElementById('detailImage').src = record.image || record.firebaseUrl || '';
         document.getElementById('detailTimestamp').textContent = formatTimestamp(record.timestamp);
         document.getElementById('detailReporter').textContent = 'Reported by ' + reporterLabel(record);
 
         document.getElementById('detailStatusDot').className = 'status-dot ' + record.status;
         document.getElementById('detailStatusTitle').textContent = statusLabels[record.status] || record.status;
-        document.getElementById('detailScoreValue').textContent = record.score;
-        document.getElementById('detailConfidenceValue').textContent = record.confidence + '%';
-        document.getElementById('detailConfidenceFill').style.width = record.confidence + '%';
-        document.getElementById('detailAssessmentText').textContent = record.assessment;
+        document.getElementById('detailScoreValue').textContent = dash(record.score);
+        document.getElementById('detailConfidenceValue').textContent = hasConfidence ? confidence + '%' : '—';
+        document.getElementById('detailConfidenceFill').style.width = confidence + '%';
+        document.getElementById('detailAssessmentText').textContent = record.assessment || record.recommendation || '';
 
-        const accent = STATUS_COLORS[record.status] || '#e6b207';
+        const accent = STATUS_COLORS[bucketOf(record.status)] || '#e6b207';
         const box = document.getElementById('detailAssessmentBox');
         box.style.borderLeftColor = accent;
         box.style.background = accent + '0f';
 
-        document.getElementById('detailColorCast').textContent = record.colorCast;
-        document.getElementById('detailSurfaceClarity').textContent = record.surfaceClarity;
-        document.getElementById('detailLighting').textContent = record.lighting;
-        document.getElementById('detailOverall').textContent = record.overallReading;
+        document.getElementById('detailColorCast').textContent = dash(record.colorCast);
+        document.getElementById('detailSurfaceClarity').textContent = dash(record.surfaceClarity);
+        document.getElementById('detailLighting').textContent = dash(record.lighting);
+        document.getElementById('detailOverall').textContent = dash(record.overallReading);
 
         const avg = record.avgColor || { r: 0, g: 0, b: 0 };
         document.getElementById('detailColorSwatch').style.background =
             'rgb(' + avg.r + ',' + avg.g + ',' + avg.b + ')';
-        document.getElementById('detailMetaLine').textContent =
-            'Analyzed ' + (record.sampledPixels || 0).toLocaleString() + ' sampled pixels · avg color rgb(' +
-            avg.r + ', ' + avg.g + ', ' + avg.b + ') · score ' + record.score + '/100';
+        document.getElementById('detailMetaLine').textContent = record.avgColor
+            ? 'Analyzed ' + (record.sampledPixels || 0).toLocaleString() + ' sampled pixels · avg color rgb(' +
+                avg.r + ', ' + avg.g + ', ' + avg.b + ') · score ' + record.score + '/100'
+            : 'Shared report · full scan details are only stored on the device that submitted it · score ' + dash(record.score) + '/100';
 
         const mine = isMine(record);
         logReportBtn.hidden = !mine;

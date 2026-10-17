@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiCap — My Profile</title>
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="pfp.css">
+</head>
+<body class="profile-page">
+
+    <div class="video-background" aria-hidden="true">
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="images&vids/5.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+    </div>
+
+    <nav class="nav" id="nav">
+        <div class="nav-inner">
+            <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks" data-nav-toggle>
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="Home.html">Home</a></li>
+                <li><a href="mapping.html">Mapping</a></li>
+                <li><a href="Image_Processing.html">Scanner</a></li>
+                <li><a href="Tracking.html">Tracking</a></li>
+                <li><a href="main.html#loginbutton">Login</a></li>
+                <li><a href="Verify.html">Verify</a></li>
+                <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+                <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="pf-main">
+        <div class="pf-shell">
+
+            <section class="pf-card pf-gate" id="pfGate" hidden>
+                <p class="eyebrow">Profile</p>
+                <h1>You're not signed in</h1>
+                <p class="pf-copy">Log in to your RiCap account, or verify with an official access code, to see your profile.</p>
+                <div class="pf-actions">
+                    <a href="main.html#loginbutton" class="pf-btn is-primary">Log in</a>
+                    <a href="Verify.html" class="pf-btn">Verify as official</a>
+                </div>
+            </section>
+
+            <section class="pf-card pf-hero" id="pfHero" hidden>
+                <div class="pf-hero-top">
+                    <button type="button" class="pf-avatar" id="pfAvatar" aria-label="Change profile picture">
+                        <span class="pf-initials" id="pfInitials">?</span>
+                        <span class="pf-avatar-edit" aria-hidden="true">Change</span>
+                    </button>
+                    <div class="pf-identity">
+                        <p class="eyebrow">My profile</p>
+                        <h1 class="pf-name" id="pfName"></h1>
+                        <p class="pf-email" id="pfEmail"></p>
+                        <div class="pf-badges" id="pfBadges"></div>
+                    </div>
+                    <div class="pf-hero-actions">
+                        <a href="Tracking.html" class="pf-btn">View all records</a>
+                        <button type="button" class="pf-btn is-danger" id="pfLogout">Log out</button>
+                    </div>
+                </div>
+                <div class="pf-stats">
+                    <div class="pf-stat"><span id="stTotal">–</span><small>Reports submitted</small></div>
+                    <div class="pf-stat"><span id="stMonth">–</span><small>This month</small></div>
+                    <div class="pf-stat"><span id="stLocal">0</span><small>Scans on this device</small></div>
+                    <div class="pf-stat"><span id="stLast">–</span><small>Last report</small></div>
+                </div>
+            </section>
+
+            <div class="pf-grid" id="pfGrid" hidden>
+                <form class="pf-card pf-details" id="pfForm" autocomplete="on" novalidate hidden>
+                    <div class="pf-card-head">
+                        <h2>Account details</h2>
+                        <button type="button" class="pf-btn is-small" id="pfEditBtn">Edit profile</button>
+                    </div>
+
+                    <div class="pf-fields">
+                        <div class="pf-field pf-field-wide">
+                            <span class="pf-field-label">Profile picture</span>
+                            <div class="pf-photo-row">
+                                <div class="pf-photo-thumb" id="pfThumb"><span class="pf-initials" id="pfThumbInitials">?</span></div>
+                                <div>
+                                    <div class="pf-actions">
+                                        <button type="button" class="pf-btn is-small" id="pfPhotoBtn">Upload photo</button>
+                                        <button type="button" class="pf-btn is-small is-danger" id="pfPhotoRemove" hidden>Remove</button>
+                                    </div>
+                                    <p class="pf-hint">JPG or PNG. It is cropped to a square.</p>
+                                </div>
+                            </div>
+                            <input type="file" id="pfPhotoInput" accept="image/*" hidden>
+                        </div>
+                        <div class="pf-field">
+                            <label for="pfFirst">First name</label>
+                            <input type="text" id="pfFirst" maxlength="40" required readonly autocomplete="given-name">
+                        </div>
+                        <div class="pf-field">
+                            <label for="pfLast">Last name</label>
+                            <input type="text" id="pfLast" maxlength="40" required readonly autocomplete="family-name">
+                        </div>
+                        <div class="pf-field pf-field-wide">
+                            <label for="pfEmailInput">Email</label>
+                            <input type="email" id="pfEmailInput" readonly>
+                        </div>
+                        <div class="pf-field pf-field-wide">
+                            <label for="pfPhone">Mobile number <span class="pf-optional">(optional)</span></label>
+                            <input type="tel" id="pfPhone" maxlength="16" readonly placeholder="09171234567" autocomplete="tel">
+                        </div>
+                    </div>
+                    <p class="pf-error" id="pfError" hidden></p>
+                    <div class="pf-actions" id="pfEditActions" hidden>
+                        <button type="submit" class="pf-btn is-primary" id="pfSaveBtn">Save changes</button>
+                        <button type="button" class="pf-btn" id="pfCancelBtn">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="pf-side">
+                    <div class="pf-card" id="pfOfficialCard">
+                        <div class="pf-card-head"><h2>Official access</h2></div>
+                        <dl class="pf-dl" id="pfOfficial"></dl>
+                        <p class="pf-note" id="pfOfficialNote" hidden></p>
+                        <div class="pf-actions" id="pfOfficialActions"></div>
+                    </div>
+
+                    <div class="pf-card" id="pfAlerts" hidden>
+                        <div class="pf-card-head"><h2>Alerts</h2></div>
+                        <label class="pf-toggle" for="pfEmailAlerts">
+                            <input type="checkbox" id="pfEmailAlerts">
+                            <span>Email me when a new river report is submitted</span>
+                        </label>
+                        <p class="pf-note pf-alert-note" id="pfAlertsNote" hidden></p>
+                    </div>
+                </div>
+            </div>
+
+            <section class="pf-card" id="pfReportsCard" hidden>
+                <div class="pf-reports-head">
+                    <h2>My recent reports</h2>
+                    <a href="Tracking.html">See all &rsaquo;</a>
+                </div>
+                <p class="pf-empty" id="pfReportsEmpty">Loading your reports…</p>
+                <div class="pf-reports" id="pfReports"></div>
+            </section>
+        </div>
+    </main>
+
+    <div class="pf-toast" id="pfToast" role="status" hidden></div>
+
+    <script src="mapping-data.js"></script>
+    <script type="module" src="pfp.js"></script>
+    <script type="module" src="admin-nav.js"></script>
+</body>
+</html>

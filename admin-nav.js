@@ -53,9 +53,10 @@ function ensureGreeting() {
         li = document.createElement('li');
         li.setAttribute('data-greeting', '');
         li.hidden = true;
-        const span = document.createElement('span');
+        const span = document.createElement('a');
+        span.href = 'pfp.html';
         span.style.cssText = 'display:inline-block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
-            'vertical-align:bottom;color:#d9c2ff;font-size:0.9rem;font-weight:600;letter-spacing:0.08em;';
+            'vertical-align:bottom;color:#d9c2ff;font-size:0.9rem;font-weight:600;letter-spacing:0.08em;text-decoration:none;';
         li.appendChild(span);
         const logout = links.querySelector('[data-logout]');
         links.insertBefore(li, logout || null);
@@ -110,8 +111,22 @@ function start() {
     apply(auth.currentUser);
     onAuthStateChanged(auth, apply);
     window.addEventListener('storage', () => apply(auth.currentUser));
-    refreshVerified();
+    refreshVerified().then(publishProfile);
     startReportAlerts();
+}
+
+// Keeps the admin's list of verified users (Maintenance → Verified users) up to date.
+let profilePublished = false;
+async function publishProfile() {
+    if (profilePublished || !isVerifiedUser()) return;
+    profilePublished = true;
+    try {
+        const { syncProfile } = await import('./profile-sync.js');
+        await syncProfile();
+    } catch (e) {
+        profilePublished = false;
+        console.warn('RiCap: could not publish profile', e);
+    }
 }
 
 // Picks up an approval that happened after the user logged in.

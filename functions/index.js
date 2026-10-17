@@ -54,6 +54,22 @@ exports.sendReportAlerts = onDocumentCreated(
 
         const river = RIVER_NAMES[r.riverId] || r.riverName || r.reportName || 'a Bataan river';
 
+        // New report for this river segment, or an update to one that already has reports?
+        let isUpdate = false;
+        if (r.riverId) {
+            try {
+                const prev = await admin.firestore().collection('reports')
+                    .where('riverId', '==', r.riverId)
+                    .where('segmentId', '==', r.segmentId ?? '')
+                    .limit(2).get();
+                isUpdate = prev.docs.some(d => d.id !== event.params.reportId);
+            } catch (err) {
+                logger.warn('Could not check for earlier reports', { error: String(err) });
+            }
+        }
+        const reportType = isUpdate ? 'Update to an existing river report' : 'New river report';
+        const sentAt = new Date().toLocaleString('en-PH', { timeZone: 'Asia/Manila' });
+
         for (const p of recipients) {
             try {
                 const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
@@ -67,10 +83,14 @@ exports.sendReportAlerts = onDocumentCreated(
                         template_params: {
                             to_email: p.email,
                             to_name: p.name || 'there',
+                            name: r.reporterName || 'A RiCap official',
+                            time: sentAt,
                             river,
                             status: status.toUpperCase(),
                             score: r.score != null ? String(r.score) : '',
                             recommendation: r.recommendation || 'Avoid contact with the water.',
+                            image_url: r.imageUrl || '',
+                            report_type: reportType,
                             site_url: SITE_URL
                         }
                     })

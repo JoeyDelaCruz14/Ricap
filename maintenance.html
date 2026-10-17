@@ -71,6 +71,7 @@
                 <div class="maint-tabs" role="tablist">
                     <button type="button" class="m-tab is-active" data-tab="flagged">Flagged content <em id="flagBadge" hidden>0</em></button>
                     <button type="button" class="m-tab" data-tab="reports">All reports</button>
+                    <button type="button" class="m-tab" data-tab="users">Verified users</button>
                     <button type="button" class="m-tab" data-tab="rivers">River locations</button>
                     <button type="button" class="m-tab" data-tab="system">System records</button>
                 </div>
@@ -94,6 +95,14 @@
                     </div>
                     <p class="m-empty" id="reportsEmpty" hidden>No reports match.</p>
                     <div class="m-list" id="reportList"></div>
+                </div>
+
+                <div class="m-pane" id="pane-users">
+                    <div class="m-toolbar">
+                        <input type="search" id="userSearch" placeholder="Search name, email, role, code…">
+                    </div>
+                    <p class="m-empty" id="usersEmpty">No verified users yet.</p>
+                    <div class="m-users" id="userList"></div>
                 </div>
 
                 <div class="m-pane" id="pane-rivers">

@@ -2,6 +2,7 @@ import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { resyncIfOptedIn } from './alerts.js';
 import { getApplicationStatus } from './registry.js';
+import { saveAccount } from './account.js';
 
 const LOGIN_REDIRECT = 'Home.html';
 const REDIRECT_DELAY_MS = 700;
@@ -54,8 +55,9 @@ if (loginForm) {
             return;
         }
         try {
-            account.verified = (await getApplicationStatus(account.email)) === 'approved';
-            localStorage.setItem('ricapAccount', JSON.stringify(account));
+            // Once approved, an account stays verified even if a later check fails or changes.
+            if ((await getApplicationStatus(account.email)) === 'approved') account.verified = true;
+            saveAccount(account);
         } catch (e) {
             console.warn('RiCap: could not check verification status', e);
         }

@@ -1,5 +1,5 @@
-let GEMINI_KEY = '';
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+let GEMINI_KEY = 'AQ.Ab8RN6LzjKNBpnPec2JsN7iyEN8FNTCOkRsIA1dkfEQyC4SS4Q';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 const GEMINI_TIMEOUT_MS = 20000;
 const GEMINI_DAILY_LIMIT = 20;  
 const LOCAL_HOSTS = ['localhost', '127.0.0.1'];
@@ -51,8 +51,10 @@ export async function getRecommendation(a, riverName, opts = {}) {
         if (!(await loadKey()) || !takeQuota(opts.uid)) return rules;
         const prompt =
             'Rewrite this river recommendation for a ' + role + ' in the Philippines so it reads naturally and briefly ' +
-            '(max 60 words, plain text, no markdown). Keep every action and the urgency exactly as given. ' +
-            'Do not add, remove or change any action, status or agency, and do not add a disclaimer.\n' +
+            '(max 200 words, plain text, no markdown). Keep every action and the urgency exactly as given. ' +
+            'Do not remove or change any action or status. You may say who to contact for each action ' +
+            '(barangay officials, MDRRMO, LGU environment office, DENR-EMB), but do not invent phone numbers, ' +
+            'and do not add a disclaimer.\n' +
             'River: ' + (riverName || 'a Bataan river') + '\n' +
             'Status: ' + a.status + '\n' +
             'Detected items: ' + items + '\n' +
@@ -69,7 +71,7 @@ export async function getRecommendation(a, riverName, opts = {}) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
             const text = data.candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim().replace(/\*+/g, '');
-            if (!text || text.length > 600) throw new Error('unusable response');
+            if (!text || text.length > 1600) throw new Error('unusable response');
             return { text: withDisclaimer(text), source: 'rules+gemini', rulesText: fallback };
         } catch (err) {
             console.warn('Gemini skipped, using rule-based text:', err.name === 'AbortError' ? 'timeout' : err.message);

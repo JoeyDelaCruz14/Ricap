@@ -6,8 +6,32 @@ function readJSON(key) {
     try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
 }
 
-export function getAccount() { return readJSON(ACCOUNT_KEY); }
+// Emails whose official application was approved. Kept apart from the account so that
+// once an account is verified, re-saving or re-creating it never drops the status.
+export const VERIFIED_KEY = 'ricapVerifiedEmails';
+
+function verifiedEmails() {
+    const list = readJSON(VERIFIED_KEY);
+    return Array.isArray(list) ? list : [];
+}
+export function isEmailVerified(email) {
+    const e = String(email || '').trim().toLowerCase();
+    return !!e && verifiedEmails().includes(e);
+}
+export function rememberVerified(email) {
+    const e = String(email || '').trim().toLowerCase();
+    if (!e || isEmailVerified(e)) return;
+    try { localStorage.setItem(VERIFIED_KEY, JSON.stringify([...verifiedEmails(), e])); } catch (err) {  }
+}
+
+export function getAccount() {
+    const a = readJSON(ACCOUNT_KEY);
+    if (a && !a.verified && isEmailVerified(a.email)) a.verified = true;
+    return a;
+}
 export function saveAccount(acc) {
+    if (acc && acc.verified) rememberVerified(acc.email);
+    else if (acc && isEmailVerified(acc.email)) acc = { ...acc, verified: true };
     try { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(acc)); } catch (e) {  }
 }
 export function getOfficialSession() { return readJSON(OFFICIAL_KEY); }
