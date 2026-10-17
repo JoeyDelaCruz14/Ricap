@@ -5,8 +5,8 @@ import { isLocalLoggedIn } from './account.js';
 import { computeRiverSegments, nearestSegment, SEGMENT_NAMES } from './river-lines.js';
 import { loadCoastDistance } from './bataan-mask.js';
 
-const MATCH_KM = 1.5;
 const FAR_KM = 3;
+const AUTO_SELECT_KM = 0.02;
 
 const state = {
     riverId: '',
@@ -140,6 +140,7 @@ function initMap() {
     riverLayer = L.layerGroup().addTo(map);
     map.on('focus', () => map.scrollWheelZoom.enable());
     map.on('blur', () => map.scrollWheelZoom.disable());
+    map.on('click', e => pinLocation(e.latlng.lat, e.latlng.lng));
 }
 
 function drawMap(fit) {
@@ -151,7 +152,7 @@ function drawMap(fit) {
         if (id === state.riverId) return;
         parts[id].forEach(coords => {
             L.polyline(coords, { color: '#ffffff', weight: 3, opacity: 0.35, interactive: false }).addTo(riverLayer);
-            L.polyline(coords, { color: '#000', weight: 18, opacity: 0 })
+            L.polyline(coords, { color: '#000', weight: 18, opacity: 0, bubblingMouseEvents: false })
                 .bindTooltip(esc(riverName(id)), { sticky: true, className: 'step-map-tip' })
                 .on('click', () => selectRiver(id))
                 .addTo(riverLayer);
@@ -163,7 +164,7 @@ function drawMap(fit) {
             const on = state.segment === n + 1;
             L.polyline(coords, { color: '#0b0c10', weight: on ? 11 : 8, opacity: 0.6, interactive: false }).addTo(riverLayer);
             L.polyline(coords, { color: on ? '#c0a1ee' : '#7c3aed', weight: on ? 6 : 4, opacity: 1, interactive: false }).addTo(riverLayer);
-            L.polyline(coords, { color: '#000', weight: 22, opacity: 0 })
+            L.polyline(coords, { color: '#000', weight: 22, opacity: 0, bubblingMouseEvents: false })
                 .bindTooltip(`Segment ${n + 1} · ${esc(SEGMENT_NAMES[n])}`, { sticky: true, className: 'step-map-tip' })
                 .on('click', () => selectSegment(n + 1))
                 .addTo(riverLayer);
@@ -195,10 +196,30 @@ function showLocationOnMap() {
     if (!map) return;
     if (locMarker) { map.removeLayer(locMarker); locMarker = null; }
     if (!state.loc) return;
-    locMarker = L.circleMarker([state.loc.lat, state.loc.lng], {
-        radius: 7, color: '#ffffff', weight: 2, fillColor: '#7b02ec', fillOpacity: 1
-    }).bindTooltip(state.loc.source === 'photo-exif' ? 'Where the photo was taken' : 'Your location', { className: 'step-map-tip' })
+    const tip = state.loc.source === 'photo-exif' ? 'Where the photo was taken'
+        : state.loc.source === 'manual' ? 'Your pinned location' : 'Your location';
+    locMarker = L.marker([state.loc.lat, state.loc.lng], {
+        draggable: true,
+        keyboard: false,
+        title: tip + ' (drag to adjust)',
+        icon: L.divIcon({
+            className: '',
+            html: '<span style="display:block;width:14px;height:14px;border-radius:50%;background:#7b02ec;border:2px solid #fff;box-sizing:border-box"></span>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        })
+    }).bindTooltip(tip + ' · drag to adjust', { className: 'step-map-tip' })
+        .on('dragend', e => {
+            const p = e.target.getLatLng();
+            pinLocation(p.lat, p.lng);
+        })
         .addTo(map);
+}
+
+function pinLocation(lat, lng) {
+    const status = $('locationStatus');
+    if (status) status.textContent = 'Using the spot you pinned on the map.';
+    setLocation({ lat, lng, accuracy: null, source: 'manual' });
 }
 
 
@@ -206,11 +227,11 @@ async function setLocation(loc) {
     state.loc = loc;
     showLocationOnMap();
     const box = $('stepSuggestion');
-    const src = loc.source === 'photo-exif' ? 'This photo was taken' : 'You are';
+    const src = loc.source === 'photo-exif' ? 'This photo was taken' : loc.source === 'manual' ? 'The pinned spot is' : 'You are';
 
     if (deps.inBataan && !deps.inBataan(loc.lat, loc.lng)) {
         box.className = 'step-suggestion is-warning';
-        box.innerHTML = `<p><strong>${src} outside Bataan.</strong> Only Bataan rivers can be reported. Choose the river and segment yourself if the photo really is from Bataan.</p>`;
+        box.innerHTML = `<p><strong>${src} outside Bataan.</strong> This location will still be saved with the report. Choose the river and segment yourself.</p>`;
         box.hidden = false;
         renderLocationWarning();
         return;
@@ -220,17 +241,32 @@ async function setLocation(loc) {
     const near = nearestRiverSegment(loc.lat, loc.lng);
     if (!near || near.km > FAR_KM) {
         box.className = 'step-suggestion is-warning';
-        box.innerHTML = `<p><strong>No mapped river nearby.</strong> ${src} ${near ? near.km.toFixed(1) + ' km from the nearest river line' : 'away from the river lines'}. Choose the river and segment yourself.</p>`;
+        box.innerHTML = `<p><strong>No mapped river nearby.</strong> ${src} ${near ? near.km.toFixed(1) + ' km from the nearest river line' : 'away from the river lines'}. This location will still be saved with the report. Choose the river and segment yourself.</p>`;
         box.hidden = false;
         renderLocationWarning();
         return;
     }
 
     const already = near.riverId === state.riverId && near.index === state.segment;
+    const distText = near.km < 1 ? Math.round(near.km * 1000) + ' m' : near.km.toFixed(1) + ' km';
+    if (near.km <= AUTO_SELECT_KM) {
+        if (!already) {
+            selectRiver(near.riverId, { fit: true });
+            selectSegment(near.index);
+        }
+        box.className = 'step-suggestion';
+        box.innerHTML = `
+            <p><strong>Selected automatically:</strong> ${esc(riverName(near.riverId))}, Segment ${near.index} (${esc(SEGMENT_NAMES[near.index - 1])})
+               <span class="step-suggestion-km">${src} ${distText} from it. You can still change it.</span></p>`;
+        box.hidden = false;
+        renderLocationWarning();
+        return;
+    }
+
     box.className = 'step-suggestion';
     box.innerHTML = `
         <p><strong>Suggested:</strong> ${esc(riverName(near.riverId))}, Segment ${near.index} (${esc(SEGMENT_NAMES[near.index - 1])})
-           <span class="step-suggestion-km">${src} ${near.km < 1 ? Math.round(near.km * 1000) + ' m' : near.km.toFixed(1) + ' km'} from it.</span></p>
+           <span class="step-suggestion-km">${src} ${distText} from it.</span></p>
         ${already
             ? '<p class="step-suggestion-ok">This matches your choice.</p>'
             : `<div class="step-suggestion-actions">
@@ -339,10 +375,9 @@ export function getSelection() {
     if (state.loc) {
         const outside = deps.inBataan && !deps.inBataan(state.loc.lat, state.loc.lng);
         const hit = nearestSegment(parts, state.riverId, state.loc.lat, state.loc.lng, Infinity);
-        if (outside) warnings.push('The photo location is outside Bataan, so the segment’s position was used instead.');
-        else if (hit && hit.km > FAR_KM) warnings.push(`The photo location is ${hit.km.toFixed(1)} km from ${riverName(state.riverId)}.`);
-        const onSegment = !outside && hit && hit.index === state.segment && hit.km <= MATCH_KM;
-        if (onSegment) loc = { ...state.loc };
+        if (outside) warnings.push('The report location is outside Bataan.');
+        else if (hit && hit.km > FAR_KM) warnings.push(`The report location is ${hit.km.toFixed(1)} km from ${riverName(state.riverId)}.`);
+        loc = { ...state.loc };
     }
     if (!loc) {
         const mid = midpoint(coords);

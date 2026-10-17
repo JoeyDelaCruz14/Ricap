@@ -896,11 +896,7 @@ const LITTER_CLASSES = [
     'sack',
     'furniture_appliance',
     'oil_slick',
-    'person',
-    'boat',
-    'bird',
     'water_hyacinth',
-    'driftwood',
     'bottle_cap',
     'plastic_film',
     'plastic_bucket',
@@ -923,17 +919,10 @@ const LITTER_CLASSES = [
     'paint_drum',
     'aerosol_can',
     'dead_animal',
-    'dog',
     'livestock',
-    'fish',
-    'duck',
-    'bridge',
-    'house',
     'fish_cage',
     'buoy_float',
-    'rock',
     'twigs_branches',
-    'leaf_litter'
 ];
 
 const POLLUTION_CLASS_INFO = {
