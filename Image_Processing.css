@@ -1,3 +1,5 @@
+/* Scanner page (Image_Processing.html): upload area, steps, selection map, results and dialogs. */
+
 html, body {
     margin: 0;
     padding: 0;
@@ -29,6 +31,7 @@ body::before {
     pointer-events: none;
 }
 
+/* Page title */
 .scan-hero {
     padding: 18vh 8vw 6vh;
     max-width: 900px;
@@ -76,6 +79,7 @@ body::before {
     margin: 0 auto;
 }
 
+/* Cards */
 .card {
     background: #14151b;
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -106,6 +110,7 @@ body::before {
     margin: 0 0 26px;
 }
 
+/* Scanner and upload area */
 .scanner-card { display: flex; flex-direction: column; }
 
 .scanner-viewport {
@@ -193,6 +198,7 @@ body::before {
 .scanner-actions { display: flex; gap: 12px; }
 .scanner-actions--secondary { margin-top: 12px; }
 
+/* Buttons */
 .btn {
     flex: 1;
     font-family: inherit;
@@ -236,6 +242,7 @@ body::before {
     box-shadow: 0 10px 26px rgba(105, 44, 232, 0.4);
 }
 
+/* Result */
 .results-card { position: relative; }
 
 .status-dot {
@@ -322,6 +329,7 @@ body::before {
     margin-top: 1px;
 }
 
+/* Camera preview */
 .camera-overlay[hidden] { display: none; }
 
 .camera-overlay {
@@ -364,6 +372,7 @@ body::before {
 }
 
 
+/* AI recommendation */
 .reco-box {
     margin-top: 16px;
     padding: 14px 16px;
@@ -381,6 +390,7 @@ body::before {
 
 .reco-source { margin-top: 8px; }
 
+/* Access banner */
 .verify-banner {
     margin: 0 0 18px;
     padding: 16px 18px;
@@ -527,6 +537,7 @@ body::before {
 .scanner-page .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 
+/* Access check card */
 .gate-card { margin-bottom: 20px; }
 
 .gate-checking {
@@ -620,6 +631,7 @@ body::before {
 .scan-steps.is-locked { opacity: 0.45; filter: saturate(0.6); pointer-events: none; }
 
 
+/* Steps */
 .step-head {
     display: flex;
     align-items: flex-start;
@@ -653,6 +665,7 @@ body::before {
 .scanner-page .scan-grid { max-width: none; }
 
 
+/* Step 1: river, segment and location */
 .step-river-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
@@ -803,6 +816,7 @@ body::before {
     background: rgba(124, 58, 237, 0.12);
 }
 
+/* Scan progress */
 .scan-progress {
     position: absolute;
     left: 50%;
@@ -844,6 +858,7 @@ body::before {
 .file-meta[hidden], .file-error[hidden] { display: none; }
 
 
+/* Chosen segment and submit status */
 .result-segment {
     margin: 10px 0 14px;
     padding: 10px 14px;
@@ -883,6 +898,7 @@ body::before {
 .submit-status.is-error { background: rgba(214, 87, 74, 0.12); border-color: rgba(214, 87, 74, 0.5); }
 
 
+/* Report name dialog */
 .report-dialog-backdrop {
     position: fixed;
     inset: 0;
@@ -925,6 +941,7 @@ body::before {
 .report-dialog-actions { display: flex; gap: 10px; margin-top: 6px; }
 
 
+/* Smaller screens */
 @media (max-width: 900px) {
     .gate-guest,
     .scanner-page .verify-banner { grid-template-columns: minmax(0, 1fr); }

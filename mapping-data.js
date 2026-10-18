@@ -1,3 +1,7 @@
+// Static data shared by the map, scanner, Home, Tracking, profile and Maintenance pages:
+// Bataan bounds and centre, and the list of monitored rivers (id, name, coast, position and a short note).
+// Loaded as a plain script, so these are globals.
+
 const BATAAN_BOUNDS = [
     [14.33, 120.02],
     [14.97, 120.66]

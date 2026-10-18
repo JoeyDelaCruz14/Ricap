@@ -1,3 +1,7 @@
+// Home page (Home.html): the community forum of river reports from Firestore, with votes,
+// comments, sharing, saved posts, status filter, river search, sort and pagination,
+// plus stats, the officials list, notifications and the account box.
+
 import { db } from './firebase-config.js';
 import {
     collection, query, orderBy, limit, onSnapshot,
@@ -21,25 +25,30 @@ const COAST_LABELS = { east: 'Manila Bay side', west: 'South China Sea side' };
 const SAVED_KEY = 'ricap_saved_posts';
 const WEEK_MS = 7 * 864e5;
 
+// The river list from mapping-data.js.
 function resolveRivers() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) {}
     if (Array.isArray(window.RIVER_DATA)) return window.RIVER_DATA;
     return [];
 }
 const rivers = resolveRivers();
+// River from mapping-data.js by id.
 const riverById = id => rivers.find(r => String(r.id) === String(id));
 
+// Escapes text before putting it into HTML.
 function escapeHtml(v) {
     return String(v ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// Up to two initials for the avatar circle.
 function initials(name) {
     const parts = String(name || '?').trim().split(/\s+/).slice(0, 2);
     return parts.map(p => p[0] || '').join('').toUpperCase() || '?';
 }
 
+// Relative time such as "5 min ago".
 function timeAgo(date) {
     const s = Math.max(1, Math.round((Date.now() - date.getTime()) / 1000));
     if (s < 60) return 'just now';
@@ -52,6 +61,7 @@ function timeAgo(date) {
     return date.toLocaleDateString();
 }
 
+// Firestore timestamp to Date.
 function toDate(ts) {
     try { return ts.toDate(); } catch (e) { return ts ? new Date(ts) : new Date(); }
 }
@@ -71,6 +81,7 @@ const state = {
     votes: new Map(),
     comments: new Map(),
     filter: 'all',
+    search: '',
     sort: 'newest',
     uid: null,
     loaded: false,
@@ -95,6 +106,7 @@ startReportAlerts();
 resyncIfOptedIn();
 ensureAuth().then(uid => { state.uid = uid; render(); }).catch(err => console.warn('Anonymous auth failed', err));
 
+// Nav shadow on scroll and the mobile menu.
 function initNav() {
     const t = $('navToggle'), l = $('navLinks');
     if (!t || !l) return;
@@ -106,6 +118,7 @@ function initNav() {
 }
 
 
+// Live Firestore listeners for reports, votes and comments.
 function startListeners() {
     onSnapshot(
         query(collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(100)),
@@ -156,7 +169,51 @@ function startListeners() {
 }
 
 
+// Lower case, no accents, single spaces, so "río  talisay" finds "Rio Talisay".
+function normalizeSearch(v) {
+    return String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// True if the report matches every word in the river search.
+function matchesSearch(r) {
+    if (!state.search) return true;
+    const river = riverById(r.riverId);
+    const text = normalizeSearch([
+        river ? river.name : 'Unmapped river',
+        river && COAST_LABELS[river.coast] ? COAST_LABELS[river.coast] : '',
+        r.reportName || ''
+    ].join(' '));
+    return state.search.split(' ').every(word => text.includes(word));
+}
+
+// River search box: suggestions plus filtering as you type.
+function initRiverSearch() {
+    const input = $('riverSearch');
+    if (!input) return;
+    const list = $('riverSearchList');
+    const names = [...new Set(rivers.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+    });
+    let timer = 0;
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            state.search = normalizeSearch(input.value);
+            state.page = 1;
+            render();
+        }, 150);
+    });
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && input.value) { input.value = ''; input.dispatchEvent(new Event('input')); }
+    });
+}
+
+// Search, status chips, sort and the notifications button.
 function initSidebarControls() {
+    initRiverSearch();
     $('statusChips').addEventListener('click', e => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
@@ -195,6 +252,7 @@ function initSidebarControls() {
     paint();
 }
 
+// Account box: official, logged-in account or guest.
 function renderAuthBlock() {
     const box = $('authBlock');
     const o = getOfficial();
@@ -237,6 +295,7 @@ function renderAuthBlock() {
     }
 }
 
+// Floating "New report" button for verified officials.
 function initFab() {
     const fab = $('fabSubmit');
     if (!fab) return;
@@ -244,6 +303,7 @@ function initFab() {
     fab.addEventListener('click', () => { location.href = 'Image_Processing.html'; });
 }
 
+// Totals at the top and the list of active officials.
 function renderStatsAndOfficials() {
     const all = state.reports;
     const officialKey = r => r.reporterCode || r.reporterName;
@@ -283,13 +343,15 @@ function renderStatsAndOfficials() {
 }
 
 
+// Re-renders the stats and the feed.
 function renderAll() {
     renderStatsAndOfficials();
     render();
 }
 
+// Reports after the status filter and search, sorted.
 function visibleReports() {
-    let list = state.reports.filter(r => state.filter === 'all' || r.status === state.filter);
+    let list = state.reports.filter(r => (state.filter === 'all' || r.status === state.filter) && matchesSearch(r));
     const votes = r => (state.votes.get(r.id) || { count: 0 }).count;
     const comms = r => (state.comments.get(r.id) || []).length;
     const time = r => (r.createdAt ? toDate(r.createdAt).getTime() : Date.now());
@@ -302,6 +364,7 @@ function visibleReports() {
     return list;
 }
 
+// Renders the current page of posts, keeping comment drafts and focus.
 function render() {
     const feed = $('forumFeed');
     if (!feed) return;
@@ -324,8 +387,17 @@ function render() {
     }
 
     const list = visibleReports();
+    const count = $('riverSearchCount');
+    if (count) {
+        const q = $('riverSearch').value.trim();
+        count.textContent = state.search
+            ? list.length + (list.length === 1 ? ' report' : ' reports') + ' for “' + q + '”'
+            : '';
+    }
     if (!list.length) {
-        feed.innerHTML = '<div class="feed-empty">No reports match this filter yet.</div>';
+        feed.innerHTML = state.search
+            ? '<div class="feed-empty">No reports found for “' + escapeHtml($('riverSearch').value.trim()) + '”. Try another river name.</div>'
+            : '<div class="feed-empty">No reports match this filter yet.</div>';
         return;
     }
 
@@ -343,6 +415,7 @@ function render() {
     }
 }
 
+// Page buttons under the feed.
 function pagerHtml(pages) {
     if (pages <= 1) return '';
     const p = state.page;
@@ -357,6 +430,7 @@ function pagerHtml(pages) {
     </nav>`;
 }
 
+// Markup for one post.
 function postHtml(r) {
     const river = riverById(r.riverId);
     const riverName = river ? river.name : 'Unmapped river';
@@ -474,6 +548,7 @@ feedEl.addEventListener('keydown', e => {
     }
 });
 
+// Adds or removes the user's vote.
 async function toggleLike(reportId) {
     try {
         const uid = state.uid || await ensureAuth();
@@ -493,6 +568,7 @@ async function toggleLike(reportId) {
     }
 }
 
+// Posts a comment.
 async function submitComment(reportId, input) {
     if (!input) return;
     const text = input.value.trim().slice(0, 300);
@@ -515,6 +591,7 @@ async function submitComment(reportId, input) {
     }
 }
 
+// Shares a post (system share sheet, or copies the link).
 async function sharePost(reportId, btn) {
     const r = state.reports.find(x => x.id === reportId);
     if (!r) return;

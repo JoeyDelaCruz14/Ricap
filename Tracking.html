@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Tracking: your scans and shared reports as cards, a table, a monthly map and a timeline. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -13,6 +14,7 @@
     <source src="images&vids/River3.mp4" type="video/mp4">
 </video>
 
+<!-- Top navigation -->
 <nav class="nav" id="siteNav">
     <div class="nav-inner">
         <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -34,6 +36,7 @@
     </div>
 </nav>
 
+<!-- Page title -->
 <header class="scan-hero">
     <p class="scan-eyebrow">Tracking</p>
     <h1 class="scan-heading">Track your reports.</h1>
@@ -42,7 +45,9 @@
 <main class="docs-section">
     <div class="docs-shell">
 
+        <!-- List view -->
         <section id="listState">
+            <!-- Monthly map and timeline -->
             <section class="card trend-card" id="trendCard">
                 <div class="trend-head">
                     <div>
@@ -108,13 +113,16 @@
                 </div>
             </div>
 
+            <!-- Empty state -->
             <div class="docs-empty" id="docsEmpty" hidden>
                 <p id="docsEmptyText">No official reports yet. Run a scan and press "Submit Official Report" to add it here.</p>
                 <a href="Image_Processing.html" class="btn btn-outline">Go to Scanner</a>
             </div>
 
+            <!-- Records as cards -->
             <div class="record-grid" id="recordGrid"></div>
 
+            <!-- Records as a table -->
             <div class="timeline-table-wrap" id="timelineTableWrap" hidden>
                 <table class="timeline-table" id="timelineTable">
                     <thead>
@@ -132,6 +140,7 @@
             </div>
         </section>
 
+        <!-- Detail view for one record -->
         <section id="detailState" hidden>
             <button class="back-link" id="backToList" type="button">&larr; All records</button>
 
@@ -194,6 +203,12 @@
                         <p id="detailAssessmentText"></p>
                     </div>
 
+                    <div class="assessment-box reco-box" id="detailRecoBox" hidden>
+                        <span class="label">Recommendation</span>
+                        <p id="detailRecoText"></p>
+                        <small class="reco-source" id="detailRecoSource"></small>
+                    </div>
+
                     <div class="disclaimer-box">
                         <span class="icon">i</span>
                         <span>Prototype heuristic — this reads color, tint, and surface variation in the photo. It's not a certified water safety test. For hazards that need immediate attention, contact your barangay or the DENR directly.</span>
@@ -211,6 +226,7 @@
     </div>
 </main>
 
+<!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="mapping-data.js"></script>
 <script src="Tracking.js"></script>

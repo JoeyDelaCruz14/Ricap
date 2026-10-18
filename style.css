@@ -1,3 +1,5 @@
+/* Base styles shared by most pages: fonts, colours, nav, buttons and the video background. */
+
 @font-face {
     font-family: "College";
     src: url("Fonts/college.ttf") format("truetype");
@@ -14,6 +16,7 @@
     font-display: swap;
 }
 
+/* Colours and fonts */
 :root {
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
     --font-display: "College", Impact, "Arial Narrow Bold", sans-serif;
@@ -21,6 +24,7 @@
 }
 
 html,
+/* Page basics */
 body {
     margin: 0;
     padding: 0;
@@ -36,6 +40,7 @@ img {
     max-width: 100%;
     height: auto;
 }
+/* Background video */
 #bg-video {
     position: fixed;
     inset: 0;
@@ -49,6 +54,7 @@ img {
     background: radial-gradient(circle at 30% 25%, #4b3560, #10131c 70%);
 }
 
+/* Top navigation */
 .nav {
     position: absolute;
     top: 0;
@@ -173,6 +179,7 @@ img {
     border-bottom-color: transparent;
 }
 
+/* Hero */
 .hero {
     position: relative;
     height: 100svh;
@@ -224,6 +231,7 @@ img {
     }
 }
 
+/* Photo collage */
 .collage-wrap {
     position: relative;
     height: 300vh;
@@ -268,6 +276,7 @@ img {
     }
 }
 
+/* Letter reveal title */
 .letter-reveal {
     min-height: 100vh;
     display: flex;
@@ -296,6 +305,7 @@ img {
     }
 }
 
+/* Second section */
 .second {
     display: grid;
     min-height: 100vh;
@@ -325,6 +335,7 @@ img {
     margin: 0;
 }
 
+/* Third section */
 .third {
     display: flex;
     min-height: 80vh;
@@ -368,6 +379,7 @@ img {
     will-change: transform;
 }
 
+/* Fade-in on scroll */
 .reveal {
     opacity: 0;
     transform: translateY(40px);
@@ -401,6 +413,7 @@ img {
     }
 }
 
+/* About */
 .about {
     background: #0b0c10;
     padding: 16vh 8vw 14vh;
@@ -476,6 +489,7 @@ img {
     margin: 0;
 }
 
+/* Features */
 .features {
     background: #0b0c10;
     padding: 4vh 8vw 18vh;
@@ -718,6 +732,7 @@ button,
 input,
 select,
 textarea,
+/* Leaflet maps */
 .leaflet-container {
     font-family: var(--font);
 }

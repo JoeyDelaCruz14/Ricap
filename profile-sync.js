@@ -1,22 +1,22 @@
+// Profile data shared between pages: the profile key (email or official code), Firebase uids the
+// user has had, the profile picture (Firebase Storage + Auth photoURL) and the profiles/ document
+// that Maintenance reads. Pictures are checked, cropped to 256x256 and re-encoded (EXIF removed).
+
 import { db, storage, auth } from './firebase-config.js';
 import { doc, setDoc, serverTimestamp, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import { updateProfile } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import { ensureAuth } from './Session.js';
 import { getAccount, isLocalLoggedIn, getOfficialSession, isVerifiedUser } from './account.js';
-
-// profiles/{email or code} -> what admins see for each verified user in the Maintenance module.
-// Logging out signs the browser out of Firebase, so one person can collect several uids over time;
-// all of them are kept in `uids` so every report they posted (reports.uid) still matches.
 export const PROFILES = 'profiles';
 const AVATAR_PREFIX = 'ricapAvatar:';
 const UIDS_PREFIX = 'ricapUids:';
 export const AVATAR_SIZE = 256;
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
-// One file per user, so a new upload replaces the old one.
+
 const AVATAR_FOLDER = 'profile-pictures';
 
-// Who the avatar belongs to on this device: the logged-in account, else the official code.
+// Who the profile belongs to on this device: email:<email> or code:<CODE>.
 export function profileKey() {
     const a = isLocalLoggedIn() ? getAccount() : null;
     if (a && a.email) return 'email:' + String(a.email).trim().toLowerCase();
@@ -24,6 +24,7 @@ export function profileKey() {
     if (o && o.code) return 'code:' + String(o.code).toUpperCase();
     return '';
 }
+
 
 // Every Firebase uid this profile has used on this device.
 export function knownUids() {
@@ -35,6 +36,7 @@ export function knownUids() {
     } catch (e) { return []; }
 }
 
+// Adds a uid to that list.
 export function rememberUid(uid) {
     const key = profileKey();
     if (!key || !uid) return;
@@ -43,6 +45,7 @@ export function rememberUid(uid) {
     try { localStorage.setItem(UIDS_PREFIX + key, JSON.stringify([...list, uid])); } catch (e) {  }
 }
 
+// The signed-in email/password user, or null (anonymous users have no picture).
 function photoUser() {
     const u = auth.currentUser;
     return u && !u.isAnonymous ? u : null;
@@ -65,6 +68,7 @@ export function getAvatar() {
     } catch (e) { return ''; }
 }
 
+// Remembers the picture URL on this device (an empty URL removes it).
 export function setAvatar(url) {
     const key = profileKey();
     if (!key) return false;
@@ -85,6 +89,7 @@ export function legacyAvatar() {
     } catch (e) { return ''; }
 }
 
+// Error with a code, so the UI can show its message as-is.
 function avatarError(message, code) {
     const e = new Error(message);
     e.code = code;
@@ -118,10 +123,12 @@ export function renderAvatar(img, crop) {
         });
 }
 
+// Tells other scripts on the page (nav, profile) that the picture changed.
 function announceAvatar(url) {
     window.dispatchEvent(new CustomEvent('ricap:avatar-change', { detail: { url } }));
 }
 
+// The signed-in user; throws if logged out or offline.
 function requireOnlineUser() {
     const user = photoUser();
     if (!user) throw avatarError('Log in with your RiCap account to change your profile picture.', 'avatar/not-signed-in');
@@ -129,6 +136,7 @@ function requireOnlineUser() {
     return user;
 }
 
+// Uploads the picture to profile-pictures/<uid> and saves its URL on the account.
 export async function uploadAvatar(blob) {
     const user = requireOnlineUser();
     const fileRef = storageRef(storage, AVATAR_FOLDER + '/' + user.uid);
@@ -142,6 +150,7 @@ export async function uploadAvatar(blob) {
     return url;
 }
 
+// Deletes the picture and clears it from the account.
 export async function removeAvatar() {
     const user = requireOnlineUser();
     try {
@@ -155,6 +164,7 @@ export async function removeAvatar() {
     syncProfile({ avatarUpdatedAt: serverTimestamp() }).catch(err => console.warn('RiCap: could not publish profile', err && err.code));
 }
 
+// Readable message for an upload or remove error.
 export function avatarErrorMessage(err) {
     const code = String((err && err.code) || '');
     if (code.indexOf('avatar/') === 0) return err.message;
@@ -164,7 +174,7 @@ export function avatarErrorMessage(err) {
     return 'Could not update the profile picture. Try again.';
 }
 
-// Publishes this browser's verified user to profiles/{key}. Unverified users are skipped.
+// Publishes this browser's verified user to profiles/{key} for Maintenance.
 export async function syncProfile(extra = {}) {
     const key = profileKey();
     if (!isVerifiedUser() || !key) return false;

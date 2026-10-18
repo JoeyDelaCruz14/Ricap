@@ -1,3 +1,5 @@
+/* Responsive fixes for small screens, shared by main, Home, Scanner and Verify. */
+
 
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { max-width: 100%; }
@@ -8,6 +10,7 @@ input, select, textarea, button { max-width: 100%; }
 .m-table-wrap, .table-wrap, .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 
+/* Phones and small tablets */
 @media (max-width: 768px) {
     .submit-main { padding: 80px 14px 64px; }
     .submit-shell { max-width: 100%; }

@@ -1,3 +1,5 @@
+// Staggered fade-in for .reveal elements. Not loaded by any page at the moment.
+
 document.addEventListener('DOMContentLoaded', () => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const elements = Array.from(document.querySelectorAll('.reveal'));

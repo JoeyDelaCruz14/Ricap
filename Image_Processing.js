@@ -1,3 +1,9 @@
+// Scanner page (Image_Processing.html): photo upload or camera, river-photo check (CLIP),
+// litter and pollution detection (YOLO ONNX models), water-quality classifier, colour/texture
+// checks, the combined score and recommendation, and submitting the official report
+// (photo to Storage, report to Firestore, a copy in this browser for Tracking).
+// River/segment selection and location live in scanner-steps.js.
+
 import { storage, auth, db } from './firebase-config.js';
 import { ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import { signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
@@ -8,6 +14,7 @@ import { getRecommendation, DISCLAIMER } from './Gemini.js';
 import { SUGGEST_MAX_DISTANCE_M } from './location-match.js';
 
 let clipModPromise = null;
+// Loads clip-gate.js on demand (it is large) and keeps the promise.
 function getClipGate() {
     if (!clipModPromise) {
         clipModPromise = import('./clip-gate.js').catch(function (err) {
@@ -22,15 +29,18 @@ getClipGate()
     .then(function (m) { return m.loadClipGate(); })
     .catch(function (e) { console.warn('[CLIP] preload failed', e); });
 
+// Nav shadow on scroll and the mobile menu.
 function initNav() {
     const nav = document.getElementById('siteNav');
     const toggle = document.getElementById('navToggle');
     const links = document.getElementById('navLinks');
+    // Nav shadow once the page is scrolled.
     function onScroll() {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         nav.classList.toggle('scrolled', scrollTop > 12);
     }
 
+    // Opens or closes the mobile menu.
     function onToggleClick() {
         const isOpen = links.classList.toggle('open');
         toggle.classList.toggle('open', isOpen);
@@ -53,6 +63,7 @@ const UPLOAD_MAX_DIM = 1600;
 
 let firebaseAuthReady = null;
 
+// Makes sure there is a Firebase user before uploading (anonymous if nobody is signed in).
 function ensureFirebaseAuth() {
     if (!firebaseAuthReady) {
         firebaseAuthReady = auth.authStateReady().then(function () {
@@ -63,6 +74,7 @@ function ensureFirebaseAuth() {
     }
     return firebaseAuthReady;
 }
+// Uploads the report photo to Storage and returns its path and download URL.
 async function uploadSubmittedImage(recordId, dataUrl, meta) {
     await ensureFirebaseAuth();
     const fileRef = storageRef(storage, STORAGE_FOLDER + '/' + recordId + '.jpg');
@@ -82,6 +94,7 @@ const RECORDS_KEY = 'ricap_river_records';
 const MAX_RECORDS = 40;
 const THUMB_MAX_DIM = 640;
 
+// Scans saved in this browser (shown in Tracking).
 function loadRecords() {
     try {
         const raw = localStorage.getItem(RECORDS_KEY);
@@ -93,6 +106,7 @@ function loadRecords() {
     }
 }
 
+// Saves scans in this browser, dropping the oldest when storage is full.
 function saveRecords(records) {
     let list = records;
     while (list.length) {
@@ -107,10 +121,12 @@ function saveRecords(records) {
     return false;
 }
 
+// Unique id for a new record.
 function makeRecordId() {
     return 'r_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
+// Escapes text before putting it into HTML.
 function escapeHtml(value) {
     return String(value)
         .replace(/&/g, '&amp;')
@@ -120,6 +136,7 @@ function escapeHtml(value) {
         .replace(/'/g, '&#039;');
 }
 
+// Resizes an image to at most maxDim pixels and re-encodes it as JPEG.
 function createStoredImage(imageDataUrl, maxDim) {
     const limit = maxDim || THUMB_MAX_DIM;
     return new Promise(function (resolve) {
@@ -140,6 +157,7 @@ function createStoredImage(imageDataUrl, maxDim) {
 }
 const BATAAN = { south: 14.33, west: 120.02, north: 14.97, east: 120.66 };
 
+// True if the point is inside the Bataan bounding box.
 function inBataan(lat, lng) {
     return lat >= BATAAN.south && lat <= BATAAN.north && lng >= BATAAN.west && lng <= BATAAN.east;
 }
@@ -150,6 +168,7 @@ const LOCATION_WAIT_MS = 15000;
 const MAX_ACCEPT_ACCURACY_M = 1000;  
 const DEV_FAKE_LOCATION = null;
 
+// Device GPS position, waiting up to LOCATION_WAIT_MS for a usable accuracy.
 function getUserLocation() {
     if (DEV_FAKE_LOCATION) return Promise.resolve(DEV_FAKE_LOCATION);
     return new Promise(function (resolve, reject) {
@@ -162,6 +181,7 @@ function getUserLocation() {
         let done = false;
         let timer = null;
 
+        // Stops watching GPS and returns the best position found.
         function finish() {
             if (done) return;
             done = true;
@@ -200,6 +220,7 @@ function getUserLocation() {
 }
 
 
+// The river list from mapping-data.js.
 function getRiverList() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) { }
     try { if (typeof RICAP_RIVERS !== 'undefined' && Array.isArray(RICAP_RIVERS)) return RICAP_RIVERS; } catch (e) { }
@@ -217,6 +238,7 @@ const COAST_LABELS = {
 };
 
 
+// Rule-based recommendation text for a scan result.
 function buildRecommendation(a) {
     const w = a.waterQuality && a.waterQuality.label;
     if (w === 'oil') {
@@ -254,6 +276,7 @@ function buildRecommendation(a) {
 }
 
 
+// Recommendation from Gemini when available, otherwise the rule-based text.
 function recommendationFor(a) {
     const sel = getSelection();
     const official = getOfficial() || {};
@@ -265,6 +288,7 @@ function recommendationFor(a) {
 }
 
 
+// Dialog that asks for the report name before submitting; resolves null on cancel.
 function askReportDetails(warnings, selection) {
     return new Promise(function (resolve) {
         const overlay = document.createElement('div');
@@ -295,11 +319,13 @@ function askReportDetails(warnings, selection) {
         const errEl = overlay.querySelector('#rpErr');
         nameInput.focus();
 
+        // Closes the dialog and returns the result.
         function close(result) {
             document.removeEventListener('keydown', onKey);
             overlay.remove();
             resolve(result);
         }
+        // Checks the report name, then closes with it.
         function submit() {
             const name = nameInput.value.trim();
             if (name.length < 3) {
@@ -310,6 +336,7 @@ function askReportDetails(warnings, selection) {
             }
             close({ name: name });
         }
+        // Esc cancels the dialog.
         function onKey(e) {
             if (e.key === 'Escape') close(null);
             if (e.key === 'Enter' && document.activeElement === nameInput) submit();
@@ -320,6 +347,7 @@ function askReportDetails(warnings, selection) {
     });
 }
 
+// Turns Firebase errors into messages the user can act on.
 function friendlyError(err) {
     const code = String((err && err.code) || '');
     if (!navigator.onLine || /unavailable|network|retry-limit|deadline/.test(code)) {
@@ -337,6 +365,7 @@ function friendlyError(err) {
     return (err && err.message) || 'Something went wrong while saving. Try again.';
 }
 
+// Uploads the annotated photo, saves the report to Firestore and keeps a local copy.
 async function submitOfficialReport(analysis, imageDataUrl, details) {
     const selection = details.selection;
     const loc = selection.loc;
@@ -357,7 +386,13 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
     const reco = await recommendationFor(analysis);
     const recommendation = reco.text;
 
-    const uploadImage = await createStoredImage(imageDataUrl, UPLOAD_MAX_DIM);
+    let uploadImage;
+    try {
+        uploadImage = await createAnnotatedImage(imageDataUrl, analysis.detections, UPLOAD_MAX_DIM);
+    } catch (err) {
+        console.warn('Could not draw detections on the upload, sending the plain photo:', err);
+        uploadImage = await createStoredImage(imageDataUrl, UPLOAD_MAX_DIM);
+    }
     const uploaded = await uploadSubmittedImage(recordId, uploadImage, {
         status: analysis.status,
         score: analysis.score,
@@ -396,7 +431,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         await addDoc(collection(db, 'reports'), reportDoc);
     }
 
-    const thumb = await createStoredImage(imageDataUrl, THUMB_MAX_DIM);
+    const thumb = await createStoredImage(uploadImage, THUMB_MAX_DIM);
     const record = {
         id: recordId,
         timestamp: timestamp,
@@ -450,6 +485,7 @@ const scannerState = {
     lastDetections: null
 };
 
+// Creates the Submit report button once.
 function ensureSubmitButton() {
     let btn = document.getElementById('submitReportBtn');
     if (btn) return btn;
@@ -465,6 +501,7 @@ function ensureSubmitButton() {
     return btn;
 }
 
+// Shows, hides and enables the Submit button for the current state.
 function updateSubmitUI() {
     const btn = document.getElementById('submitReportBtn');
     if (!btn) return;
@@ -474,6 +511,7 @@ function updateSubmitUI() {
     btn.textContent = scannerState.isSubmitting ? 'Submitting…' : 'Submit Official Report';
 }
 
+// Upload, camera, drag and drop, and the Scan / Submit buttons.
 function initScanner() {
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
@@ -493,6 +531,7 @@ function initScanner() {
     const submitBtn = ensureSubmitButton();
     let mediaStream = null;
 
+    // Shows a newly chosen photo and resets the previous result.
     function loadImageDataUrl(dataUrl) {
         scannerState.file = true;
         scannerState.dataUrl = dataUrl;
@@ -515,11 +554,13 @@ function initScanner() {
     const fileMeta = document.getElementById('fileMeta');
     const fileError = document.getElementById('fileError');
 
+    // Shows or clears the file error under the upload area.
     function showFileError(msg) {
         fileError.textContent = msg || '';
         fileError.hidden = !msg;
     }
 
+    // Checks the chosen file and loads it.
     function handleFiles(fileList) {
         const file = fileList && fileList[0];
         if (!file) return;
@@ -552,6 +593,7 @@ function initScanner() {
         onImageFile(file);
     }
 
+    // Opens the camera preview.
     async function openCamera() {
         cameraError.hidden = true;
         cameraError.textContent = '';
@@ -586,6 +628,7 @@ function initScanner() {
         }
     }
 
+    // Stops the camera and hides the preview.
     function closeCamera() {
         if (mediaStream) {
             mediaStream.getTracks().forEach(function (track) { track.stop(); });
@@ -595,6 +638,7 @@ function initScanner() {
         cameraOverlay.hidden = true;
     }
 
+    // Takes a photo from the camera preview.
     function captureFromCamera() {
         if (!cameraVideo.videoWidth) return;
 
@@ -655,6 +699,7 @@ function initScanner() {
         window.location.href = 'Tracking.html';
     });
 
+    // Clears the photo and the result.
     function resetScanner() {
         scannerState.file = null;
         scannerState.dataUrl = null;
@@ -677,6 +722,7 @@ function initScanner() {
     }
 }
 
+// Shows or hides the progress state while a scan runs.
 function setScanningUI(isScanning, label) {
     scannerState.isScanning = isScanning;
     document.getElementById('dropzone').classList.toggle('is-scanning', isScanning);
@@ -699,6 +745,7 @@ function setScanningUI(isScanning, label) {
     }
 }
 
+// Runs the full analysis on the chosen photo and shows the result.
 async function runScan() {
     if (!scannerState.file || scannerState.isScanning) return;
 
@@ -736,6 +783,7 @@ async function runScan() {
     }
 }
 
+// Checks access, selection and the river-photo check, then submits the report.
 async function handleSubmitReport() {
     const pending = scannerState.pending;
     if (!pending || scannerState.submitted || scannerState.isSubmitting || scannerState.isScanning) return;
@@ -815,6 +863,7 @@ async function handleSubmitReport() {
     }
 }
 
+// Detection models (YOLO, ONNX) and their thresholds.
 const LITTER_MODEL_URL = 'models/best_litter_merged_v1.onnx';
 const LITTER_MODEL_CLASSES = ['trash'];
 const SCENE_MODEL_URL = 'models/river_pollution.onnx';
@@ -856,6 +905,7 @@ const CONTEXT_MIN_SCORE = 0.25;
 const LITTER_BIG_BOX_AREA = 0.30;
 const LITTER_BIG_BOX_MIN_SCORE = 0.75;
 
+// Drops weak detections and suspiciously large low-confidence litter boxes.
 function filterDetections(detections, imgW, imgH) {
     const imgArea = imgW && imgH ? imgW * imgH : 0;
     return detections.filter(function (d) {
@@ -983,6 +1033,7 @@ const NATURAL_LABELS = ['twigs_branches', 'leaf_litter', 'driftwood', 'water_hya
 const yoloSessionPromises = {};
 const YOLO_DOWNLOAD_TIMEOUT_MS = 60000;
 
+// Updates the progress text under the scanner.
 function updateScanLabel(text) {
     const sub = document.getElementById('quickStatusSub');
     if (sub) sub.textContent = text;
@@ -991,6 +1042,7 @@ function updateScanLabel(text) {
     console.log('[YOLO]', text);
 }
 
+// Downloads a model file with a timeout and progress updates.
 async function fetchModelBuffer(url, timeoutMs, onProgress) {
     const controller = new AbortController();
     const timer = setTimeout(function () { controller.abort(); }, timeoutMs);
@@ -1027,6 +1079,7 @@ async function fetchModelBuffer(url, timeoutMs, onProgress) {
     }
 }
 
+// Loads a YOLO model into ONNX Runtime once and reuses the session.
 function getYoloSession(modelUrl) {
     if (!yoloSessionPromises[modelUrl]) {
         if (typeof ort === 'undefined') {
@@ -1057,6 +1110,7 @@ function getYoloSession(modelUrl) {
     return yoloSessionPromises[modelUrl];
 }
 
+// Loads an image from a URL or data URL.
 function loadImage(src) {
     return new Promise(function (resolve, reject) {
         const img = new Image();
@@ -1066,6 +1120,7 @@ function loadImage(src) {
     });
 }
 
+// Scales the image into a square with padding and converts it to a model input tensor.
 function letterboxToTensor(img, size) {
     const scale = Math.min(size / img.width, size / img.height);
     const drawW = Math.round(img.width * scale);
@@ -1092,6 +1147,7 @@ function letterboxToTensor(img, size) {
     return { chw, scale, padX, padY };
 }
 
+// Overlap (intersection over union) of two boxes.
 function iou(a, b) {
     const x1 = Math.max(a.x1, b.x1), y1 = Math.max(a.y1, b.y1);
     const x2 = Math.min(a.x2, b.x2), y2 = Math.min(a.y2, b.y2);
@@ -1101,6 +1157,7 @@ function iou(a, b) {
     return interArea / (areaA + areaB - interArea + 1e-6);
 }
 
+// Removes duplicate boxes that overlap a stronger box of the same label.
 function nonMaxSuppression(boxes, iouThreshold) {
     const byClass = {};
     boxes.forEach(function (b) {
@@ -1120,6 +1177,7 @@ function nonMaxSuppression(boxes, iouThreshold) {
     return kept;
 }
 
+// Turns raw YOLO output into boxes in original image pixels.
 function decodeYoloOutput(outputTensor, scale, padX, padY, origW, origH, classNamesOverride) {
     const dims = outputTensor.dims;
     const numAttrs = dims[1];
@@ -1181,6 +1239,7 @@ const YOLO_TILING = true;
 const YOLO_TILE_MIN_SIDE = 700;
 const YOLO_TILE_FRACTION = 0.6;
 
+// Runs the model on four overlapping crops to find small litter.
 async function detectTiles(session, inputName, outputName, img, size, classNames, skipLabels) {
     const tw = Math.round(img.width * YOLO_TILE_FRACTION);
     const th = Math.round(img.height * YOLO_TILE_FRACTION);
@@ -1213,6 +1272,7 @@ async function detectTiles(session, inputName, outputName, img, size, classNames
     return found;
 }
 
+// Runs one YOLO model on the image (whole image, plus tiles when large).
 async function runOneModel(modelUrl, classNames, skipLabels, img, size) {
     const session = await getYoloSession(modelUrl);
     const inputName = session.inputNames[0];
@@ -1240,6 +1300,7 @@ async function runOneModel(modelUrl, classNames, skipLabels, img, size) {
     return detections;
 }
 
+// Runs the litter and scene models and merges their detections.
 async function runYoloDetection(imageDataUrl) {
     try {
         const img = await loadImage(imageDataUrl);
@@ -1280,6 +1341,7 @@ async function runYoloDetection(imageDataUrl) {
     }
 }
 
+// Counts detections per label and turns them into litter and scene scores.
 function scoreDetections(detections) {
     const counts = {};
     detections.forEach(function (d) { counts[d.label] = (counts[d.label] || 0) + 1; });
@@ -1320,6 +1382,7 @@ function scoreDetections(detections) {
 
 const SURFACE_CAST_FLOOR = 25;
 
+// Score from the average colour (brown/green cast and darkness).
 function scoreSurface(stats) {
     const { r, g, b } = stats.avgColor;
     const brightness = (r + g + b) / 3;
@@ -1342,6 +1405,7 @@ function scoreSurface(stats) {
     return { surfaceScore: surfaceScore, colorCast: colorCast, lighting: lighting, tinted: tinted };
 }
 
+// Measures how many hard edges the photo has (a sign of debris).
 function computeClutterStats(imageDataUrl) {
     return new Promise(function (resolve) {
         const img = new Image();
@@ -1398,6 +1462,7 @@ function computeClutterStats(imageDataUrl) {
     });
 }
 
+// Turns the edge ratio into clutter points.
 function scoreClutter(clutterStats) {
     const ratio = clutterStats.hardEdgeRatio;
 
@@ -1414,6 +1479,7 @@ function scoreClutter(clutterStats) {
 
 const BLUR_VARIANCE_THRESHOLD = 80;
 
+// Measures sharpness so blurry photos can be flagged.
 function computeBlurStats(imageDataUrl) {
     return new Promise(function (resolve) {
         const img = new Image();
@@ -1462,6 +1528,7 @@ function computeBlurStats(imageDataUrl) {
     });
 }
 
+// Flags photos that do not look like an outdoor water scene.
 function assessScenePlausibility(stats, detections, water) {
     const { r, g, b } = stats.avgColor;
     const coolBias = (g + b) - r;
@@ -1478,6 +1545,7 @@ function assessScenePlausibility(stats, detections, water) {
     return { flagged: false, message: null };
 }
 
+// Warnings shown with the result (blur, unlikely scene).
 function buildWarnings(blurStats, sceneCheck) {
     const warnings = [];
     if (blurStats.laplacianVariance < BLUR_VARIANCE_THRESHOLD) {
@@ -1492,6 +1560,7 @@ function buildWarnings(blurStats, sceneCheck) {
     return warnings;
 }
 
+// Water-quality classifier (algae / clean / discolored / oil).
 const WATER_MODEL_URL = 'models/water_quality.onnx';
 const WATER_INPUT_SIZE = 224;
 const WATER_CLASSES = ['algae', 'clean', 'discolored', 'oil'];
@@ -1524,6 +1593,7 @@ const IMAGENET_STD = [0.229, 0.224, 0.225];
 
 let waterSessionPromise = null;
 
+// Loads the water-quality model once and reuses the session.
 function getWaterSession() {
     if (!waterSessionPromise) {
         if (typeof ort === 'undefined') {
@@ -1552,6 +1622,7 @@ function getWaterSession() {
     return waterSessionPromise;
 }
 
+// Converts raw scores into probabilities.
 function softmax(arr) {
     let max = -Infinity;
     for (let i = 0; i < arr.length; i++) if (arr[i] > max) max = arr[i];
@@ -1560,6 +1631,7 @@ function softmax(arr) {
     return exps.map(function (v) { return v / sum; });
 }
 
+// Classifies the water in the photo.
 async function runWaterClassification(imageDataUrl) {
     try {
         const img = await loadImage(imageDataUrl);
@@ -1616,6 +1688,7 @@ async function runWaterClassification(imageDataUrl) {
     }
 }
 
+// Points from the water-quality result, when confident enough.
 function scoreWater(water) {
     if (!water || !water.available || water.topProb < WATER_MIN_CONFIDENCE) {
         return { label: 'uncertain', points: 0, usable: false };
@@ -1628,6 +1701,7 @@ function scoreWater(water) {
     return { label: water.topClass, points: points, usable: true };
 }
 
+// Plain-language summary of what was found.
 function buildAssessment(items, contextItems, surface, clutter, modelAvailable, waterInfo, sceneItems, cleanEvidence) {
     const parts = [];
     if (!modelAvailable) {
@@ -1663,6 +1737,7 @@ function buildAssessment(items, contextItems, surface, clutter, modelAvailable, 
 const CLIP_SCAN_WAIT_MS = 25000;     
 const CLIP_SUBMIT_WAIT_MS = 60000;  
 
+// Rejects if the promise takes longer than ms.
 function withTimeout(promise, ms, label) {
     let timer;
     const timeout = new Promise(function (_, reject) {
@@ -1673,6 +1748,7 @@ function withTimeout(promise, ms, label) {
     return Promise.race([promise, timeout]).finally(function () { clearTimeout(timer); });
 }
 
+// Runs the CLIP river-photo check with a time limit.
 async function runRiverCheck(imageDataUrl, waitMs) {
     const clip = await getClipGate();
     return withTimeout(clip.checkRiverPhoto(imageDataUrl), waitMs, 'River-photo check');
@@ -1685,6 +1761,7 @@ const TINT_CLEAR_MAX = 0.25;
 const TINT_HEAVY_MIN = 0.60;
 const TINT_MAX_POINTS = 35;
 
+// RGB (0-255) to hue (degrees), saturation and value (0-1).
 function rgbToHsv(r, g, b) {
     const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
     let h = 0;
@@ -1697,6 +1774,7 @@ function rgbToHsv(r, g, b) {
     return { h: h, s: max ? d / max : 0, v: max / 255 };
 }
 
+// Shares of brown, clear and neutral pixels in the lower part of the photo.
 function measureWaterTint(pixels, w, h) {
     let brown = 0, clear = 0, neutral = 0, other = 0, brownSat = 0;
     for (let y = Math.floor(h * TINT_TOP); y < h; y++) {
@@ -1735,6 +1813,7 @@ const TINT_TEXT = {
     'heavily turbid': 'heavily turbid, muddy brown water'
 };
 
+// Water tint level and points (clear / slight / heavy brown).
 function computeWaterTint(imageDataUrl) {
     return new Promise(function (resolve) {
         const img = new Image();
@@ -1759,6 +1838,7 @@ function computeWaterTint(imageDataUrl) {
     });
 }
 
+// Second opinion from CLIP on litter boxes, to drop objects that are not litter.
 const CLIP_VERIFY_WAIT_MS = 8000;
 const CLIP_VERIFY_MAX_BOXES = 6;
 const CLIP_VERIFY_MIN_OBJECT = 0.5;
@@ -1778,6 +1858,7 @@ const CLIP_OBJECT_CAPTIONS = {
     water_reflection: ['a photo of water ripples or reflections']
 };
 
+// Crops one detection box (with padding) from the image.
 function cropDetection(img, d, pad) {
     const bw = d.x2 - d.x1, bh = d.y2 - d.y1;
     const x1 = Math.max(0, d.x1 - bw * pad), y1 = Math.max(0, d.y1 - bh * pad);
@@ -1791,6 +1872,7 @@ function cropDetection(img, d, pad) {
     return canvas.toDataURL('image/jpeg', 0.9);
 }
 
+// Asks CLIP whether each litter box really shows litter; relabels the ones that do not.
 async function verifyLitterWithClip(imageDataUrl, detections) {
     const litter = detections
         .filter(function (d) { return !!POLLUTION_CLASS_INFO[d.label]; })
@@ -1849,6 +1931,7 @@ async function verifyLitterWithClip(imageDataUrl, detections) {
     return { needed: true, ran: true, relabelled: relabelled };
 }
 
+// Combines litter, water, tint, clutter and scene into one score and status.
 function combineScores(p) {
     const items = p.items, surface = p.surface, clutter = p.clutter;
     const water = p.water, waterScoring = p.waterScoring;
@@ -1886,6 +1969,7 @@ function combineScores(p) {
              classifierPoints: classifierPoints, tintPoints: tintPoints };
 }
 
+// The whole analysis for one photo: river check, detection, water checks, score.
 async function analyzeRiverImage(imageDataUrl) {
     updateScanLabel('Checking that this is a river photo…');
     const slowNote = setTimeout(function () {
@@ -2003,12 +2087,14 @@ async function analyzeRiverImage(imageDataUrl) {
     };
 }
 
+// Adds s/es for counts other than 1.
 function pluralize(label, count) {
     if (count === 1) return label;
     if (/(ch|sh|s|x|z)$/.test(label)) return label + 'es';
     return label + 's';
 }
 
+// Draws the photo and its detection boxes on the preview canvas.
 async function drawDetections(imageDataUrl, detections) {
     const img = await loadImage(imageDataUrl);
     const previewImg = document.getElementById('previewImg');
@@ -2058,6 +2144,49 @@ async function drawDetections(imageDataUrl, detections) {
     canvas.hidden = false;
 }
 
+// The submitted photo with the same boxes and labels the user saw on screen, so Mapping,
+// Tracking and the Forum show what the model detected. Box sizes scale with the photo.
+async function createAnnotatedImage(imageDataUrl, detections, maxDim) {
+    const img = await loadImage(imageDataUrl);
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+
+    const unit = Math.max(1, Math.max(w, h) / 640);
+    const fontPx = Math.round(12 * unit);
+    const labelH = Math.round(16 * unit);
+    const pad = Math.round(4 * unit);
+    (detections || []).forEach(function (d) {
+        const x = d.x1 * scale;
+        const y = d.y1 * scale;
+        const bw = (d.x2 - d.x1) * scale;
+        const bh = (d.y2 - d.y1) * scale;
+        const flagged = !!POLLUTION_CLASS_INFO[d.label] || !!SCENE_CLASS_INFO[d.label];
+        const color = flagged ? '#d6574a' : '#4fae8c';
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2 * unit;
+        ctx.strokeRect(x, y, bw, bh);
+
+        const label = d.label.replace(/_/g, ' ') + ' ' + Math.round(d.score * 100) + '%';
+        ctx.font = '600 ' + fontPx + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+        const textW = ctx.measureText(label).width + pad * 2;
+        const labelY = Math.max(0, y - labelH);
+        ctx.fillStyle = color;
+        ctx.fillRect(x, labelY, textW, labelH);
+        ctx.fillStyle = '#0b0c10';
+        ctx.fillText(label, x + pad, labelY + labelH - pad);
+    });
+
+    return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+// Average colour of the photo.
 function computeImageStats(imageDataUrl) {
     return new Promise(function (resolve) {
         const img = new Image();
@@ -2087,6 +2216,7 @@ function computeImageStats(imageDataUrl) {
     });
 }
 
+// Result panel before any scan.
 function showWaitingQuickRead() {
     document.getElementById('quickStatusDot').className = 'status-dot';
     document.getElementById('quickStatusTitle').textContent = 'Waiting for scan';
@@ -2096,6 +2226,7 @@ function showWaitingQuickRead() {
     updateSubmitUI();
 }
 
+// Message under the Submit button (busy, success or error).
 function showSubmitStatus(kind, text) {
     const box = document.getElementById('submitStatus');
     if (!box) return;
@@ -2104,6 +2235,7 @@ function showSubmitStatus(kind, text) {
     box.hidden = !text;
 }
 
+// Shows which river segment the report will be saved to.
 function renderResultSegment() {
     const el = document.getElementById('resultSegment');
     if (!el) return;
@@ -2112,6 +2244,7 @@ function renderResultSegment() {
     el.classList.toggle('is-missing', !sel.ok);
 }
 
+// Hides the recommendation box.
 function hideRecommendation() {
     const box = document.getElementById('recoBox');
     if (box) box.hidden = true;
@@ -2120,6 +2253,7 @@ function hideRecommendation() {
     showSubmitStatus('', '');
 }
 
+// Shows the scan result: status, score and details.
 function renderQuickRead(result) {
     const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted', critical: 'Critical' };
 
@@ -2155,6 +2289,7 @@ function renderQuickRead(result) {
     updateSubmitUI();
 }
 
+// Shows warnings above the result.
 function renderWarnings(warnings) {
     const box = document.getElementById('scanWarnings');
     if (!box) return;
@@ -2173,10 +2308,12 @@ function renderWarnings(warnings) {
 }
 
 
+// Re-checks access (see scanner-steps.js).
 function refreshVerifyUI() {
     return refreshGate();
 }
 
+// Access-code form for officials at the top of the page.
 function initAccessGate() {
     const form = document.getElementById('accessForm');
     const input = document.getElementById('accessCode');
@@ -2223,6 +2360,7 @@ function initAccessGate() {
     refreshVerifyUI();
 }
 
+// Page entry point.
 function boot() {
     initNav();
     initScanner();

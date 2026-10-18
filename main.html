@@ -1,14 +1,16 @@
 <!DOCTYPE html>
+<!-- Landing page: hero, features, how it works, contact, and the login / sign-up modal. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RiCap</title>
-  <link rel="stylesheet" href="style.css">feaut
+  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="Responsive.css">
   <link rel="stylesheet" href="home-auth.css">
-</head>
+</head> 
 <body class="home-page">
+  <!-- Background video -->
   <div class="video-background">
     <video autoplay muted loop playsinline id="bg-video">
       <source src="images&vids/Sequence_01_2.mp4" type="video/mp4">
@@ -16,6 +18,7 @@
     <div class="video-overlay"></div>
   </div>
 
+      <!-- Top navigation -->
       <nav class="nav" id="nav">
     <div class="nav-inner">
         <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -37,9 +40,10 @@
     <div class="nav-scrub"><div class="nav-scrub-fill" id="navScrubFill"></div></div>
 </nav>
   <main>
-    <section class="hero-section" id="home">
+    <!-- Hero -->
+    <section class="hero-section" id="home"> 
       <div class="hero-content">
-        <p class="hero-small reveal">RIVER INTELLIGENCE</p>
+        <p class="hero-small reveal">RIVER INTELLIGENCE</p> <!--hero text--> 
         <h1 class="hero-title reveal">
           See the river
           <span>differently.</span>
@@ -56,6 +60,7 @@
       </div>
       </div>
     </section>
+    <!-- Features -->
     <section class="features-section section" id="features">
       <div class="section-number reveal"></div>
 
@@ -110,6 +115,7 @@
       </div>
     </section>
 
+    <!-- How it works -->
     <section class="process-section section" id="how-it-works">
       <div class="section-number reveal"></div>
 
@@ -157,6 +163,7 @@
       </div>
     </section>
 
+    <!-- Call to action (opens login / sign-up) -->
     <section class="cta-section section" id="loginbutton">
       <div class="cta-content reveal">
         <h2>
@@ -168,6 +175,7 @@
       </div>
     </section>
 
+    <!-- Contact form -->
     <section class="contact-section section" id="contact">
       <div class="section-content">
         <p class="section-label reveal">CONTACT</p>
@@ -201,10 +209,12 @@
 
   </main>
 
+  <!-- Login / sign-up modal (water surface inside the box) -->
   <div class="auth-modal" id="authModal">
     <div class="auth-backdrop"></div>
 
     <div class="auth-box">
+      <canvas class="auth-water" id="authWater" aria-hidden="true"></canvas>
       <button class="auth-close" id="authClose">×</button>
 
       <div class="auth-header">
@@ -218,6 +228,7 @@
         <button class="auth-tab" data-tab="signup">Sign Up</button>
       </div>
 
+      <!-- Login form (admin-login.js) -->
       <form class="auth-form active" id="loginForm">
         <div class="form-group">
           <label for="loginEmail">EMAIL</label>
@@ -245,6 +256,7 @@
         </button>
       </form>
 
+      <!-- Sign-up form (account-auth.js) -->
       <form class="auth-form" id="signupForm">
         <div class="form-group">
           <label for="signupFirstName">First Name</label>
@@ -292,13 +304,17 @@
     </div>
   </div>
 
+  <!-- Toast message -->
   <div class="toast" id="toast">
     <span class="toast-icon">✓</span>
     <span id="toastMessage">Done.</span>
   </div>
+  <!-- Scripts -->
   <script src="nav.js"></script>
   <script src="contact.js"></script>
   <script src="home-interactive.js"></script>
+  <script src="water-core.js"></script>
+  <script src="auth-ripples.js"></script>
   <script type="module" src="admin-nav.js"></script>
   <script type="module" src="admin-login.js"></script>
   <script type="module" src="account-auth.js"></script>

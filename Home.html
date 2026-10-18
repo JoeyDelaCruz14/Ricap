@@ -1,4 +1,5 @@
  <!DOCTYPE html>
+<!-- Home: community forum of river reports with filters, river search and account box. -->
  <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -13,6 +14,7 @@
         <a class="skip-link" href="#forumFeed">Skip to reports</a>
  
   
+        <!-- Top navigation -->
         <nav class="nav scrolled" id="nav" aria-label="Main">
          <div class="nav-inner">
          <a class="nav-brand" href="Home.html">Ri<span>Cap</span></a>
@@ -31,6 +33,7 @@
             </nav>
 
             <main class="forum">
+                <!-- Title and stats -->
                 <header class="forum-header">
                     <h1 class="forum-title" tabindex="-1">River Watch Forum</h1>
                     <p class="forum-sub">Live field reports from verified officials, with AI-suggested actions. Vote, comment, and follow Bataan's rivers in real time.</p>
@@ -49,7 +52,14 @@
                 </header>
 
                 <div class="forum-body">
+                    <!-- Sidebar: search, filters, notifications, officials, account -->
                     <aside class="forum-sidebar" id="forumSidebar" aria-label="Filters and account">
+                        <div class="sidebar-block" role="search">
+                            <label class="sidebar-block-title" for="riverSearch">Search rivers</label>
+                            <input type="search" id="riverSearch" class="river-search" placeholder="Type a river name" list="riverSearchList" autocomplete="off" enterkeyhint="search" aria-describedby="riverSearchCount">
+                            <datalist id="riverSearchList"></datalist>
+                            <p class="river-search-count" id="riverSearchCount" aria-live="polite"></p>
+                        </div>
                         <div class="sidebar-block">
                             <p class="sidebar-block-title">Filter by status</p>
                             <div class="status-chips" id="statusChips">
@@ -81,15 +91,19 @@
                             <div id="authBlock"></div>
                         </div>
                     </aside>
+                    <!-- Report feed (filled by Home.js) -->
                     <section class="forum-feed" id="forumFeed" aria-live="polite" aria-label="Latest river reports" tabindex="-1"></section>
                 </div>
             </main>
 
+            <!-- Floating buttons -->
             <button class="fab-submit" id="fabSubmit" hidden>New report</button>
             <button type="button" class="back-to-top" id="backToTop" aria-label="Back to top">
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V4m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
 
+            <!-- Scripts -->
+            <script src="mapping-data.js"></script>
             <script type="module" src="Home.js"></script>
             <script type="module" src="admin-nav.js"></script>
             <script src="home-page-interactive.js" defer></script>

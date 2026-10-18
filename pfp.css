@@ -1,3 +1,5 @@
+/* Profile page (pfp.html): profile header, details form, photo crop dialog, side cards and reports. */
+
 :root {
     --bg: #0f0f11;
     --card: rgba(23, 23, 26, 0.82);
@@ -166,6 +168,21 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-side > .pf-card:last-child { flex: 1 1 auto; }
 .pf-details { display: flex; flex-direction: column; }
 .pf-details .pf-actions { margin-top: auto; padding-top: 18px; }
+.pf-details .pf-photo-row .pf-actions { padding-top: 0; }
+
+/* Account details gets the full width; the side cards sit in a row underneath it,
+   so the details card no longer stretches to the height of three stacked cards. */
+.pf-grid { grid-template-columns: minmax(0, 1fr); }
+.pf-side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    align-items: start;
+}
+@media (min-width: 861px) {
+    .pf-details .pf-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .pf-details .pf-field-wide { grid-column: span 2; }
+    .pf-details .pf-field-wide:first-child { grid-column: 1 / -1; }
+}
 
 /* Pills */
 .pf-pill {
@@ -268,6 +285,7 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 }
 @keyframes pf-spin { to { transform: rotate(360deg); } }
 
+/* Errors */
 .pf-error {
     margin-top: 14px;
     padding: 10px 12px;
@@ -314,6 +332,10 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-note { color: var(--muted); font-size: .88rem; }
 .pf-note + .pf-actions, .pf-dl + .pf-actions { margin-top: 16px; }
 .pf-alert-note { margin-top: 12px; }
+.pf-password .pf-hint { margin-top: 8px; }
+.pf-pw-status:empty { display: none; }
+.pf-pw-status { margin-top: 10px; }
+.pf-password .pf-actions { margin-top: 14px; }
 .pf-toggle { display: flex; align-items: flex-start; gap: 10px; font-size: .92rem; cursor: pointer; }
 .pf-toggle input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
 

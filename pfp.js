@@ -1,6 +1,11 @@
+// Profile page (pfp.html): account details, profile picture (crop + upload), official access,
+// email alerts, change password and the user's recent reports.
+
 import { auth, db } from './firebase-config.js';
 import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
-import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
+import {
+    onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail
+} from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import { getAccount, saveAccount, isLocalLoggedIn, getOfficialSession, isVerifiedUser, displayName, normalizePhone, initials } from './account.js';
 import { ensureAuth, signOutOfficial } from './Session.js';
 import { performLogout } from './admin-nav.js';
@@ -17,16 +22,19 @@ const RECENT_LIMIT = 8;
 
 const $ = id => document.getElementById(id);
 
+// Escapes text before putting it into HTML.
 function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, ch =>
         ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
+// Firestore timestamp to Date.
 function toDate(ts) {
     const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
     return d && !isNaN(d) ? d : null;
 }
 
+// Readable date (and time).
 function fmtDate(d, withTime) {
     if (!d) return '—';
     return withTime
@@ -34,6 +42,7 @@ function fmtDate(d, withTime) {
         : d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+// River name for a report.
 function riverName(r) {
     try {
         if (typeof RIVER_DATA !== 'undefined' && r.riverId) {
@@ -44,6 +53,7 @@ function riverName(r) {
     return r.reportName || 'Unnamed spot';
 }
 
+// Scans saved in this browser.
 function localRecords() {
     try {
         const list = JSON.parse(localStorage.getItem(RECORDS_KEY) || '[]');
@@ -52,6 +62,7 @@ function localRecords() {
 }
 
 let toastTimer = null;
+// Small message at the bottom of the page.
 function toast(msg) {
     const t = $('pfToast');
     t.textContent = msg;
@@ -68,12 +79,14 @@ function publish() {
 let editing = false;
 let reportsLoaded = false;
 
+// Everything the page needs to know about who is signed in.
 function currentState(user, isAdmin) {
     const account = isLocalLoggedIn() ? getAccount() : null;
     const official = getOfficialSession();
     return { user, isAdmin, account, official, signedIn: isAdmin || !!account || !!official };
 }
 
+// Shows the picture, or initials when there is none.
 function paintAvatar(el, initialsEl, name) {
     const photo = getAvatar();
     initialsEl.textContent = initials(name);
@@ -81,6 +94,7 @@ function paintAvatar(el, initialsEl, name) {
     el.classList.toggle('has-photo', !!photo);
 }
 
+// Name, email, badges and stats at the top.
 function renderHeader(s) {
     const name = displayName(s.user) || (s.account && s.account.name) || 'RiCap user';
     const email = (s.account && s.account.email) || (s.isAdmin ? s.user.email : '') || '';
@@ -101,6 +115,7 @@ function renderHeader(s) {
     $('pfBadges').innerHTML = badges.join('');
 }
 
+// Switches the details form between view and edit mode.
 function setEditing(on) {
     editing = on;
     ['pfFirst', 'pfLast', 'pfPhone'].forEach(id => { $(id).readOnly = !on; });
@@ -110,6 +125,7 @@ function setEditing(on) {
     if (on) $('pfFirst').focus();
 }
 
+// Fills the account details form.
 function renderForm(s) {
     const a = s.account;
     $('pfForm').hidden = !a;
@@ -122,6 +138,7 @@ function renderForm(s) {
     $('pfPhone').value = a.phone || '';
 }
 
+// Official access card.
 function renderOfficial(s) {
     const o = s.official;
     const dl = $('pfOfficial');
@@ -160,12 +177,46 @@ function renderOfficial(s) {
     }
 }
 
+// Email alerts card.
 function renderAlerts(s) {
     const a = s.account;
     $('pfAlerts').hidden = !(a && a.email);
     if (a && a.email) $('pfEmailAlerts').checked = emailAlertsEnabled();
 }
 
+// Only accounts that sign in with an email and password have a password to change.
+function passwordUser() {
+    const u = auth.currentUser;
+    return u && !u.isAnonymous && u.email && u.providerData.some(p => p.providerId === 'password') ? u : null;
+}
+
+// Shows the Change password card for email/password accounts only.
+function renderPassword() {
+    const u = passwordUser();
+    $('pfPasswordForm').hidden = !u;
+    if (u) $('pfPwEmail').value = u.email;
+}
+
+// Readable message for a password change error.
+function passwordError(err) {
+    const code = String((err && err.code) || '');
+    if (/wrong-password|invalid-credential|invalid-login-credentials/.test(code)) return 'Your current password is incorrect.';
+    if (code === 'auth/weak-password') return 'Choose a stronger password (at least 6 characters).';
+    if (code === 'auth/too-many-requests') return 'Too many attempts. Wait a few minutes and try again.';
+    if (code === 'auth/network-request-failed' || !navigator.onLine) return 'No connection. Check your internet and try again.';
+    if (code === 'auth/requires-recent-login') return 'For your security, log out, log in again and retry.';
+    console.warn('RiCap: password change failed', code);
+    return 'Could not change your password. Try again.';
+}
+
+// Error and status lines in the password card.
+function setPwMessage(error, status) {
+    $('pfPwError').textContent = error || '';
+    $('pfPwError').hidden = !error;
+    $('pfPwStatus').textContent = status || '';
+}
+
+// One report in "My recent reports".
 function reportCard(r) {
     const st = String(r.status || 'moderate');
     const a = document.createElement('a');
@@ -185,6 +236,7 @@ function reportCard(r) {
     return a;
 }
 
+// Loads the user's reports from Firestore and this browser.
 async function loadMyReports(s) {
     const local = localRecords();
     $('stLocal').textContent = local.length;
@@ -224,6 +276,7 @@ async function loadMyReports(s) {
     mine.slice(0, RECENT_LIMIT).forEach(r => list.appendChild(reportCard(r)));
 }
 
+// Re-renders the whole page for the current user.
 async function refresh() {
     const user = auth.currentUser;
     const isAdmin = await isAdminUser(user);
@@ -236,6 +289,7 @@ async function refresh() {
     renderForm(s);
     renderOfficial(s);
     renderAlerts(s);
+    renderPassword();
     moveLegacyAvatar();
     if (!reportsLoaded) {
         reportsLoaded = true;
@@ -301,6 +355,7 @@ $('pfForm').addEventListener('submit', async e => {
 
 // The old version kept the picture as base64 on this device; move it to Storage once.
 let legacyMoving = false;
+// Moves a picture saved by the old version (base64 on this device) to Storage.
 async function moveLegacyAvatar() {
     const old = legacyAvatar();
     if (legacyMoving || !old || !canHaveAvatar() || getAvatar()) return;
@@ -314,12 +369,14 @@ async function moveLegacyAvatar() {
     }
 }
 
+// Disables a button and shows a spinner while busy.
 function setBusy(btn, busy, label) {
     btn.disabled = busy;
     btn.setAttribute('aria-busy', String(busy));
     if (label) btn.textContent = label;
 }
 
+// Opens the file chooser for a new picture.
 function pickPhoto() {
     if (!canHaveAvatar()) {
         toast('Log in with your RiCap account to change your profile picture.');
@@ -334,10 +391,12 @@ $('pfPhotoBtn').addEventListener('click', pickPhoto);
 const crop = { img: null, url: '', zoom: 1, cx: 0, cy: 0, busy: false, drag: null };
 const cropCanvas = $('pfCropCanvas');
 
+// Side of the crop square in image pixels at the current zoom.
 function cropSide() {
     return Math.min(crop.img.naturalWidth, crop.img.naturalHeight) / crop.zoom;
 }
 
+// Crop square in image pixels, kept inside the image.
 function cropRect() {
     const side = cropSide();
     const half = side / 2;
@@ -346,6 +405,7 @@ function cropRect() {
     return { x: crop.cx - half, y: crop.cy - half, side };
 }
 
+// Draws the crop preview with a round mask.
 function drawCrop() {
     if (!crop.img) return;
     const r = cropRect();
@@ -363,12 +423,14 @@ function drawCrop() {
     ctx.restore();
 }
 
+// Status or error line in the crop dialog.
 function setCropStatus(msg, isError) {
     const el = $('pfCropStatus');
     el.textContent = msg || '';
     el.classList.toggle('is-error', !!isError);
 }
 
+// Closes the crop dialog and frees the image.
 function closeCrop() {
     if (crop.url) URL.revokeObjectURL(crop.url);
     crop.img = null;
@@ -376,6 +438,7 @@ function closeCrop() {
     if ($('pfCropDialog').open) $('pfCropDialog').close();
 }
 
+// Loads the chosen file as an image for cropping.
 function loadImage(file) {
     return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -410,6 +473,7 @@ $('pfCropZoom').addEventListener('input', e => {
     drawCrop();
 });
 
+// Changes the crop zoom (buttons, wheel and keys).
 function nudgeZoom(delta) {
     const z = Math.min(4, Math.max(1, crop.zoom + delta));
     crop.zoom = z;
@@ -516,6 +580,53 @@ $('pfEmailAlerts').addEventListener('change', async e => {
 });
 
 $('pfLogout').addEventListener('click', () => performLogout());
+
+$('pfPasswordForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const user = passwordUser();
+    if (!user) return;
+    const current = $('pfPwCurrent').value;
+    const next = $('pfPwNew').value;
+    const confirm = $('pfPwConfirm').value;
+    if (!current || !next || !confirm) { setPwMessage('Fill in all three password fields.'); return; }
+    if (next.length < 6) { setPwMessage('Your new password needs at least 6 characters.'); $('pfPwNew').focus(); return; }
+    if (next !== confirm) { setPwMessage('The new passwords don’t match.'); $('pfPwConfirm').focus(); return; }
+    if (next === current) { setPwMessage('Your new password must be different from the current one.'); $('pfPwNew').focus(); return; }
+
+    const save = $('pfPwSave');
+    setBusy(save, true, 'Updating…');
+    $('pfPwReset').disabled = true;
+    setPwMessage('', 'Updating your password…');
+    try {
+        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, current));
+        await updatePassword(user, next);
+        $('pfPasswordForm').reset();
+        $('pfPwEmail').value = user.email;
+        setPwMessage('', 'Password updated. Use your new password next time you log in.');
+        toast('Password updated.');
+    } catch (err) {
+        setPwMessage(passwordError(err), '');
+    } finally {
+        setBusy(save, false, 'Update password');
+        $('pfPwReset').disabled = false;
+    }
+});
+
+$('pfPwReset').addEventListener('click', async () => {
+    const user = passwordUser();
+    if (!user) return;
+    const btn = $('pfPwReset');
+    setBusy(btn, true, 'Sending…');
+    setPwMessage('', '');
+    try {
+        await sendPasswordResetEmail(auth, user.email);
+        setPwMessage('', 'A reset link was sent to your email. Check your inbox and spam.');
+    } catch (err) {
+        setPwMessage(passwordError(err), '');
+    } finally {
+        setBusy(btn, false, 'Email me a reset link');
+    }
+});
 
 onAuthStateChanged(auth, refresh);
 window.addEventListener('storage', e => { if (e.key) refresh(); });

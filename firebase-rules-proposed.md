@@ -3,17 +3,14 @@
 Nothing here has been deployed. Merge these into your current rules in the Firebase console
 (the repo has no rules files, so your existing rules for other paths are not shown here and must stay).
 
-## 1. Before deploying the new code: list your admins
+## 1. Who counts as admin
 
-Citizens now sign in with Firebase email/password too, so "signed in" no longer means "admin".
-For every existing admin:
+`admin-role.js` treats the admin email that your current Realtime Database rules already trust
+(`auth.token.email === ...`) as admin, so no extra setup is needed for that account.
+To add more admins later, either add their email hash in `admin-role.js` (and the email to your
+rules), or use the optional `admins/<uid>` list below.
 
-1. Firebase console → Authentication → Users → copy the admin's **User UID**.
-2. Realtime Database → Data → add `admins/<that uid>` = `true` (boolean).
-
-Without this, admins will see "This account does not have admin access." on Admin and Maintenance.
-
-## 2. Realtime Database rules: add this node
+## 2. Optional: Realtime Database rule for an admins/ list
 
 ```json
 "admins": {

@@ -1,3 +1,5 @@
+/* Home page (Home.html): forum layout, sidebar filters, river search, posts, comments and pager. */
+
 :root {
     --ink: #0b0c10;
     --ink-2: #0e0f16;
@@ -36,6 +38,7 @@ html:has(body.forum-page) {
     scrollbar-color: var(--ink-3) var(--ink);
 }
 
+/* Page basics */
 body.forum-page {
     background: var(--ink);
     color: var(--text);
@@ -86,6 +89,7 @@ body.forum-page :focus-visible {
 .skip-link:focus-visible { transform: none; }
 
 
+/* Buttons */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -139,6 +143,7 @@ body.forum-page :focus-visible {
 .btn:hover .btn-icon { transform: translateY(3px); }
 
 
+/* Forum layout and header */
 .forum {
     width: 100%;
     max-width: 1560px;
@@ -230,6 +235,7 @@ body.forum-page :focus-visible {
     pointer-events: none;
 }
 
+/* Stats */
 .stat {
     display: flex;
     flex-direction: row-reverse;
@@ -269,6 +275,7 @@ body.forum-page :focus-visible {
 }
 
 
+/* Sidebar and feed layout */
 .forum-body {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr);
@@ -290,6 +297,7 @@ body.forum-page :focus-visible {
     border-radius: 16px;
 }
 
+/* Sidebar blocks */
 .sidebar-block { padding: 20px 0; }
 .sidebar-block + .sidebar-block { border-top: 1px solid var(--line); }
 
@@ -315,6 +323,7 @@ body.forum-page :focus-visible {
     text-transform: none;
 }
 
+/* Status filter chips */
 .status-chips {
     display: flex;
     flex-wrap: wrap;
@@ -364,6 +373,7 @@ body.forum-page :focus-visible {
     color: var(--current-hi);
 }
 
+/* Sort menu */
 .sidebar-select {
     width: 100%;
     min-height: 44px;
@@ -396,6 +406,28 @@ body.forum-page :focus-visible {
 
 .sidebar-select:focus-visible { border-color: var(--current); }
 
+/* River search box */
+.river-search {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px 0 40px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='8.5' cy='8.5' r='5.5' fill='none' stroke='%23a96eff' stroke-width='1.8'/%3E%3Cpath d='m13 13 4 4' stroke='%23a96eff' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat 13px center / 18px 18px;
+    color: var(--text);
+    color-scheme: dark;
+    font-family: var(--font);
+    font-size: 0.92rem;
+    transition: border-color 0.2s ease;
+}
+.river-search::placeholder { color: var(--text); opacity: .45; }
+.river-search:hover { border-color: var(--current-edge); }
+.river-search:focus { outline: none; border-color: var(--current); }
+.river-search-count { margin: 8px 0 0; font-size: 0.8rem; opacity: .7; }
+.river-search-count:empty { display: none; }
+@media (pointer: coarse) { .river-search { font-size: 16px; } }
+
+/* Officials list */
 .official-list {
     list-style: none;
     margin: 0;
@@ -441,6 +473,7 @@ body.forum-page :focus-visible {
     color: var(--text-faint);
 }
 
+/* Account and notification boxes */
 .preview-block {
     border-top: 1px solid var(--line);
 }
@@ -497,6 +530,7 @@ body.forum-page :focus-visible {
 .preview-note strong { color: var(--text); }
 
 
+/* Feed */
 .forum-feed {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr));
@@ -543,6 +577,7 @@ body.forum-page :focus-visible {
     padding-top: 8px;
 }
 
+/* Pager */
 .pager-btn {
     min-width: 40px;
     min-height: 40px;
@@ -571,6 +606,7 @@ body.forum-page :focus-visible {
 
 .pager-btn:disabled { opacity: 0.4; cursor: default; }
 
+/* Post card */
 .post {
     --rx: 0deg;
     --ry: 0deg;
@@ -765,6 +801,7 @@ body.forum-page :focus-visible {
     background: var(--pill-color, var(--current));
 }
 
+/* Post actions: vote, comment, share, save */
 .post-actions {
     display: flex;
     align-items: center;
@@ -973,6 +1010,7 @@ body.forum-page :focus-visible {
 .post-add-comment input[disabled] { opacity: .5; }
 
 
+/* Floating buttons */
 .fab-submit {
     position: fixed;
     right: max(24px, env(safe-area-inset-right));
@@ -1053,6 +1091,7 @@ body.forum-page :focus-visible {
 .back-to-top:hover svg { transform: translateY(-3px); }
 
 
+/* Entrance animations */
 @keyframes hpRise {
     from { opacity: 0; translate: 0 18px; }
     to   { opacity: 1; translate: 0 0; }
@@ -1094,6 +1133,7 @@ html.hp-js .hp-reveal.is-in {
 html.hp-js .hp-reveal.is-settled { transition: none; }
 
 
+/* Smaller screens */
 @media (max-width: 1100px) {
     .forum-header {
         grid-template-columns: 1fr;

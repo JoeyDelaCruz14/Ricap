@@ -1,3 +1,6 @@
+// Extra help for the Verify form: live field validation messages, the progress bar and steps,
+// drag and drop for the ID photo, and pointing out a missing photo on submit.
+
 (function () {
     'use strict';
 
@@ -25,6 +28,7 @@
     const touched = new WeakSet();
 
     const firstName = $('firstName'), lastName = $('lastName'), fullName = $('fullName');
+    // Keeps the hidden full-name field equal to first + last name.
     function syncFullName() {
         if (!fullName || !firstName || !lastName) return;
         fullName.value = [firstName.value.trim(), lastName.value.trim()].filter(Boolean).join(' ');
@@ -33,15 +37,18 @@
     form.addEventListener('reset', () => setTimeout(syncFullName));
     syncFullName();
 
+    // True if the field passes the browser validation.
     function isValid(el) {
         if (el.id === 'phoneInput') return el.value.trim() === '' || /^(09|\+639)\d{9}$/.test(el.value.replace(/[\s-]/g, ''));
         return el.value.trim() !== '' && el.checkValidity();
     }
 
+    // True once an ID photo is captured or uploaded.
     function hasPhoto() {
         return !!capturePreview && !capturePreview.hidden;
     }
 
+    // Error message for a field.
     function messageFor(f) {
         const id = f.el.id + 'Msg';
         let m = $(id);
@@ -58,6 +65,7 @@
         return m;
     }
 
+    // Shows or clears the error for one field.
     function check(f) {
         if (!touched.has(f.el)) return;
         const ok = isValid(f.el);
@@ -68,6 +76,7 @@
         messageFor(f).textContent = ok ? '' : f.msg;
     }
 
+    // Updates the progress bar and step indicators.
     function update() {
         const doneFields = requiredFields.filter(f => isValid(f.el)).length;
         const photo = hasPhoto();
@@ -125,6 +134,7 @@
     }
 
     if (captureBox && fileInput) {
+        // Drag and drop is only allowed while no photo is chosen.
         const canDrop = () => !$('captureEmpty').hidden;
         ['dragenter', 'dragover'].forEach(type => captureBox.addEventListener(type, e => {
             if (!canDrop()) return;

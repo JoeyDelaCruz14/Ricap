@@ -1,3 +1,7 @@
+// Mapping page (mapping.html): Leaflet map of Bataan rivers with their segments coloured by the
+// reports of the chosen month, popups with the latest scan, a sidebar list with search, a jump
+// search, per-river notifications and the month selector.
+
 import { watchRiverStatuses } from './river-status.js';
 import {
     requestNotifications,
@@ -13,6 +17,7 @@ import {
     collection, query, where, onSnapshot, getDocs, Timestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 
+// The river list from mapping-data.js.
 function resolveRivers() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) {}
     try { if (typeof RICAP_RIVERS !== 'undefined' && Array.isArray(RICAP_RIVERS)) return RICAP_RIVERS; } catch (e) {}
@@ -82,10 +87,12 @@ const FIT_OPTIONS = { padding: [24, 24] };
 const MAX_ZOOM = 18;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Bounds of Bataan as a Leaflet LatLngBounds.
 function provinceBounds() {
     return (bataan && bataan.bounds) || BOUNDS;
 }
 
+// Keeps the map from panning far outside Bataan.
 function lockToBataan() {
     const b = provinceBounds();
     if (!b) return;
@@ -96,6 +103,7 @@ function lockToBataan() {
     map.options.maxBoundsViscosity = 0.85;
 }
 
+// Fits the whole province in view.
 function showBataan(animate) {
     const b = provinceBounds();
     if (!b) {
@@ -107,6 +115,7 @@ function showBataan(animate) {
     else map.fitBounds(b, { ...FIT_OPTIONS, animate: false });
 }
 
+// Hides river pins that fall outside the province outline.
 function hidePinsOutsideBataan() {
     if (!bataan) return;
     rivers.forEach(rv => {
@@ -121,6 +130,7 @@ function hidePinsOutsideBataan() {
     });
 }
 
+// Creates the map, base layers, mask and river lines.
 function initMap() {
     map = L.map('map', {
         zoomControl: true,
@@ -149,7 +159,6 @@ function initMap() {
 
     initPopupEvents();
     addMapLegend();
-    addLocateControl();
 
     let resizeTimer = null;
     window.addEventListener('resize', () => {
@@ -213,6 +222,7 @@ function initMap() {
         });
 }
 
+// One marker per river.
 function createRiverMarkers() {
     rivers.forEach(rv => {
         if (typeof rv.lat !== 'number' || typeof rv.lng !== 'number') return;
@@ -253,6 +263,7 @@ function createRiverMarkers() {
     updateMarkerStatuses();
 }
 
+// Marker icon coloured by status, with the report count.
 function createMarkerIcon(status, count) {
     const safeStatus = statusColors[status] ? status : 'none';
     const color = statusColors[safeStatus];
@@ -269,6 +280,7 @@ function createMarkerIcon(status, count) {
 }
 
 
+// Handles buttons inside popups (notifications, full analysis).
 function initPopupEvents() {
     map.on('popupopen', event => {
         const el = event.popup.getElement();
@@ -304,16 +316,31 @@ function initPopupEvents() {
     });
 }
 
+// Shows whether notifications are on for this river.
 function paintRiverNotificationButton(button, riverId) {
     const enabled = riverNotifEnabled(String(riverId));
     button.textContent = enabled ? '🔔 Notifications on' : '🔕 Enable notifications';
     button.classList.toggle('is-on', enabled);
 }
 
+// Short date and time for popups, e.g. "Oct 18, 2026, 3:45 PM"; '' when there is no valid date.
+function formatUpdated(date) {
+    if (!(date instanceof Date) || isNaN(date)) return '';
+    return date.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// "1 report" / "3 reports".
+function reportCount(n) {
+    const count = Number(n) || 0;
+    return count + (count === 1 ? ' report' : ' reports');
+}
+
+// Name of the selected month.
 function monthLabel() {
     return new Date(viewYear, viewMonth, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 }
 
+// How this month compares to the previous one.
 function comparisonLine(status) {
     if (typeof status.prevAvg !== 'number' || typeof status.score !== 'number') {
         return '<p class="river-popup-trend">No reports here last month.</p>';
@@ -325,6 +352,7 @@ function comparisonLine(status) {
     return `<p class="river-popup-trend">Last month avg <b>${Math.round(status.prevAvg)}</b> → ${text}</p>`;
 }
 
+// Popup for a river marker: status, latest photo, counts.
 function buildRiverPopup(rv) {
     const status = statuses[rv.id];
     const riverName = rv.name || rv.officialName || 'Unknown River';
@@ -345,7 +373,7 @@ function buildRiverPopup(rv) {
     }
 
     const label = String(status.status || '');
-    const updated = status.lastUpdated ? status.lastUpdated.toLocaleString() : '';
+    const updated = formatUpdated(status.lastUpdated);
 
     return `
         <div class="river-popup">
@@ -357,9 +385,7 @@ function buildRiverPopup(rv) {
                 <span class="popup-badge ${escapeHtml(label)}">${escapeHtml(label.toUpperCase())}</span>
                 · ${status.score ?? '—'}/100
             </p>
-            ${updated
-                ? `<p class="river-popup-updated">Updated ${escapeHtml(updated)} · ${status.count} report(s) in ${escapeHtml(monthLabel())}</p>`
-                : ''}
+            <p class="river-popup-updated">${updated ? 'Updated ' + escapeHtml(updated) + ' · ' : ''}${reportCount(status.count)} in ${escapeHtml(monthLabel())}</p>
             ${comparisonLine(status)}
             <button type="button" class="river-popup-full" data-river-id="${id}">
                 📋 View full analysis
@@ -368,6 +394,7 @@ function buildRiverPopup(rv) {
         </div>`;
 }
 
+// Recolours markers after reports change.
 function updateMarkerStatuses() {
     rivers.forEach(rv => {
         const marker = markers[rv.id];
@@ -413,6 +440,7 @@ function updateMarkerStatuses() {
 
 const SEGMENT_MATCH_KM = 1.5;
 
+// Distance in km from a point to a line.
 function distanceToLineKm(p, coords) {
     const kx = 111.32 * Math.cos(p[0] * Math.PI / 180), ky = 110.57;
     let best = Infinity;
@@ -426,6 +454,7 @@ function distanceToLineKm(p, coords) {
     return best;
 }
 
+// Which segment a report belongs to: the saved segment, else the nearest within SEGMENT_MATCH_KM.
 function placeReport(report) {
     const segs = segments[report.riverId];
     if (!segs) return { seg: null, why: 'river has no line' };
@@ -444,13 +473,16 @@ function placeReport(report) {
         : { seg: null, km: bestD, why: 'taken ' + bestD.toFixed(1) + ' km from the river line' };
 }
 
+// Segment id for a report, or null.
 function segmentIdForReport(report) {
     return placeReport(report).seg;
 }
 
+// Status of every segment from its reports.
 function computeSegmentStatuses() {
     segmentStatuses = {};
     if (!lastReports || !Object.keys(segments).length) return;
+    // Reports placed on a segment, keyed by segment id instead of river id.
     const bySegment = list => list
         .map(rep => ({ rep, seg: segmentIdForReport(rep) }))
         .filter(x => x.seg)
@@ -471,10 +503,12 @@ function computeSegmentStatuses() {
     }
 }
 
+// Status as a readable word.
 function statusWord(st) {
     return st && st.status ? st.status.charAt(0).toUpperCase() + st.status.slice(1) : 'No assessment';
 }
 
+// Hover text for a segment.
 function segmentTooltip(seg) {
     const st = segmentStatuses[seg.id];
     const color = st && statusColors[st.status] ? statusColors[st.status] : statusColors.none;
@@ -483,11 +517,12 @@ function segmentTooltip(seg) {
         <span class="seg-tip-status"><i style="background:${color}"></i>${statusWord(st)}${st && st.score != null ? ' · ' + st.score + '/100' : ''}</span>`;
 }
 
+// Popup for a segment: status, latest photo, report count.
 function buildSegmentPopup(seg) {
     const st = segmentStatuses[seg.id];
     const label = st ? String(st.status || '') : '';
     const id = escapeHtml(String(seg.riverId));
-    const updated = st && st.lastUpdated ? st.lastUpdated.toLocaleString() : '';
+    const updated = st ? formatUpdated(st.lastUpdated) : '';
     return `
         <div class="river-popup seg-popup">
             ${st && st.imageUrl
@@ -497,7 +532,7 @@ function buildSegmentPopup(seg) {
             <p class="seg-popup-part"><b class="seg-divider">${seg.index}</b> Segment ${seg.index} of 4 · ${escapeHtml(seg.name)} · ${seg.lengthKm.toFixed(1)} km</p>
             ${st
                 ? `<p class="river-popup-location"><span class="popup-badge ${escapeHtml(label)}">${escapeHtml(label.toUpperCase())}</span> · ${st.score ?? '—'}/100</p>
-                   <p class="river-popup-updated">Last assessed ${escapeHtml(updated)} · ${st.count} report(s) in ${escapeHtml(monthLabel())}</p>
+                   <p class="river-popup-updated">${updated ? 'Last assessed ' + escapeHtml(updated) + ' · ' : ''}${reportCount(st.count)} in ${escapeHtml(monthLabel())}</p>
                    ${comparisonLine(st)}
                    ${st.assessment || st.recommendation
                        ? `<button type="button" class="river-popup-full" data-river-id="${id}" data-segment-id="${escapeHtml(seg.id)}">📋 View report &amp; recommendation</button>`
@@ -508,6 +543,7 @@ function buildSegmentPopup(seg) {
         </div>`;
 }
 
+// Report totals for one river.
 function riverSummary(riverId) {
     const st = statuses[riverId];
     const id = escapeHtml(String(riverId));
@@ -515,13 +551,14 @@ function riverSummary(riverId) {
         <div class="seg-popup-river">
             <p class="seg-popup-river-title">Whole river in ${escapeHtml(monthLabel())}</p>
             ${st
-                ? `<p class="river-popup-location"><span class="popup-badge ${escapeHtml(st.status)}">${escapeHtml(String(st.status).toUpperCase())}</span> · ${st.score ?? '—'}/100 · ${st.count} report(s)</p>
+                ? `<p class="river-popup-location"><span class="popup-badge ${escapeHtml(st.status)}">${escapeHtml(String(st.status).toUpperCase())}</span> · ${st.score ?? '—'}/100 · ${reportCount(st.count)}</p>
                    <button type="button" class="river-popup-full" data-river-id="${id}">📋 River analysis</button>`
                 : '<p class="river-popup-updated">No reports for this river yet.</p>'}
             <button type="button" class="river-popup-action" data-river-id="${id}">🔕 Enable notifications</button>
         </div>`;
 }
 
+// Adds tooltips, popups and colours to the segment lines.
 function wireSegments() {
     Object.values(segments).flat().forEach(seg => {
         seg.hit.bindTooltip(() => segmentTooltip(seg), { sticky: true, className: 'seg-tooltip', direction: 'top', offset: [0, -10] });
@@ -555,6 +592,7 @@ function wireSegments() {
 const SEGMENT_MARKER_ZOOM = 11.5;
 const JOINT_DOT_ZOOM = 12.5;
 
+// Shows segment numbers and joints only when zoomed in.
 function updateDividers() {
     const z = map.getZoom();
     const toggle = (group, show) => {
@@ -571,6 +609,7 @@ function updateDividers() {
     });
 }
 
+// Highlights a river and zooms to it.
 function selectRiver(riverId) {
     const segs = segments[riverId];
     if (!segs) return;
@@ -587,12 +626,14 @@ function selectRiver(riverId) {
 }
 
 
+// Opens the detailed panel for a river (or one segment).
 function openFullAnalysis(riverId, segmentId) {
     const rv = rivers.find(r => String(r.id) === String(riverId));
     const s = segmentId ? segmentStatuses[segmentId] : statuses[riverId];
     if (!rv || !s) return;
     const seg = segmentId ? (segments[riverId] || []).find(x => x.id === segmentId) : null;
 
+    // One label/value row in the analysis panel (skipped when empty).
     const row = (k, v) =>
         v ? `<p><strong>${k}:</strong> ${escapeHtml(String(v))}</p>` : '';
 
@@ -615,7 +656,7 @@ function openFullAnalysis(riverId, segmentId) {
             ${row('Detection confidence', s.confidence != null ? s.confidence + '%' : '')}
             ${row('Assessment', s.assessment)}
             ${row('Recommendation', s.recommendation)}
-            ${row('Last updated', s.lastUpdated && s.lastUpdated.toLocaleString())}
+            ${row('Last updated', formatUpdated(s.lastUpdated))}
         </div>`;
 
     const close = () => {
@@ -631,18 +672,21 @@ function openFullAnalysis(riverId, segmentId) {
 }
 
 
+// Score (0-100) to status.
 function statusFromScore(score) {
     if (score > 65) return 'polluted';
     if (score > 30) return 'moderate';
     return 'healthy';
 }
 
+// Date of a Firestore report.
 function docDate(d) {
     const t = d.createdAt;
     if (t && typeof t.toDate === 'function') return t.toDate();
     return t ? new Date(t) : null;
 }
 
+// Groups reports by river and averages their scores.
 function aggregateReports(reports) {
     const byRiver = {};
     reports.forEach(r => {
@@ -672,6 +716,7 @@ function aggregateReports(reports) {
     return out;
 }
 
+// Keeps reports of the selected month (and the previous one for comparison) and repaints.
 function applyReports(allReports, year, month) {
     const startSel = new Date(year, month, 1);
     const endSel = new Date(year, month + 1, 1);
@@ -699,6 +744,7 @@ function applyReports(allReports, year, month) {
     updateMonthBar();
 }
 
+// Loads the reports for the selected month (live for the current month).
 async function loadMonth() {
     const loadId = ++monthLoadId;
     if (monthUnsub) { monthUnsub(); monthUnsub = null; }
@@ -726,9 +772,12 @@ async function loadMonth() {
         if (!isCurrent) constraints.push(where('createdAt', '<', Timestamp.fromDate(windowEnd)));
         const q = query(col, ...constraints);
 
+        // Applies the loaded reports, unless a newer month was chosen meanwhile.
         const handle = snap => {
             if (loadId !== monthLoadId) return;
-            applyReports(snap.docs.map(d => d.data()), year, month);
+            // 'estimate' gives a just-submitted report its local time until the server time arrives,
+            // so it still counts as the latest report instead of having no date.
+            applyReports(snap.docs.map(d => d.data({ serverTimestamps: 'estimate' })), year, month);
         };
 
         if (isCurrent) {
@@ -741,6 +790,7 @@ async function loadMonth() {
     }
 }
 
+// Shows an error when reports could not be loaded.
 function monthLoadFailed(err, isCurrent) {
     console.warn('RiCap: could not load monthly reports', err);
     const sub = document.getElementById('monthSub');
@@ -760,6 +810,7 @@ function monthLoadFailed(err, isCurrent) {
 }
 
 
+// Previous / next month buttons.
 function initMonthBar() {
     const prev = document.getElementById('monthPrev');
     const next = document.getElementById('monthNext');
@@ -770,6 +821,7 @@ function initMonthBar() {
     updateMonthBar();
 }
 
+// Moves the selected month by delta.
 function shiftMonth(delta) {
     const d = new Date(viewYear, viewMonth + delta, 1);
     if (d > new Date(NOW.getFullYear(), NOW.getMonth(), 1)) return;
@@ -778,6 +830,7 @@ function shiftMonth(delta) {
     loadMonth();
 }
 
+// Updates the month label and button states.
 function updateMonthBar() {
     const title = document.getElementById('monthTitle');
     const sub = document.getElementById('monthSub');
@@ -809,6 +862,7 @@ function updateMonthBar() {
 }
 
 
+// River list in the sidebar.
 function initSidebar() {
     const sidebar = document.getElementById('mapSidebar');
     const toggle = document.getElementById('sidebarToggle');
@@ -825,6 +879,7 @@ function initSidebar() {
     updateSidebarStat();
 }
 
+// Re-renders the sidebar list with current statuses.
 function updateSidebar() {
     const container = document.getElementById('sidebarGroups');
     if (!container) return;
@@ -913,6 +968,7 @@ function updateSidebar() {
     buildLegend();
 }
 
+// Groups rivers by coast.
 function groupRivers(list) {
     const groups = {};
     list.forEach(rv => {
@@ -922,6 +978,7 @@ function groupRivers(list) {
     return groups;
 }
 
+// True if the river matches the sidebar search text.
 function matchesSearch(rv) {
     if (!currentSearch) return true;
 
@@ -933,6 +990,7 @@ function matchesSearch(rv) {
     return text.includes(currentSearch.toLowerCase());
 }
 
+// Shows or hides a river on the map.
 function setRiverVisibility(riverId, visible) {
     const line = riverLayers[riverId];
     if (visible) hiddenRivers.delete(riverId);
@@ -945,6 +1003,7 @@ function setRiverVisibility(riverId, visible) {
     updateDividers();
 }
 
+// Plain pins when the river lines could not be loaded.
 function showFallbackPins() {
     rivers.forEach(rv => {
         const marker = markers[rv.id];
@@ -955,6 +1014,7 @@ function showFallbackPins() {
     });
 }
 
+// Sidebar search box.
 function initSearch() {
     const search = document.getElementById('riverSearch');
     if (!search) return;
@@ -970,6 +1030,7 @@ function initSearch() {
 
 let jumpState = null;
 
+// Rivers and places matching the jump-search text.
 function jumpCandidates(text) {
     const q = text.trim().toLowerCase();
     if (!q) return [];
@@ -983,6 +1044,7 @@ function jumpCandidates(text) {
     return [...riverHits, ...areaHits].slice(0, 8);
 }
 
+// Jump search with keyboard navigation.
 function initJumpSearch(input) {
     const list = document.getElementById('searchResults');
     if (!list) return;
@@ -1021,6 +1083,7 @@ function initJumpSearch(input) {
     });
 }
 
+// Re-renders the jump-search results list.
 function refreshJumpResults() {
     if (!jumpState) return;
     const { input, list } = jumpState;
@@ -1042,6 +1105,7 @@ function refreshJumpResults() {
     input.removeAttribute('aria-activedescendant');
 }
 
+// Highlights one jump result.
 function setJumpIndex(i) {
     const { input, list } = jumpState;
     jumpState.index = i;
@@ -1052,6 +1116,7 @@ function setJumpIndex(i) {
     input.setAttribute('aria-activedescendant', 'jump-' + i);
 }
 
+// Closes the jump-search results.
 function closeJumpResults() {
     if (!jumpState) return;
     jumpState.items = [];
@@ -1060,6 +1125,7 @@ function closeJumpResults() {
     jumpState.input.removeAttribute('aria-activedescendant');
 }
 
+// Zooms to the chosen jump result.
 function jumpTo(item) {
     if (!item) return;
     closeJumpResults();
@@ -1090,6 +1156,7 @@ function jumpTo(item) {
 }
 
 
+// Status colour legend on the map.
 function addMapLegend() {
     const control = L.control({ position: 'bottomleft' });
     control.onAdd = () => {
@@ -1104,142 +1171,7 @@ function addMapLegend() {
     control.addTo(map);
 }
 
-// "My location": live GPS dot with an accuracy ring. Click again to re-center, or to stop when already centered.
-const LOCATE_ZOOM = 16;
-
-function addLocateControl() {
-    let watchId = null;
-    let dot = null;
-    let ring = null;
-    let follow = false;
-    let hasFix = false;
-    let msgTimer = null;
-
-    map.createPane('userLocation');
-    map.getPane('userLocation').style.zIndex = 650;
-
-    const control = L.control({ position: 'topleft' });
-    let button, msg;
-    control.onAdd = () => {
-        const wrap = L.DomUtil.create('div', 'leaflet-bar locate-control');
-        button = L.DomUtil.create('a', 'locate-btn', wrap);
-        button.href = '#';
-        button.setAttribute('role', 'button');
-        button.setAttribute('aria-label', 'Show my location');
-        button.title = 'Show my location';
-        button.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
-            '<circle cx="12" cy="12" r="4" fill="currentColor"/>' +
-            '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/>' +
-            '<path d="M12 1v3M12 20v3M1 12h3M20 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-        msg = L.DomUtil.create('p', 'locate-msg', wrap);
-        msg.setAttribute('role', 'status');
-        msg.hidden = true;
-        L.DomEvent.disableClickPropagation(wrap);
-        L.DomEvent.on(button, 'click', e => { L.DomEvent.preventDefault(e); onClick(); });
-        return wrap;
-    };
-    control.addTo(map);
-
-    map.on('dragstart', () => { follow = false; });
-
-    function say(text, ms) {
-        clearTimeout(msgTimer);
-        msg.textContent = text;
-        msg.hidden = !text;
-        if (text && ms) msgTimer = setTimeout(() => { msg.hidden = true; }, ms);
-    }
-
-    function setState(state) {
-        button.classList.toggle('is-loading', state === 'loading');
-        button.classList.toggle('is-active', state === 'active');
-        button.setAttribute('aria-pressed', String(state !== 'off'));
-    }
-
-    function inArea(latlng) {
-        const limit = map.options.maxBounds;
-        return !limit || limit.contains(latlng);
-    }
-
-    function centerOn(latlng) {
-        if (!inArea(latlng)) {
-            say('You are outside Bataan, so the map cannot center on you.', 5000);
-            return;
-        }
-        follow = true;
-        const zoom = Math.max(map.getZoom(), LOCATE_ZOOM);
-        if (reduceMotion) map.setView(latlng, zoom);
-        else map.flyTo(latlng, zoom, { duration: 0.9 });
-    }
-
-    function onPosition(p) {
-        const latlng = L.latLng(p.coords.latitude, p.coords.longitude);
-        const accuracy = Math.round(p.coords.accuracy);
-        if (!dot) {
-            ring = L.circle(latlng, {
-                pane: 'userLocation', radius: accuracy, interactive: false,
-                color: '#3b82f6', weight: 1, opacity: 0.6, fillColor: '#3b82f6', fillOpacity: 0.12
-            }).addTo(map);
-            dot = L.circleMarker(latlng, {
-                pane: 'userLocation', radius: 8, weight: 3,
-                color: '#ffffff', fillColor: '#3b82f6', fillOpacity: 1
-            }).addTo(map);
-        } else {
-            ring.setLatLng(latlng).setRadius(accuracy);
-            dot.setLatLng(latlng);
-        }
-        dot.bindTooltip('You are here (±' + accuracy + ' m)');
-        setState('active');
-        if (!hasFix) {
-            hasFix = true;
-            say(accuracy > 150 ? 'Location is rough (±' + accuracy + ' m). Move outdoors for a better fix.' : '', 5000);
-            centerOn(latlng);
-        } else if (follow && inArea(latlng)) {
-            map.panTo(latlng, { animate: !reduceMotion });
-        }
-    }
-
-    function onError(err) {
-        if (hasFix && err.code !== 1) return;   // keep the last fix through brief signal drops
-        stop();
-        say(err.code === 1
-            ? 'Location access is blocked. Allow location for this site in your browser settings.'
-            : 'Could not get your location. Turn on GPS and try again outdoors.', 6000);
-    }
-
-    function start() {
-        if (!window.isSecureContext) {
-            say('Location only works when the site is opened over HTTPS.', 6000);
-            return;
-        }
-        if (!navigator.geolocation) {
-            say('This browser does not support location.', 6000);
-            return;
-        }
-        setState('loading');
-        say('Finding your location…');
-        watchId = navigator.geolocation.watchPosition(onPosition, onError,
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 });
-    }
-
-    function stop() {
-        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-        if (dot) { map.removeLayer(dot); map.removeLayer(ring); }
-        dot = ring = null;
-        hasFix = follow = false;
-        setState('off');
-        say('');
-    }
-
-    function onClick() {
-        if (watchId === null) return start();
-        if (!dot) return;
-        const here = dot.getLatLng();
-        if (follow && map.getBounds().contains(here)) stop();
-        else centerOn(here);
-    }
-}
-
+// Button that clears the selected river and shows all of Bataan.
 function initReset() {
     const button = document.getElementById('resetView');
     if (!button) return;
@@ -1252,6 +1184,7 @@ function initReset() {
     });
 }
 
+// Counts shown at the top of the sidebar.
 function updateSidebarStat() {
     const element = document.getElementById('sidebarStat');
     if (!element) return;
@@ -1260,6 +1193,7 @@ function updateSidebarStat() {
     element.textContent = `${rivers.length} rivers · ${reportCount} reported in ${monthLabel()}`;
 }
 
+// Legend markup.
 function buildLegend() {
     const legend = document.getElementById('mapLegend');
     if (!legend) return;
@@ -1281,6 +1215,7 @@ function buildLegend() {
         </div>`;
 }
 
+// Escapes text before putting it into HTML.
 function escapeHtml(value) {
     return String(value)
         .replace(/&/g, '&amp;')

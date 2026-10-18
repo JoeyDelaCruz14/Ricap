@@ -1,3 +1,6 @@
+// Verify page (Verify.html): application form for official access, with an ID photo from the
+// camera or an upload. Saves the application to the Realtime Database and the photo to Storage.
+
 import { rtdb, storage } from './firebase-config.js';
 import { ref as dbRef, push, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js';
@@ -51,16 +54,19 @@ navToggle?.addEventListener('click', () => {
     navToggle.setAttribute('aria-expanded', String(open));
 });
 
+// Shows a form error.
 function showError(msg) {
     applyError.textContent = msg;
     applyError.hidden = false;
 }
 
+// Hides the form error.
 function clearError() {
     applyError.hidden = true;
     applyError.textContent = '';
 }
 
+// PH mobile number to +639XXXXXXXXX, or null.
 function normalizePhone(raw) {
     const p = raw.replace(/[\s-]/g, '');
     if (/^09\d{9}$/.test(p)) return '+63' + p.slice(1);
@@ -72,12 +78,14 @@ phoneEl.addEventListener('input', () => {
     phoneEl.value = phoneEl.value.replace(/[\s-]/g, '');
 });
 
+// Switches the ID photo box between empty, live camera and preview.
 function showState(state) {
     captureEmpty.hidden = state !== 'empty';
     captureLive.hidden = state !== 'live';
     capturePreview.hidden = state !== 'preview';
 }
 
+// Stops the camera stream.
 function stopCamera() {
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
@@ -86,6 +94,7 @@ function stopCamera() {
     video.srcObject = null;
 }
 
+// Clears the captured or uploaded photo.
 function resetPhoto() {
     stopCamera();
     photoBlob = null;
@@ -99,6 +108,7 @@ function resetPhoto() {
     showState('empty');
 }
 
+// Uses this image as the ID photo and shows the preview.
 function setPhoto(blob) {
     photoBlob = blob;
     if (previewUrl) URL.revokeObjectURL(previewUrl);

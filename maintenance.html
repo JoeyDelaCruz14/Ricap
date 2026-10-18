@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Maintenance (admins only): manage reports, rivers, access codes and verified users. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,6 +11,7 @@
 </head>
 <body class="maintenance-page">
 
+    <!-- Background video -->
     <div class="video-background" aria-hidden="true">
         <video autoplay muted loop playsinline id="bg-video">
             <source src="images&vids/5.mp4" type="video/mp4">
@@ -17,6 +19,7 @@
         <div class="video-overlay"></div>
     </div>
 
+    <!-- Top navigation -->
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -39,6 +42,7 @@
     <main class="page-main">
         <div class="page-shell">
 
+            <!-- Admin sign-in -->
             <section class="access-gate" id="mGate">
                 <p class="eyebrow">Admin</p>
                 <h1 class="gate-title">Maintenance Module</h1>
@@ -53,6 +57,7 @@
                 <p class="access-error" id="mLoginError" hidden></p>
             </section>
 
+            <!-- Maintenance panel -->
             <section id="mPanel" hidden>
                 <header class="maint-head">
                     <p class="eyebrow">Signed in as <span id="mEmailLabel"></span> ·
@@ -61,6 +66,7 @@
                     <p class="maint-sub">Review flagged content, manage river location records, and maintain system records.</p>
                 </header>
 
+                <!-- Totals -->
                 <div class="maint-stats" id="mStats">
                     <div class="m-stat"><span id="stReports">0</span><small>Reports</small></div>
                     <div class="m-stat"><span id="stFlagged">0</span><small>Flagged</small></div>
@@ -68,6 +74,7 @@
                     <div class="m-stat"><span id="stCodes">0</span><small>Active officials</small></div>
                 </div>
 
+                <!-- Tabs -->
                 <div class="maint-tabs" role="tablist">
                     <button type="button" class="m-tab is-active" data-tab="flagged">Flagged content <em id="flagBadge" hidden>0</em></button>
                     <button type="button" class="m-tab" data-tab="reports">All reports</button>
@@ -76,11 +83,13 @@
                     <button type="button" class="m-tab" data-tab="system">System records</button>
                 </div>
 
+                <!-- Tab: flagged reports -->
                 <div class="m-pane is-active" id="pane-flagged">
                     <p class="m-empty" id="flaggedEmpty">Nothing is flagged right now.</p>
                     <div class="m-list" id="flaggedList"></div>
                 </div>
 
+                <!-- Tab: all reports -->
                 <div class="m-pane" id="pane-reports">
                     <div class="m-toolbar">
                         <input type="search" id="reportSearch" placeholder="Search name, river, reporter…">
@@ -97,6 +106,7 @@
                     <div class="m-list" id="reportList"></div>
                 </div>
 
+                <!-- Tab: verified users -->
                 <div class="m-pane" id="pane-users">
                     <div class="m-toolbar">
                         <input type="search" id="userSearch" placeholder="Search name, email, role, code…">
@@ -105,6 +115,7 @@
                     <div class="m-users" id="userList"></div>
                 </div>
 
+                <!-- Tab: river records -->
                 <div class="m-pane" id="pane-rivers">
                     <form id="riverForm" class="m-form" autocomplete="off">
                         <h2 id="riverFormTitle">Add river location</h2>
@@ -157,6 +168,7 @@
                     </div>
                 </div>
 
+                <!-- Tab: access codes and data checks -->
                 <div class="m-pane" id="pane-system">
                     <h2 class="m-h2">Official access codes</h2>
                     <p class="m-empty" id="codesEmpty">No access codes issued yet.</p>
@@ -174,8 +186,10 @@
         </div>
     </main>
 
+    <!-- Toast message -->
     <div class="m-toast" id="mToast" hidden></div>
 
+    <!-- Scripts -->
     <script src="mapping-data.js"></script>
     <script type="module" src="maintenance.js"></script>
     <script type="module" src="admin-nav.js"></script>

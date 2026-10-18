@@ -1,3 +1,7 @@
+// Scanner steps: access check, choosing a river and segment, and the location (GPS, photo EXIF
+// or a pin on the map). Suggests a segment only under the strict 20 m rule in location-match.js;
+// the user can always choose manually.
+
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import { getOfficial, hasOfficialClaim, verifyCode } from './Session.js';
@@ -25,11 +29,13 @@ const gateListeners = [];
 
 const $ = id => document.getElementById(id);
 const esc = s => (deps.escapeHtml ? deps.escapeHtml(s) : String(s));
+// River name for an id.
 const riverName = id => {
     const rv = rivers.find(r => String(r.id) === String(id));
     return rv ? (rv.name || rv.officialName || String(rv.id)) : '';
 };
 
+// Loads the river segments once.
 function loadGeometry() {
     if (!geoPromise) {
         geoPromise = (async () => {
@@ -46,16 +52,19 @@ function loadGeometry() {
     return geoPromise;
 }
 
+// Distance in km from a point to a river.
 function distanceToRiverKm(riverId, lat, lng) {
     const hit = parts && nearestSegment(parts, riverId, lat, lng, Infinity);
     return hit ? hit.km : Infinity;
 }
 
+// Middle point of a line, used to centre the map.
 function midpoint(coords) {
     return coords[Math.floor(coords.length / 2)];
 }
 
 
+// Fills the river dropdown.
 function buildRiverSelect() {
     const sel = $('stepRiver');
     const groups = {};
@@ -70,6 +79,7 @@ function buildRiverSelect() {
         '</optgroup>').join('');
 }
 
+// Fills the segment dropdown for the chosen river.
 function buildSegmentSelect() {
     const sel = $('stepSegment');
     const hasRiver = !!state.riverId;
@@ -83,6 +93,7 @@ function buildSegmentSelect() {
         : 'Segments run from the source (1) to the mouth (4). Click a part of the line on the map to pick it.';
 }
 
+// Chooses a river (from the dropdown, the map or a suggestion).
 function selectRiver(id, opts = {}) {
     state.autoSelected = false;
     state.riverId = id ? String(id) : '';
@@ -93,6 +104,7 @@ function selectRiver(id, opts = {}) {
     renderSummary();
 }
 
+// Chooses a segment of the current river.
 function selectSegment(n, opts = {}) {
     state.autoSelected = !!opts.auto;
     state.segment = Number(n) || 0;
@@ -101,6 +113,7 @@ function selectSegment(n, opts = {}) {
     renderSummary();
 }
 
+// One-line summary of the current choice.
 function renderSummary() {
     const box = $('stepSummary');
     if (!box) return;
@@ -116,6 +129,7 @@ function renderSummary() {
 }
 
 
+// Creates the small selection map.
 function initMap() {
     if (map || typeof L === 'undefined' || !$('segmentMap')) return;
     map = L.map('segmentMap', {
@@ -136,6 +150,7 @@ function initMap() {
     map.on('click', e => pinLocation(e.latlng.lat, e.latlng.lng));
 }
 
+// Draws the river lines, highlighting the chosen segment.
 function drawMap(fit) {
     if (!map || !parts) return;
     riverLayer.clearLayers();
@@ -185,6 +200,7 @@ function drawMap(fit) {
     }
 }
 
+// Shows the report location as a draggable pin.
 function showLocationOnMap() {
     if (!map) return;
     if (locMarker) { map.removeLayer(locMarker); locMarker = null; }
@@ -209,6 +225,7 @@ function showLocationOnMap() {
         .addTo(map);
 }
 
+// Sets the location from a map click or pin drag.
 function pinLocation(lat, lng) {
     const status = $('locationStatus');
     if (status) status.textContent = 'Using the spot you pinned on the map.';
@@ -216,6 +233,7 @@ function pinLocation(lat, lng) {
 }
 
 
+// Saves the location and suggests a segment if one is within 20 m.
 async function setLocation(loc) {
     state.loc = loc;
     showLocationOnMap();
@@ -276,14 +294,17 @@ async function setLocation(loc) {
         <span class="step-suggestion-km">${formatMeters(hit.m)} from ${where}. You can still change it.</span></p>`);
 }
 
+// Distance as "15 m" or "1.2 km".
 function formatMeters(m) {
     return m < 1000 ? Math.round(m) + ' m' : (m / 1000).toFixed(1) + ' km';
 }
 
+// Forgets that the current choice was suggested automatically.
 function clearAutoSelection() {
     if (state.autoSelected) selectRiver('', { fit: false });
 }
 
+// Warning when the location is far from the chosen river.
 function renderLocationWarning() {
     const el = $('stepLocationWarning');
     if (!el) return;
@@ -296,6 +317,7 @@ function renderLocationWarning() {
     }
 }
 
+// Gets the location from the device GPS.
 async function useDeviceLocation() {
     const btn = $('useLocationBtn');
     const status = $('locationStatus');
@@ -315,6 +337,7 @@ async function useDeviceLocation() {
 }
 
 
+// Reads the GPS position stored in a photo, if any.
 async function readExifGps(file) {
     if (!file || file.type !== 'image/jpeg') return null;
     const v = new DataView(await file.slice(0, 256 * 1024).arrayBuffer());
@@ -330,6 +353,7 @@ async function readExifGps(file) {
     return null;
 }
 
+// Converts an EXIF GPS value to decimal degrees.
 function parseGps(v, t) {
     try {
         const le = v.getUint16(t) === 0x4949;
@@ -360,12 +384,14 @@ function parseGps(v, t) {
     }
 }
 
+// Called when a photo is chosen: uses its GPS position if it has one.
 export async function onImageFile(file) {
     const gps = await readExifGps(file).catch(() => null);
     if (gps) await setLocation({ lat: gps.lat, lng: gps.lng, accuracy: null, source: 'photo-exif' });
 }
 
 
+// The chosen river, segment and location, or an error message.
 export function getSelection() {
     if (!state.riverId) return { ok: false, error: 'Choose the river in step 1.' };
     if (!state.segment) return { ok: false, error: 'Choose which segment of the river (1 to 4) in step 1.' };
@@ -398,15 +424,19 @@ export function getSelection() {
 }
 
 
+// True once the user may submit official reports.
 export function isGateVerified() { return state.gate === 'verified'; }
+// Registers a callback for access changes.
 export function onGateChange(fn) { gateListeners.push(fn); }
 
 let gateRun = null;
+// Re-checks whether the user may submit official reports.
 export function refreshGate() {
     if (!gateRun) gateRun = runGate().finally(() => { gateRun = null; });
     return gateRun;
 }
 
+// Checks the access state: official session, claim or logged-in account.
 async function runGate() {
     const official = getOfficial();
     const user = auth.currentUser;
@@ -445,6 +475,7 @@ async function runGate() {
 }
 
 
+// Entry point, called by Image_Processing.js with shared helpers.
 export function initSteps(options) {
     deps = options || {};
     rivers = deps.rivers || [];

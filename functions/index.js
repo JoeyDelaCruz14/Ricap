@@ -1,3 +1,8 @@
+// Cloud Functions (region asia-southeast1):
+// - sendReportAlerts: when a report with status moderate or worse is created, emails the
+//   subscribers in alertSubscribers through EmailJS.
+// - redeemAccessCode: checks an access code and sets the official claim on the caller.
+
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');

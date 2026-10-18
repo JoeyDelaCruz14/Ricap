@@ -1,3 +1,5 @@
+/* Admin page (Admin.html): login gate and application cards. */
+
 :root {
     --bg: #0f0f11;
     --card: #17171a;
@@ -150,6 +152,7 @@ body.admin-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff; 
     border-radius: var(--radius);
 }
 
+/* Application cards */
 .app-list { display: flex; flex-direction: column; gap: 14px; }
 
 .app-card {
@@ -199,6 +202,7 @@ body.admin-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff; 
     overflow-wrap: anywhere;
 }
 
+/* Smaller screens */
 @media (max-width: 768px) {
     .page-main { padding: 84px 14px 64px; }
 }

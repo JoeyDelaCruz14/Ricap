@@ -1,3 +1,7 @@
+// River geometry for the map and scanner: loads Bataan waterways (local file, then the Overpass
+// API with a 7-day cache), picks each river's main stem, splits it into equal segments and draws
+// them on a Leaflet map. Also exports distance helpers used to match a location to a segment.
+
 
 const BBOX = '14.33,120.02,14.97,120.66';
 const ENDPOINTS = [
@@ -20,6 +24,7 @@ const QUERY =
 
 const STRIP_WORDS = /\b(river|ilog|rio|sapa|creek|stream|ng|ang)\b/g;
 
+// Normalizes a river name for matching (lower case, without words like "river" or "ilog").
 function norm(name) {
     return String(name || '')
         .toLowerCase()
@@ -32,6 +37,7 @@ function norm(name) {
 
 const RAD = Math.PI / 180;
 
+// Great-circle distance in km between two points.
 function km(aLat, aLng, bLat, bLng) {
     const dLat = (bLat - aLat) * RAD, dLng = (bLng - aLng) * RAD;
     const h = Math.sin(dLat / 2) ** 2 +
@@ -39,6 +45,7 @@ function km(aLat, aLng, bLat, bLng) {
     return 12742 * Math.asin(Math.sqrt(h));
 }
 
+// Closest point on the straight segment a-b to point p.
 function nearestOnSegment(p, a, b) {
     const k = Math.cos(p[0] * RAD);
     const ax = a[1] * k, ay = a[0], bx = b[1] * k, by = b[0], px = p[1] * k, py = p[0];
@@ -49,6 +56,7 @@ function nearestOnSegment(p, a, b) {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
+// Closest point on a polyline to point p, with its distance.
 function nearestOnLine(p, coords) {
     let best = null, bestD = Infinity;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -59,6 +67,7 @@ function nearestOnLine(p, coords) {
     return { pt: best, d: bestD };
 }
 
+// Total length of a polyline in km.
 function lineLengthKm(coords) {
     let s = 0;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -67,6 +76,7 @@ function lineLengthKm(coords) {
     return s;
 }
 
+// Point halfway along a polyline.
 function lineMidpoint(coords) {
     const half = lineLengthKm(coords) / 2;
     let acc = 0;
@@ -87,6 +97,7 @@ function lineMidpoint(coords) {
 
 export const SEGMENT_NAMES = ['Upstream', 'Upper-Mid', 'Lower-Mid', 'Downstream'];
 
+// Point at distance d (km) along a polyline.
 function pointAlong(coords, d) {
     let acc = 0;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -104,6 +115,7 @@ function pointAlong(coords, d) {
     return { i: coords.length - 2, pt: coords[coords.length - 1] };
 }
 
+// Splits a polyline into n parts of equal length.
 function splitIntoParts(coords, n) {
     const total = lineLengthKm(coords);
     const cuts = [];
@@ -122,6 +134,7 @@ function splitIntoParts(coords, n) {
     return parts;
 }
 
+// Joins connected waterway pieces into the longest path that reaches the coast.
 function buildMainStem(lines, coastKm) {
     const key = p => p[0] + ',' + p[1];
     const lens = lines.map(lineLengthKm);
@@ -132,6 +145,7 @@ function buildMainStem(lines, coastKm) {
     const next = new Array(lines.length).fill(-1);
     const visiting = new Set();
     let cyclic = false;
+    // Longest path from piece i following connected pieces (memoized).
     function walk(i) {
         if (best[i] !== undefined) return best[i];
         if (visiting.has(i)) { cyclic = true; return 0; }
@@ -169,11 +183,13 @@ function buildMainStem(lines, coastKm) {
     return { coords, used, uncertain, lengthKm: lineLengthKm(coords), totalKm: lens.reduce((a, b) => a + b, 0) };
 }
 
+// Line thickness for the current map zoom.
 function lineWeight(zoom) {
     return Math.max(2.5, Math.min(7, 2.5 + (zoom - 10) * 0.9));
 }
 const HIT_WEIGHT = 22;
 
+// Numbered marker shown at the middle of a segment.
 function segmentIcon(index, color) {
     return L.divIcon({
         className: 'seg-marker-icon',
@@ -186,6 +202,7 @@ function segmentIcon(index, color) {
 const NO_ASSESSMENT_COLOR = '#7f8792';
 
 
+// Waterways cached in localStorage, if still fresh.
 function readCache() {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
@@ -196,11 +213,13 @@ function readCache() {
     } catch (e) { return null; }
 }
 
+// Caches downloaded waterways in localStorage.
 function writeCache(ways) {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), ways })); }
     catch (e) { console.warn('[RiverLines] could not cache waterways (storage full?)'); }
 }
 
+// Loads the bundled waterways file (data/bataan-waterways.json).
 async function loadWaterwaysFile() {
     const res = await fetch(DATA_URL);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -209,6 +228,7 @@ async function loadWaterwaysFile() {
     return json.ways;
 }
 
+// Downloads waterways from the Overpass API, trying each endpoint in turn.
 async function fetchWaterways() {
     let lastErr = null;
     for (const url of ENDPOINTS) {
@@ -239,6 +259,7 @@ async function fetchWaterways() {
 }
 
 
+// Builds the segments for every river: { riverId: [segment, ...] }.
 export async function computeRiverSegments(rivers, options = {}) {
     let ways;
     try {
@@ -315,6 +336,7 @@ export async function computeRiverSegments(rivers, options = {}) {
     return { ways, assigned, how, waysOf, stems, parts };
 }
 
+// Nearest segment of one river to a point, within maxKm.
 export function nearestSegment(parts, riverId, lat, lng, maxKm) {
     const list = parts && parts[riverId];
     if (!list) return null;
@@ -326,6 +348,7 @@ export function nearestSegment(parts, riverId, lat, lng, maxKm) {
     return best && best.km <= maxKm ? best : null;
 }
 
+// Distance from a point to every segment of every river, nearest first.
 export function segmentDistances(parts, lat, lng) {
     const out = [];
     Object.keys(parts || {}).forEach(riverId => {
@@ -337,6 +360,7 @@ export function segmentDistances(parts, lat, lng) {
     return out.sort((a, b) => a.km - b.km);
 }
 
+// Draws all river segments on a Leaflet map and returns handles for styling them.
 export async function loadRiverLines(map, rivers, options = {}) {
     const { ways, assigned, how, waysOf, stems, parts } = await computeRiverSegments(rivers, options);
 

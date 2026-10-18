@@ -1,5 +1,9 @@
+// Sign-up form on main.html (runs before the older handler in home-interactive.js and stops it).
+// Creates a Firebase email/password account, records the email in the registry, saves the local
+// account without the password, and optionally turns on email alerts.
+
 import { auth } from './firebase-config.js';
-import { createUserWithEmailAndPassword, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import { createUserWithEmailAndPassword, updateProfile, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { saveAccount, getAccount, normalizePhone } from './account.js';
 import { isEmailRegistered, registerEmail } from './registry.js';
 import { setEmailAlerts } from './alerts.js';
@@ -7,6 +11,7 @@ import { requestNotifications, setAllNotifications } from './Notify.js';
 
 const form = document.getElementById('signupForm');
 
+// Small confirmation message at the bottom of the page.
 function showToast(message) {
     const toast = document.getElementById('toast');
     const msg = document.getElementById('toastMessage');
@@ -45,6 +50,7 @@ if (form) {
         const submitBtn = form.querySelector('.auth-submit');
         if (submitBtn) submitBtn.disabled = true;
         const name = `${firstName} ${lastName}`;
+        let verificationSent = false;
         try {
             try {
                 if (await isEmailRegistered(email)) {
@@ -58,6 +64,9 @@ if (form) {
             try {
                 const cred = await createUserWithEmailAndPassword(auth, email, password);
                 await updateProfile(cred.user, { displayName: name }).catch(() => {});
+                // The user must open this link before they can log in (checked in admin-login.js).
+                try { await sendEmailVerification(cred.user); verificationSent = true; }
+                catch (e) { console.warn('RiCap: could not send the verification email', e && e.code); }
             } catch (e) {
                 const c = String(e && e.code || '');
                 showToast(c === 'auth/email-already-in-use' ? 'An account with this email already exists. Please log in instead.'
@@ -92,6 +101,8 @@ if (form) {
         if (loginTab) loginTab.click();
         const le = document.getElementById('loginEmail');
         if (le) le.value = email;
-        showToast('Account created successfully.' + alertMsg);
+        showToast(verificationSent
+            ? 'Account created. We sent a confirmation link to ' + email + '. Open it, then log in.' + alertMsg
+            : 'Account created. Log in to get a new confirmation link for ' + email + '.' + alertMsg);
     }, true);
 }

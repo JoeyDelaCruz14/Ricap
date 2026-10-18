@@ -1,3 +1,5 @@
+/* Tracking page (Tracking.html): records grid and table, monthly map, timeline and detail view. */
+
 /* ---- from style.css ---- */
 
 @font-face {
@@ -635,6 +637,7 @@ main {
 
 
 .scan-hero,
+/* Page layout */
 .docs-shell {
     max-width: 1300px;
     margin-inline: auto;
@@ -688,6 +691,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 
 
+/* List header and toolbar */
 .docs-list-header {
     display: flex;
     align-items: flex-end;
@@ -804,6 +808,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 
+/* Empty state */
 .docs-empty {
     background: #14151b;
     border: 1px dashed rgba(255, 255, 255, 0.15);
@@ -822,6 +827,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 
+/* Record cards */
 .record-grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -989,6 +995,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 
+/* Records table */
 .timeline-table-wrap {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
@@ -1127,6 +1134,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 
+/* Monthly map and timeline */
 .trend-card { margin-bottom: 40px; }
 
 .trend-head {
@@ -1366,6 +1374,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: rgba(255, 255, 255, 0.6);
 }
 
+/* Map legend and river chips */
 .trend-legend {
     display: flex;
     flex-wrap: wrap;
@@ -1422,6 +1431,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .river-chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .river-chip span { color: rgba(255, 255, 255, 0.55); font-variant-numeric: tabular-nums; }
 
+/* Map popups */
 .trend-map .leaflet-popup-content-wrapper {
     background: #14151b;
     color: #fff;
@@ -1450,6 +1460,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .pop-down { color: #6fd3b0; }
 
 
+/* Detail view */
 .back-link {
     display: inline-flex;
     align-items: center;
@@ -1597,6 +1608,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Assessment */
 .assessment-box {
     background: rgba(160, 90, 240, 0.08);
     border: 1px solid rgba(160, 90, 240, 0.28);
@@ -1622,6 +1634,15 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     color: rgba(255, 255, 255, 0.85);
 }
 
+/* AI / rule-based recommendation in the detail view; keeps the numbered steps on separate lines. */
+.reco-box p { white-space: pre-line; }
+.reco-box .reco-source {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
 .indicator-heading {
     font-size: 0.75rem;
     font-weight: 700;
@@ -1631,6 +1652,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     margin: 0 0 12px;
 }
 
+/* Metrics */
 .metric-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1697,6 +1719,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
     margin-top: 1px;
 }
 
+/* Detail actions */
 .result-actions {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1711,6 +1734,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 
 
+/* Smaller screens */
 @media (max-width: 1100px) {
     .trend-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

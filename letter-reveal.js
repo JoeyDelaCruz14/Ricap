@@ -1,3 +1,5 @@
+// Reveals an SVG title while scrolling. Not loaded by any page at the moment.
+
 document.addEventListener('DOMContentLoaded', () => {
     const wrap = document.getElementById('letterRevealWrap');
     const svg = document.getElementById('letterRevealSvg');
@@ -5,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) return; 
     let ticking = false;
+    // Reveals the letters by how far the section has scrolled.
     function update() {
         ticking = false;
         const rect = wrap.getBoundingClientRect();
@@ -17,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.style.transform = `scale(${scale})`;
     }
 
+    // Runs update() at most once per frame.
     function onScroll() {
         if (!ticking) {
             ticking = true;

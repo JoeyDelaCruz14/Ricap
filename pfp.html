@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- My Profile: account details, profile picture, official access, alerts, password and recent reports. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -10,6 +11,7 @@
 </head>
 <body class="profile-page">
 
+    <!-- Background video -->
     <div class="video-background" aria-hidden="true">
         <video autoplay muted loop playsinline id="bg-video">
             <source src="images&vids/5.mp4" type="video/mp4">
@@ -17,6 +19,7 @@
         <div class="video-overlay"></div>
     </div>
 
+    <!-- Top navigation -->
     <nav class="nav" id="nav">
         <div class="nav-inner">
             <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -39,6 +42,7 @@
     <main class="pf-main">
         <div class="pf-shell">
 
+            <!-- Shown when not signed in -->
             <section class="pf-card pf-gate" id="pfGate" hidden>
                 <p class="eyebrow">Profile</p>
                 <h1>You're not signed in</h1>
@@ -49,6 +53,7 @@
                 </div>
             </section>
 
+            <!-- Profile header: picture, name, badges, stats -->
             <section class="pf-card pf-hero" id="pfHero" hidden>
                 <div class="pf-hero-top">
                     <button type="button" class="pf-avatar" id="pfAvatar" aria-label="Change profile picture">
@@ -75,6 +80,7 @@
             </section>
 
             <div class="pf-grid" id="pfGrid" hidden>
+                <!-- Account details and profile picture -->
                 <form class="pf-card pf-details" id="pfForm" autocomplete="on" novalidate hidden>
                     <div class="pf-card-head">
                         <h2>Account details</h2>
@@ -121,6 +127,7 @@
                 </form>
 
                 <div class="pf-side">
+                    <!-- Official access -->
                     <div class="pf-card" id="pfOfficialCard">
                         <div class="pf-card-head"><h2>Official access</h2></div>
                         <dl class="pf-dl" id="pfOfficial"></dl>
@@ -128,6 +135,7 @@
                         <div class="pf-actions" id="pfOfficialActions"></div>
                     </div>
 
+                    <!-- Email alerts -->
                     <div class="pf-card" id="pfAlerts" hidden>
                         <div class="pf-card-head"><h2>Alerts</h2></div>
                         <label class="pf-toggle" for="pfEmailAlerts">
@@ -136,9 +144,37 @@
                         </label>
                         <p class="pf-note pf-alert-note" id="pfAlertsNote" hidden></p>
                     </div>
+
+                    <!-- Change password -->
+                    <form class="pf-card pf-password" id="pfPasswordForm" novalidate hidden>
+                        <div class="pf-card-head"><h2>Change password</h2></div>
+                        <input type="email" id="pfPwEmail" autocomplete="username" hidden>
+                        <div class="pf-fields">
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfPwCurrent">Current password</label>
+                                <input type="password" id="pfPwCurrent" autocomplete="current-password" required>
+                            </div>
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfPwNew">New password</label>
+                                <input type="password" id="pfPwNew" autocomplete="new-password" minlength="6" required aria-describedby="pfPwHint">
+                            </div>
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfPwConfirm">Confirm new password</label>
+                                <input type="password" id="pfPwConfirm" autocomplete="new-password" minlength="6" required>
+                            </div>
+                        </div>
+                        <p class="pf-hint" id="pfPwHint">At least 6 characters.</p>
+                        <p class="pf-error" id="pfPwError" role="alert" hidden></p>
+                        <p class="pf-note pf-pw-status" id="pfPwStatus" role="status" aria-live="polite"></p>
+                        <div class="pf-actions">
+                            <button type="submit" class="pf-btn is-primary" id="pfPwSave">Update password</button>
+                            <button type="button" class="pf-btn" id="pfPwReset">Email me a reset link</button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
+            <!-- My recent reports -->
             <section class="pf-card" id="pfReportsCard" hidden>
                 <div class="pf-reports-head">
                     <h2>My recent reports</h2>
@@ -150,6 +186,7 @@
         </div>
     </main>
 
+    <!-- Photo crop dialog -->
     <dialog class="pf-card pf-crop" id="pfCropDialog" aria-labelledby="pfCropTitle">
         <div class="pf-card-head"><h2 id="pfCropTitle">Adjust your photo</h2></div>
         <div class="pf-crop-stage" id="pfCropStage" tabindex="0" role="img" aria-label="Preview of your new profile picture" aria-describedby="pfCropHint">
@@ -167,8 +204,10 @@
         </div>
     </dialog>
 
+    <!-- Toast message -->
     <div class="pf-toast" id="pfToast" role="status" hidden></div>
 
+    <!-- Scripts -->
     <script src="mapping-data.js"></script>
     <script type="module" src="pfp.js"></script>
     <script type="module" src="admin-nav.js"></script>

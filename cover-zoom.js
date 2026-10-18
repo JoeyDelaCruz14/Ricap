@@ -1,3 +1,5 @@
+// Zooms the background video in while scrolling past the hero. Not loaded by any page at the moment.
+
 document.addEventListener('DOMContentLoaded', () => {
     const video = document.getElementById('bg-video');
     const hero = document.querySelector('.hero');
@@ -9,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxScale = 1.85; 
     let ticking = false;
 
+    // Scales the video by how far the hero has scrolled.
     function update() {
         ticking = false;
 
@@ -19,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         video.style.transform = `scale(${scale})`;
     }
 
+    // Runs update() at most once per frame.
     function onScroll() {
         if (!ticking) {
             ticking = true;

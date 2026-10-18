@@ -1,3 +1,7 @@
+// Shared nav behaviour on every page: shows Admin/Maintenance links to admins, adds Log out,
+// the greeting with the profile picture, the mobile menu toggle, and keeps the verified state
+// and the published profile up to date. Also exports performLogout() for other scripts.
+
 import { auth } from './firebase-config.js';
 import { startReportAlerts } from './Notify.js';
 import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount } from './account.js';
@@ -6,6 +10,7 @@ import { isAdminUser } from './admin-role.js';
 
 const LOGOUT_REDIRECT = 'main.html';
 const OFFICIAL_KEY = 'ricap_official';  
+// Logs out everything (official session, local account, Firebase) and goes to the landing page.
 export async function performLogout() {
     try { localStorage.removeItem(OFFICIAL_KEY); } catch (e) {  }
     clearLocalLogin();
@@ -13,6 +18,7 @@ export async function performLogout() {
     window.location.href = LOGOUT_REDIRECT;
 }
 
+// Adds hidden Admin and Maintenance links to pages that do not declare them.
 function ensureAdminLinks() {
     const links = document.getElementById('navLinks');
     if (!links) return;
@@ -29,6 +35,7 @@ function ensureAdminLinks() {
     });
 }
 
+// Adds a Log out link to the nav (shown only when someone is logged in).
 function ensureLogoutLink() {
     const links = document.getElementById('navLinks');
     if (!links || links.querySelector('[data-logout]')) return;
@@ -46,6 +53,7 @@ function ensureLogoutLink() {
     links.appendChild(li);
 }
 
+// Adds the "Hi, name" greeting with a small avatar, linking to the profile page.
 function ensureGreeting() {
     const links = document.getElementById('navLinks');
     if (!links) return null;
@@ -74,12 +82,25 @@ function ensureGreeting() {
 }
 
 
+// Nav items labelled Login (hidden while someone is logged in).
 function loginItems() {
     return [...document.querySelectorAll('#navLinks li')].filter(li =>
         !li.hasAttribute('data-logout') &&
         li.textContent.trim().toLowerCase() === 'login');
 }
 
+// The Scanner is only for verified officials and admins. Officials who still need to enter their
+// access code reach it from "Enter access code" (Home) or "Go to Scanner" (profile), which stay visible.
+const SCANNER_LINKS = '#navLinks a[href="Image_Processing.html"], a.docs-new-scan-btn, .docs-empty a[href="Image_Processing.html"]';
+function paintScannerLinks(show) {
+    document.querySelectorAll(SCANNER_LINKS).forEach(a => {
+        const el = a.closest('#navLinks li') || a;
+        el.hidden = !show;
+        el.style.display = show ? '' : 'none';
+    });
+}
+
+// Updates the nav for the current user: admin links, login/logout items, greeting.
 async function apply(user) {
     const isAdmin = await isAdminUser(user);
     if (user !== auth.currentUser) return;
@@ -91,6 +112,7 @@ async function apply(user) {
     loginItems().forEach(li => { li.hidden = loggedIn; });
     const verified = isVerifiedUser();
     document.querySelectorAll('#navLinks a[href="Verify.html"]').forEach(a => { a.closest('li').hidden = verified; });
+    paintScannerLinks(verified || isAdmin);
     const logout = document.querySelector('#navLinks [data-logout]');
     if (logout) logout.hidden = !loggedIn;
     if (greet) {
@@ -102,6 +124,7 @@ async function apply(user) {
     }
 }
 
+// Shows the profile picture in the greeting, or hides it when there is none.
 function paintNavAvatar(url) {
     const img = document.querySelector('#navLinks [data-nav-avatar]');
     if (!img) return;
@@ -111,10 +134,12 @@ function paintNavAvatar(url) {
 }
 
 // Pages without their own menu script mark the toggle with data-nav-toggle.
+// Mobile menu open/close for pages whose toggle button has data-nav-toggle.
 function initToggle() {
     const toggle = document.getElementById('navToggle');
     const links = document.getElementById('navLinks');
     if (!toggle || !links || !toggle.hasAttribute('data-nav-toggle')) return;
+    // Opens or closes the mobile menu.
     const setOpen = open => {
         links.classList.toggle('open', open);
         toggle.classList.toggle('open', open);
@@ -125,8 +150,11 @@ function initToggle() {
     document.addEventListener('keydown', e => { if (e.key === 'Escape') setOpen(false); });
 }
 
+// Entry point: builds the nav extras and listens for auth and storage changes.
 function start() {
     initToggle();
+    // Hide right away for normal users; apply() shows it again once an admin is confirmed.
+    paintScannerLinks(isVerifiedUser());
     apply(auth.currentUser);
     onAuthStateChanged(auth, apply);
     window.addEventListener('storage', () => apply(auth.currentUser));
@@ -137,6 +165,7 @@ function start() {
 
 // Keeps the admin's list of verified users (Maintenance → Verified users) up to date.
 let profilePublished = false;
+// Publishes a verified user to profiles/ once per page so Maintenance can list them.
 async function publishProfile() {
     if (profilePublished || !isVerifiedUser()) return;
     profilePublished = true;
@@ -150,10 +179,18 @@ async function publishProfile() {
 }
 
 // Picks up an approval that happened after the user logged in.
+// Picks up an approval or redeemed code that happened after the user logged in.
 async function refreshVerified() {
     const a = getAccount();
     if (!isLocalLoggedIn() || !a || !a.email || a.verified) return;
     try {
+        const user = auth.currentUser;
+        if (user && !user.isAnonymous && user.email && user.email.toLowerCase() === String(a.email).toLowerCase() &&
+            (await user.getIdTokenResult()).claims.official === true) {
+            saveAccount({ ...a, verified: true });
+            apply(auth.currentUser);
+            return;
+        }
         const { getApplicationStatus } = await import('./registry.js');
         if ((await getApplicationStatus(a.email)) !== 'approved') return;
         saveAccount({ ...a, verified: true });

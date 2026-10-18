@@ -1,3 +1,6 @@
+// Strict 20 m rule for suggesting a river segment from a location (GPS or photo EXIF).
+// Tested in tests/location-match.test.mjs.
+
 import { segmentDistances } from './river-lines.js';
 
 // Change this one value to widen or tighten the auto-select rule.

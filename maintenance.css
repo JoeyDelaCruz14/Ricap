@@ -1,3 +1,5 @@
+/* Maintenance page (maintenance.html): admin panels, report cards and forms. */
+
 :root {
     --bg: #0f0f11;
     --card: rgba(23, 23, 26, 0.82);
@@ -423,6 +425,7 @@ body.maintenance-page ::selection { background: rgba(139, 92, 246, 0.4); color: 
 .m-card,
 .m-form,
 .m-table-wrap,
+/* Data checks */
 .m-check {
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);

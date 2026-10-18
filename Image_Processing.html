@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Scanner: choose a river and segment, upload or take a photo, scan it and submit an official report. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -15,6 +16,7 @@
     <source src="images&vids/Sequence_01_3.mp4" type="video/mp4">
 </video>
 
+<!-- Top navigation -->
 <nav class="nav" id="siteNav">
     <div class="nav-inner">
         <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -34,6 +36,7 @@
     </div>
 </nav>
 
+<!-- Page title -->
 <header class="scan-hero">
     <p class="scan-eyebrow">Image Processing</p>
     <h1 class="scan-heading">Scan a river photo, get an instant pollution read.</h1>
@@ -41,6 +44,7 @@
 </header>
 
 <main class="scan-section">
+    <!-- Access check: login / access code -->
     <section class="card gate-card" id="gateCard" aria-live="polite">
         <div class="gate-checking" id="gateChecking">
             <span class="gate-spinner" aria-hidden="true"></span> Checking your access…
@@ -79,6 +83,7 @@
 
     <div class="scan-steps" id="scanSteps" hidden>
 
+        <!-- Step 1: river, segment and location -->
         <section class="card step-card step-river" aria-labelledby="stepRiverTitle">
             <div class="step-head">
                 <span class="step-num" aria-hidden="true">1</span>
@@ -118,6 +123,7 @@
 
         <div class="scan-grid">
 
+            <!-- Step 2: photo upload / camera and scan -->
             <section class="card scanner-card" aria-labelledby="stepPhotoTitle">
                 <div class="step-head">
                     <span class="step-num" aria-hidden="true">2</span>
@@ -157,6 +163,7 @@
                 </div>
             </section>
 
+            <!-- Step 3: result, recommendation and submit -->
             <section class="card results-card" id="resultsCard" aria-live="polite" aria-labelledby="stepResultTitle">
                 <div class="step-head">
                     <span class="step-num" aria-hidden="true">3</span>
@@ -201,6 +208,7 @@
     </div>
 </main>
 
+<!-- Camera preview -->
 <div class="camera-overlay" id="cameraOverlay" hidden>
     <video id="cameraVideo" autoplay playsinline muted></video>
     <p class="camera-error" id="cameraError" hidden></p>
@@ -210,6 +218,7 @@
     </div>
 </div>
 
+<!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="vendor/onnxruntime-web/ort.min.js"></script>
 <script src="mapping-data.js"></script>

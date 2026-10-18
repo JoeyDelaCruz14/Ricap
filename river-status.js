@@ -1,3 +1,6 @@
+// Live river status from recent reports: watches the last 30 days of reports in Firestore,
+// matches each to the nearest river and combines them, newer reports weighing more.
+
 import { db } from './firebase-config.js';
 import {
     collection,
@@ -14,6 +17,7 @@ const MAX_AGE_DAYS = 30;
 const MAX_ACCURACY_M = 2000;
 const HALF_LIFE_DAYS = 7;
 
+// Great-circle distance in km.
 function distKm(aLat, aLng, bLat, bLng) {
     const R = 6371;
     const rad = Math.PI / 180;
@@ -25,6 +29,7 @@ function distKm(aLat, aLng, bLat, bLng) {
     return 2 * R * Math.asin(Math.sqrt(h));
 }
 
+// Maps a pollution score (0-100) to healthy / moderate / polluted / critical.
 export function statusFromScore(score) {
     return score > 85 ? 'critical'
         : score > 65 ? 'polluted'
@@ -32,6 +37,7 @@ export function statusFromScore(score) {
         : 'healthy';
 }
 
+// Nearest river to a point, within MAX_MATCH_KM.
 export function nearestRiver(lat, lng, rivers) {
     let best = null;
     let bestD = Infinity;
@@ -51,6 +57,7 @@ export function nearestRiver(lat, lng, rivers) {
     return best && bestD <= MAX_MATCH_KM ? best : null;
 }
 
+// Combines report scores per river; each report counts half as much every HALF_LIFE_DAYS.
 function compute(docs, rivers) {
     const buckets = {};
 
@@ -121,6 +128,7 @@ function compute(docs, rivers) {
     return out;
 }
 
+// Calls cb with fresh statuses whenever reports change. Returns the unsubscribe function.
 export function watchRiverStatuses(rivers, cb) {
     const since = Timestamp.fromDate(new Date(Date.now() - MAX_AGE_DAYS * 864e5));
 

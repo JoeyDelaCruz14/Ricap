@@ -1,3 +1,6 @@
+// Effects for Home.html: nav shadow, smooth scrolling, back-to-top, mobile menu, posts fading in
+// as they load, card tilt (mouse only) and the counting animation of the stats.
+
 (function () {
     'use strict';
 
@@ -17,6 +20,7 @@
 
 
     let ticking = false;
+    // Nav shadow and back-to-top button on scroll.
     function onScroll() {
         if (ticking) return;
         ticking = true;
@@ -31,6 +35,7 @@
     onScroll();
 
 
+    // Smooth scroll that leaves room for the fixed nav.
     function scrollToTarget(target) {
         target.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
         if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
@@ -54,10 +59,12 @@
     }
 
 
+    // True while the mobile menu is open.
     function menuOpen() {
         return !!links && links.classList.contains('open');
     }
 
+    // Closes the mobile menu, optionally returning focus to the toggle.
     function closeMenu(returnFocus) {
         if (!menuOpen()) return;
         links.classList.remove('open');
@@ -108,6 +115,7 @@
         }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 })
         : null;
 
+    // Fades an element in after a delay.
     function reveal(el, delay) {
         if (!revealObserver || reduceMotion()) return;
         el.classList.add('hp-reveal');
@@ -120,6 +128,7 @@
     });
 
 
+    // Prepares newly rendered posts for the fade-in.
     function prepareFeed() {
         let fresh = 0;
         feed.querySelectorAll(':scope > .post').forEach((post) => {
@@ -144,6 +153,7 @@
         let tiltFrame = 0;
         let lastEvent = null;
 
+        // Puts a tilted card back flat.
         function resetTilt(card) {
             if (!card) return;
             card.classList.remove('is-tilting');
@@ -175,6 +185,7 @@
     }
 
 
+    // Counts the stats up to their new value.
     const statIds = ['statReports', 'statRivers', 'statOfficials'];
     const easeOutExpo = (t) => (t >= 1 ? 1 : 1 - Math.pow(2, -10 * t));
 
@@ -186,11 +197,13 @@
         let frame = 0;
         const observer = new MutationObserver(onWrite);
 
+        // Writes the number without triggering the observer again.
         function write(text) {
             el.textContent = text;
             observer.takeRecords();
         }
 
+        // Animates from the shown number to the new one.
         function onWrite() {
             const target = parseInt(el.textContent.replace(/[^\d-]/g, ''), 10);
             if (!Number.isFinite(target)) return;

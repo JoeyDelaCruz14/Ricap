@@ -1,3 +1,6 @@
+// CLIP "is this a river photo?" check, run in the browser with transformers.js (loaded from a CDN).
+// Compares the photo to water and non-water captions; the model (~90 MB) downloads on first use.
+
 const LIB_URLS = [
     'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js',
     'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1/dist/transformers.min.js',
@@ -46,6 +49,7 @@ const MIN_TOP_SCORE = 0.25;
 let libPromise = null;
 let classifierPromise = null;
 
+// Loads transformers.js, trying each CDN URL until one works.
 function loadLib() {
     if (!libPromise) {
         libPromise = (async function () {
@@ -71,6 +75,7 @@ function loadLib() {
     return libPromise;
 }
 
+// Loads the CLIP zero-shot classifier once and reuses it.
 export function loadClipGate(onProgress) {
     if (!classifierPromise) {
         classifierPromise = loadLib()
@@ -89,6 +94,7 @@ export function loadClipGate(onProgress) {
     return classifierPromise;
 }
 
+// Classifies the photo; ok is true when the water captions score high enough.
 export async function checkRiverPhoto(imageSrc) {
     const classifier = await loadClipGate();
     const results = await classifier(imageSrc, ALL_LABELS);

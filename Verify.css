@@ -1,3 +1,5 @@
+/* Verify page (Verify.html): application form, ID photo capture and progress. */
+
 :root {
     --ap-bg: #111111;
     --ap-card: #111111;
@@ -57,6 +59,7 @@ body.submit-page {
     background: var(--ap-accent); border-color: var(--ap-accent); color: #fff;
 }
 
+/* Form */
 .report-form { display: flex; flex-direction: column; gap: 18px; }
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
@@ -98,6 +101,7 @@ h1, h2, h3, p, label, li { color: var(--ap-ink); }
 .ghost-btn { background: transparent; color: var(--ap-accent-soft); border: 1px solid var(--ap-line); }
 .ghost-btn:hover { border-color: var(--ap-accent); background: rgba(139,92,246,.14); }
 
+/* ID photo box */
 .capture-box {
     border: 2px dashed var(--ap-line); border-radius: var(--ap-radius);
     background: var(--ap-bg); padding: 20px; text-align: center;
@@ -117,6 +121,7 @@ h1, h2, h3, p, label, li { color: var(--ap-ink); }
     margin: 0; font-size: .88rem; color: var(--ap-danger); font-weight: 500;
 }
 
+/* Success message */
 .submit-success { text-align: center; color: var(--ap-ink); }
 .submit-success svg { color: var(--ap-accent); margin-bottom: 8px; }
 .success-title { margin: 0 0 10px; font-size: 1.7rem; letter-spacing: -.02em; }
@@ -235,6 +240,7 @@ body.submit-page:has(#applyForm) .submit-shell { width: 100%; max-width: 1480px;
 }
 #applyFormSection > .report-form { grid-area: form; }
 
+/* Approval steps */
 .apply-steps {
     list-style: none;
     margin: 0;
@@ -292,6 +298,7 @@ body.submit-page:has(#applyForm) .submit-shell { width: 100%; max-width: 1480px;
 }
 .apply-steps li.is-done .apply-step-num::before { content: "✓"; font-size: .85rem; }
 
+/* Form card */
 #applyForm {
     gap: 20px;
     padding: clamp(22px, 2.4vw, 36px);
@@ -378,6 +385,7 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
     background: rgba(255, 107, 138, 0.08);
 }
 
+/* Progress bar */
 .apply-progress { display: flex; align-items: center; gap: 12px; }
 .apply-progress-bar {
     flex: 1;
@@ -414,6 +422,7 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
 }
 #applySuccess svg { color: var(--ap-ok); }
 
+/* Smaller screens */
 @media (max-width: 900px) {
     #applyFormSection {
         grid-template-columns: minmax(0, 1fr);

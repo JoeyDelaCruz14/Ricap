@@ -1,13 +1,18 @@
+// Email alert subscription for logged-in accounts. The subscriber list lives in Firestore
+// (alertSubscribers); the sendReportAlerts Cloud Function emails them when a report is posted.
+
 import { db } from './firebase-config.js';
 import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ensureAuth } from './Session.js';
 import { getAccount, saveAccount, isLocalLoggedIn, normalizePhone } from './account.js';
 
+// True if the logged-in account opted in to email alerts.
 export function emailAlertsEnabled() {
     const a = getAccount();
     return !!(a && a.email && a.emailAlerts === true);
 }
 
+// Adds or removes this account in the Firestore subscriber list.
 async function writeSubscriber(account, enabled) {
     if (!account.email) throw new Error('No email on this account.');
     const uid = await ensureAuth();
@@ -20,6 +25,7 @@ async function writeSubscriber(account, enabled) {
     }, { merge: true });
 }
 
+// Turns email alerts on or off for the logged-in account.
 export async function setEmailAlerts(on) {
     const a = getAccount();
     if (!a) throw new Error('No account found.');
@@ -28,6 +34,7 @@ export async function setEmailAlerts(on) {
     saveAccount(a);
 }
 
+// Re-saves the subscription on page load, in case it was lost on the server.
 export async function resyncIfOptedIn() {
     if (!isLocalLoggedIn()) return;
     const a = getAccount();

@@ -1,3 +1,7 @@
+// Map mask that darkens everything outside Bataan and outlines its municipalities.
+// Boundary comes from data/bataan-boundaries.geojson, falling back to Nominatim (cached 30 days).
+// Also used by the scanner to measure how far a point is from the coast.
+
 
 const BOUNDARY_URL = 'data/bataan-boundaries.geojson';
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
@@ -11,6 +15,7 @@ const AREA_LINE_COLOR = '#111318';
 const EDGE_TOLERANCE_KM = 1;
 
 
+// Boundary cached in localStorage, if still fresh.
 function readCache() {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
@@ -21,11 +26,13 @@ function readCache() {
     } catch (e) { return null; }
 }
 
+// Caches the boundary in localStorage.
 function writeCache(rings) {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), rings })); }
     catch (e) {  }
 }
 
+// Converts GeoJSON (Multi)Polygon coordinates to Leaflet [lat, lng] rings.
 function toLatLngPolygons(geometry) {
     const polys = geometry.type === 'Polygon' ? [geometry.coordinates]
         : geometry.type === 'MultiPolygon' ? geometry.coordinates
@@ -33,6 +40,7 @@ function toLatLngPolygons(geometry) {
     return polys.map(poly => poly.map(ring => ring.map(([lng, lat]) => [lat, lng])));
 }
 
+// Loads the bundled boundary file.
 async function loadBoundaryFile() {
     const res = await fetch(BOUNDARY_URL);
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -48,6 +56,7 @@ async function loadBoundaryFile() {
     };
 }
 
+// Downloads the province boundary from OpenStreetMap Nominatim.
 async function loadBoundaryFromNominatim(bounds) {
     let rings = readCache();
     if (!rings) {
@@ -68,6 +77,7 @@ async function loadBoundaryFromNominatim(bounds) {
 }
 
 
+// Point-in-polygon test for one ring.
 function ringContains(ring, lat, lng) {
     let inside = false;
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -77,12 +87,14 @@ function ringContains(ring, lat, lng) {
     return inside;
 }
 
+// True if the point is inside any of the polygons.
 function polygonsContain(polygons, lat, lng) {
     let inside = false;
     polygons.forEach(poly => poly.forEach(ring => { if (ringContains(ring, lat, lng)) inside = !inside; }));
     return inside;
 }
 
+// Distance in km from a point to the nearest boundary edge.
 function distanceToEdgesKm(polygons, lat, lng) {
     const kx = 111.32 * Math.cos(lat * Math.PI / 180), ky = 110.57;
     let best = Infinity;
@@ -100,6 +112,7 @@ function distanceToEdgesKm(polygons, lat, lng) {
     return best;
 }
 
+// Returns a function (lat, lng) -> km to the coast, used by the scanner.
 export async function loadCoastDistance() {
     const data = await loadBoundaryFile();
     return p => {
@@ -109,6 +122,7 @@ export async function loadCoastDistance() {
 }
 
 
+// Adds the CSS for the mask, outlines and marker animations once.
 function injectStyles() {
     if (document.getElementById('ricap-mask-styles')) return;
     const style = document.createElement('style');
@@ -162,9 +176,11 @@ function injectStyles() {
 const CLICK_ZOOM_LEVEL = 16;
 const CLICK_FLY_SECONDS = 0.7;
 
+// Zooms smoothly to a river marker when it is clicked.
 function bindMarkerClickAnimation(map, onOverview) {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // The marker element that was clicked, if any.
     function markerIconEl(e) {
         const marker = e.popup && e.popup._source;
         const icon = marker && (marker.getElement ? marker.getElement() : marker._icon);
@@ -208,6 +224,7 @@ function bindMarkerClickAnimation(map, onOverview) {
 }
 
 
+// Adds the mask and municipality outlines to the map; highlights the area under the pointer.
 export async function loadBataanMask(map, bounds, options = {}) {
     injectStyles();
     bindMarkerClickAnimation(map, options.onOverview);
@@ -267,6 +284,7 @@ export async function loadBataanMask(map, bounds, options = {}) {
     const label = L.tooltip({ className: 'ricap-area-label', direction: 'center', permanent: false, interactive: false, opacity: 1 });
     let active = null;
 
+    // Highlights one municipality (or none).
     function setActive(area) {
         if (area === active) return;
         if (active) active.layer.setStyle(baseStyle);
@@ -280,6 +298,7 @@ export async function loadBataanMask(map, bounds, options = {}) {
         }
     }
 
+    // The municipality under a map position.
     function areaAt(latlng) {
         if (!latlng) return null;
         for (const area of municipalities) {

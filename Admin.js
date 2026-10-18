@@ -1,3 +1,6 @@
+// Admin page (Admin.html), admins only: reviews official applications, generates access codes
+// and emails them to approved applicants through EmailJS (with a mailto: fallback).
+
 import { rtdb as db, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { ref, query, orderByChild, equalTo, onValue, set, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -7,8 +10,10 @@ const EMAILJS_SERVICE_ID = 'service_qcgez2j';
 const EMAILJS_TEMPLATE_ID = 'template_3fet77r';
 const EMAILJS_PUBLIC_KEY = 'D1LTqshDzk5V-D4ug';
 
+// Escapes text before putting it into HTML.
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// True if the EmailJS ids above are filled in.
 function emailjsConfigured() {
     return !!(EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) &&
         !EMAILJS_SERVICE_ID.startsWith('YOUR_') &&
@@ -16,6 +21,7 @@ function emailjsConfigured() {
         !EMAILJS_PUBLIC_KEY.startsWith('YOUR_');
 }
 
+// Emails the access code to the applicant through EmailJS.
 async function sendAccessCodeEmail(data, code) {
     if (!emailjsConfigured()) throw new Error('EmailJS is not configured in admin.js.');
 
@@ -43,6 +49,7 @@ async function sendAccessCodeEmail(data, code) {
     }
 }
 
+// mailto: link with the code, for sending by hand when EmailJS fails.
 function buildMailtoLink(data, code) {
     const submitUrl = new URL('Image_Processing.html', window.location.href).href;
     const body = 'Hi ' + data.fullName + ',\n\nYour RiCap application was approved. Your access code is: ' +
@@ -96,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Live list of pending applications.
     function listenForApplications() {
         const q = query(ref(db, 'officialApplications'), orderByChild('status'), equalTo('pending'));
         unsubscribeList = onValue(q, (snapshot) => {
@@ -118,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.warn('RiCap: could not record application status (check the applicationEmails rule)', err));
     }
 
+    // Random access code such as RICAP-7K2QXM (no look-alike characters such as 0/O or 1/I).
     function generateAccessCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         const buf = new Uint32Array(6);
@@ -127,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return code;
     }
 
+    // One application with Approve and Reject buttons.
     function renderCard(id, data) {
         const card = document.createElement('div');
         card.className = 'app-card';

@@ -1,3 +1,6 @@
+// Hero title letters that appear one by one, then follow the mouse slightly.
+// Not loaded by any page at the moment.
+
 document.addEventListener('DOMContentLoaded', () => {
     const heroText = document.getElementById('heroText');
     if (!heroText) return;
@@ -18,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return span;
     });
 
+    // After the intro animation, letters stay put and react to the mouse.
     const settle = () => {
         letters.forEach((letter) => {
             letter.style.animation = 'none';
@@ -36,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// Moves each letter a little towards the mouse.
 function enableMagnetEffect(letters) {
     const maxDist = 300;        
     const liftAmount = 24;      
@@ -47,6 +52,7 @@ function enableMagnetEffect(letters) {
     let rafPending = false;
     let lastEvent = null;
 
+    // Moves each letter towards the mouse.
     function update() {
         rafPending = false;
         if (!lastEvent) return;

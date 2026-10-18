@@ -1,8 +1,15 @@
+// Effects and the auth modal on main.html: reveal on scroll, video dimming and card tilt on scroll,
+// cursor glow and magnetic buttons (mouse only), opening/closing the login and sign-up modal,
+// show/hide password and the password strength bar.
+// The login and sign-up submit handlers at the end are the old local-only versions; admin-login.js
+// and account-auth.js handle those forms first and stop these from running.
+
 document.addEventListener("DOMContentLoaded", () => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
     const isSmallScreen = window.matchMedia("(max-width: 900px)").matches;
     const allowPointerFX = canHover && !prefersReducedMotion && !isSmallScreen;
+    // Fade elements in as they scroll into view.
     const revealElements = document.querySelectorAll(".reveal");
 
     const revealObserver = new IntersectionObserver(entries => {
@@ -19,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }, { threshold: 0.12 });
 
     revealElements.forEach(element => revealObserver.observe(element));
+    // Scroll effects: dim the background video and tilt cards.
     const video = document.getElementById("bg-video");
     const videoBackground = document.querySelector(".video-background");
     const scrollTiltElements = Array.from(document.querySelectorAll(".scroll-tilt"));
@@ -33,12 +41,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let viewportHeight = window.innerHeight;
     let scrollTicking = false;
 
+    // Runs updateOnScroll() at most once per frame.
     function requestScrollUpdate() {
         if (scrollTicking) return;
         scrollTicking = true;
         requestAnimationFrame(updateOnScroll);
     }
 
+    // Dims the video and tilts visible cards by scroll position.
     function updateOnScroll() {
         scrollTicking = false;
         const y = window.scrollY || document.documentElement.scrollTop;
@@ -103,11 +113,13 @@ document.addEventListener("DOMContentLoaded", () => {
         let heroY = 0;
         let pointerLoopRunning = false;
 
+        // Moves the cursor glow.
         function paintGlow() {
             cursorGlow.style.transform =
                 "translate3d(" + glowX.toFixed(1) + "px, " + glowY.toFixed(1) + "px, 0) translate(-50%, -50%)";
         }
 
+        // Eases the glow (and hero) towards the mouse every frame.
         function pointerLoop() {
             glowX += (mouseX - glowX) * 0.08;
             glowY += (mouseY - glowY) * 0.08;
@@ -169,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Login / sign-up modal.
     const authModal = document.getElementById("authModal");
     const authClose = document.getElementById("authClose");
     const authTabs = document.querySelectorAll(".auth-tab");
@@ -177,6 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const authTitle = document.getElementById("authTitle");
     const authSubtitle = document.getElementById("authSubtitle");
 
+    // Opens the login / sign-up modal on the given tab.
     function openAuth(tab = "login") {
         if (!authModal) return;
         authModal.classList.add("open");
@@ -184,12 +198,14 @@ document.addEventListener("DOMContentLoaded", () => {
         switchAuth(tab);
     }
 
+    // Closes the modal.
     function closeAuth() {
         if (!authModal) return;
         authModal.classList.remove("open");
         document.body.style.overflow = "";
     }
 
+    // Switches between the Log In and Sign Up tabs.
     function switchAuth(tab) {
         authTabs.forEach(button => button.classList.toggle("active", button.dataset.tab === tab));
         loginForm.classList.toggle("active", tab === "login");
@@ -234,6 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // Password strength bar on the sign-up form.
     const password = document.getElementById("signupPassword");
     const strengthProgress = document.getElementById("strengthProgress");
     const strengthText = document.getElementById("strengthText");
@@ -252,6 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Small message at the bottom of the page.
     const showToast = message => {
         const toast = document.getElementById("toast");
         const toastMessage = document.getElementById("toastMessage");
@@ -261,6 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => toast.classList.remove("show"), 3000);
     };
 
+    // Old local sign-up (see the note at the top of this file).
     signupForm.addEventListener("submit", event => {
         event.preventDefault();
 
@@ -281,6 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("Account created successfully.");
     });
 
+    // Old local login (see the note at the top of this file).
     loginForm.addEventListener("submit", event => {
         event.preventDefault();
 
