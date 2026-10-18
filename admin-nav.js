@@ -18,11 +18,12 @@ export async function performLogout() {
     window.location.href = LOGOUT_REDIRECT;
 }
 
-// Adds hidden Admin and Maintenance links to pages that do not declare them.
+// Adds a hidden Maintenance link to pages that do not declare it. Admin.html is no longer linked:
+// its application review is the Applications tab in Maintenance.
 function ensureAdminLinks() {
     const links = document.getElementById('navLinks');
     if (!links) return;
-    [['Admin.html', 'Admin'], ['maintenance.html', 'Maintenance']].forEach(([href, text]) => {
+    [['maintenance.html', 'Maintenance']].forEach(([href, text]) => {
         if (links.querySelector(`a[href="${href}"]`)) return;
         const li = document.createElement('li');
         li.setAttribute('data-admin-only', '');

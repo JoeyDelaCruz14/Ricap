@@ -425,6 +425,53 @@ body.maintenance-page ::selection { background: rgba(139, 92, 246, 0.4); color: 
 .m-card,
 .m-form,
 .m-table-wrap,
+/* Applications tab (cards rendered by applications.js) */
+.app-list { display: flex; flex-direction: column; gap: 14px; }
+.app-card {
+    display: flex;
+    gap: 18px;
+    padding: 18px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition: border-color .15s;
+}
+.app-card:hover { border-color: var(--line-strong); }
+.app-card img {
+    width: 112px;
+    height: 112px;
+    flex-shrink: 0;
+    object-fit: cover;
+    border-radius: 10px;
+    background: #000;
+}
+.app-card-body { flex: 1; min-width: 0; }
+.app-card-name { margin-bottom: 4px; font-size: 1.05rem; font-weight: 700; color: #fff; }
+.app-card-meta { margin-bottom: 14px; font-size: .85rem; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }
+.app-card-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.app-card .reject-btn { color: var(--danger); border-color: rgba(255, 107, 138, 0.45); }
+.app-card .reject-btn:hover:not(:disabled) { border-color: var(--danger); background: rgba(255, 107, 138, 0.1); }
+.app-card-code {
+    margin-top: 12px;
+    padding: 8px 12px;
+    font-size: .82rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    color: var(--healthy);
+    background: rgba(79, 174, 140, 0.08);
+    border: 1px solid rgba(79, 174, 140, 0.35);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+.app-card-code a { color: inherit; }
+@media (max-width: 560px) {
+    .app-card { flex-direction: column; gap: 14px; padding: 16px; }
+    .app-card img { width: 100%; height: auto; aspect-ratio: 4 / 3; max-height: 240px; }
+    .app-card-actions > * { flex: 1 1 100%; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .app-card { transition: none; }
+}
+
 /* Data checks */
 .m-check {
     -webkit-backdrop-filter: blur(12px);

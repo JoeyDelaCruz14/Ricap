@@ -1,5 +1,6 @@
 // Maintenance page (maintenance.html), admins only: reports (flag, override status, delete),
-// river records, access codes, verified users and data integrity checks.
+// official applications (from applications.js), river records, access codes, verified users
+// and data integrity checks.
 
 import { db, rtdb, storage, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -9,6 +10,7 @@ import {
 import { ref as storageRef, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 import { ref as rtRef, onValue, update as rtUpdate } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { isAdminUser } from './admin-role.js';
+import { watchApplications } from './applications.js';
 
 const STORAGE_FOLDER = 'Submitted images';
 const BATAAN = { south: 14.33, west: 120.02, north: 14.97, east: 120.66 };
@@ -94,6 +96,12 @@ onAuthStateChanged(auth, async user => {
 // Live listeners for reports, river records, access codes, applications and profiles.
 function startListeners(user) {
     currentAdmin = user.email;
+
+    // Applications tab: the same review as Admin.html, with the pending count on the tab.
+    unsubs.push(watchApplications($('appList'), $('appsEmpty'), count => {
+        $('appBadge').textContent = count;
+        $('appBadge').hidden = !count;
+    }));
 
     unsubs.push(onSnapshot(query(collection(db, 'reports'), orderBy('createdAt', 'desc')), snap => {
         reports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
