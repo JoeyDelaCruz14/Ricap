@@ -1,8 +1,3 @@
-// Official (access-code) session and Firebase auth helpers used across pages.
-// verifyCode() redeems a code through the redeemAccessCode Cloud Function, falling back to a
-// browser-side Realtime Database check when the function is unreachable.
-// ensureAuth() makes sure there is a Firebase user, signing in anonymously only if nobody is signed in.
-
 import { rtdb, auth, app } from './firebase-config.js';
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";

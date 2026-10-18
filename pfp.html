@@ -52,6 +52,29 @@
                 </div>
             </section>
 
+            <!-- Public profile of another reporter (pfp.html?report=<id>, opened from a post on Home) -->
+            <section class="pf-card pf-hero pf-public" id="pfPublic" hidden>
+                <div class="pf-hero-top">
+                    <div class="pf-avatar pf-public-avatar" id="pfPublicAvatar" role="img" aria-label="Profile picture">
+                        <span class="pf-initials" id="pfPublicInitials" aria-hidden="true">?</span>
+                    </div>
+                    <div class="pf-identity">
+                        <p class="eyebrow">Reporter profile</p>
+                        <h1 class="pf-name" id="pfPublicName">Loading…</h1>
+                        <div class="pf-badges" id="pfPublicBadges"></div>
+                    </div>
+                    <div class="pf-hero-actions">
+                        <a href="Home.html" class="pf-btn">Back to Home</a>
+                    </div>
+                </div>
+                <div class="pf-stats">
+                    <div class="pf-stat"><span id="pubTotal">–</span><small>Reports submitted</small></div>
+                    <div class="pf-stat"><span id="pubMonth">–</span><small>This month</small></div>
+                    <div class="pf-stat"><span id="pubRivers">–</span><small>Rivers covered</small></div>
+                    <div class="pf-stat"><span id="pubLast">–</span><small>Last report</small></div>
+                </div>
+            </section>
+
             <!-- Profile header: picture, name, badges, stats -->
             <section class="pf-card pf-hero" id="pfHero" hidden>
                 <div class="pf-hero-top">

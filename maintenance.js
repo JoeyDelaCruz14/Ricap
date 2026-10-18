@@ -1,7 +1,3 @@
-// Maintenance page (maintenance.html), admins only: reports (flag, override status, delete),
-// official applications (from applications.js), river records, access codes, verified users
-// and data integrity checks.
-
 import { db, rtdb, storage, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
@@ -9,27 +5,23 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { ref as storageRef, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 import { ref as rtRef, onValue, update as rtUpdate } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
-import { isAdminUser } from './admin-role.js';
-import { watchApplications } from './applications.js';
 
 const STORAGE_FOLDER = 'Submitted images';
 const BATAAN = { south: 14.33, west: 120.02, north: 14.97, east: 120.66 };
 const STATUSES = ['healthy', 'moderate', 'polluted', 'critical'];
 const COAST_LABELS = { east: 'Manila Bay (east)', west: 'South China Sea (west)' };
 
-// Escapes text before putting it into HTML.
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 
-let reports = [];
-let riverRecords = [];
-let codes = [];
+/* ---------- state ---------- */
+let reports = [];          // [{id, ...data}]
+let riverRecords = [];     // Firestore riverLocations
+let codes = [];            // RTDB accessCodes
 let pendingApps = 0;
-let approvedApps = [];
-let profiles = [];
 let unsubs = [];
 
-// Rivers from mapping-data.js.
+/* ---------- helpers ---------- */
 function staticRivers() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) { }
     try { if (typeof RICAP_RIVERS !== 'undefined' && Array.isArray(RICAP_RIVERS)) return RICAP_RIVERS; } catch (e) { }
@@ -37,7 +29,6 @@ function staticRivers() {
     return [];
 }
 
-// River name for an id.
 function riverName(id) {
     if (id == null || id === '') return 'Unassigned';
     const hit = riverRecords.find(r => r.id === String(id)) ||
@@ -45,14 +36,12 @@ function riverName(id) {
     return hit ? (hit.name || hit.officialName || String(id)) : String(id);
 }
 
-// Readable date.
 function fmtDate(ts) {
     const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
     return d && !isNaN(d) ? d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 }
 
 let toastTimer = null;
-// Small message at the bottom of the page.
 function toast(msg) {
     const t = $('mToast');
     t.textContent = msg;
@@ -61,6 +50,7 @@ function toast(msg) {
     toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
 }
 
+/* ---------- auth ---------- */
 $('mLoginForm').addEventListener('submit', async e => {
     e.preventDefault();
     $('mLoginError').hidden = true;
@@ -73,14 +63,8 @@ $('mLoginForm').addEventListener('submit', async e => {
 });
 $('mSignOut').addEventListener('click', () => signOut(auth));
 
-onAuthStateChanged(auth, async user => {
-    const isAdmin = await isAdminUser(user);
-    if (user !== auth.currentUser) return;
-    if (user && !user.isAnonymous && !isAdmin) {
-        $('mLoginError').textContent = 'This account does not have admin access.';
-        $('mLoginError').hidden = false;
-    }
-    if (isAdmin) {
+onAuthStateChanged(auth, user => {
+    if (user && !user.isAnonymous) {
         $('mGate').hidden = true;
         $('mPanel').hidden = false;
         $('mEmailLabel').textContent = user.email;
@@ -93,15 +77,9 @@ onAuthStateChanged(auth, async user => {
     }
 });
 
-// Live listeners for reports, river records, access codes, applications and profiles.
+/* ---------- listeners ---------- */
 function startListeners(user) {
     currentAdmin = user.email;
-
-    // Applications tab: the same review as Admin.html, with the pending count on the tab.
-    unsubs.push(watchApplications($('appList'), $('appsEmpty'), count => {
-        $('appBadge').textContent = count;
-        $('appBadge').hidden = !count;
-    }));
 
     unsubs.push(onSnapshot(query(collection(db, 'reports'), orderBy('createdAt', 'desc')), snap => {
         reports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -125,26 +103,18 @@ function startListeners(user) {
     const offApps = onValue(rtRef(rtdb, 'officialApplications'), snap => {
         const val = snap.val() || {};
         pendingApps = Object.values(val).filter(a => a && a.status === 'pending').length;
-        approvedApps = Object.entries(val).filter(([, a]) => a && a.status === 'approved').map(([id, a]) => ({ id, ...a }));
         renderIntegrity();
-        renderUsers();
     }, () => { });
     unsubs.push(offApps);
-
-    unsubs.push(onSnapshot(collection(db, 'profiles'), snap => {
-        profiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderUsers();
-    }, err => onLoadError('verified user profiles', err)));
 }
 let currentAdmin = '';
 
-// Shows which data failed to load.
 function onLoadError(what, err) {
     console.error(err);
     toast('Could not load ' + what + ' — check your Firebase rules.');
 }
 
-// Re-renders every section.
+/* ---------- render ---------- */
 function renderAll() {
     renderStats();
     renderFlagged();
@@ -152,10 +122,8 @@ function renderAll() {
     renderRivers();
     renderCodes();
     renderIntegrity();
-    renderUsers();
 }
 
-// Totals at the top.
 function renderStats() {
     const flagged = reports.filter(r => r.flagged).length;
     $('stReports').textContent = reports.length;
@@ -166,7 +134,6 @@ function renderStats() {
     $('flagBadge').hidden = !flagged;
 }
 
-// One report with its admin actions.
 function reportCard(r) {
     const status = STATUSES.includes(r.status) ? r.status : 'healthy';
     const card = document.createElement('article');
@@ -199,7 +166,6 @@ function reportCard(r) {
     return card;
 }
 
-// Reports flagged for review.
 function renderFlagged() {
     const list = $('flaggedList');
     const flagged = reports.filter(r => r.flagged);
@@ -208,7 +174,6 @@ function renderFlagged() {
     flagged.forEach(r => list.appendChild(reportCard(r)));
 }
 
-// All reports, filtered.
 function renderReports() {
     const q = $('reportSearch').value.trim().toLowerCase();
     const st = $('reportStatus').value;
@@ -224,7 +189,6 @@ function renderReports() {
     rows.forEach(r => list.appendChild(reportCard(r)));
 }
 
-// River records list.
 function renderRivers() {
     const body = $('riverRows');
     body.innerHTML = '';
@@ -247,7 +211,6 @@ function renderRivers() {
     });
 }
 
-// Access codes list.
 function renderCodes() {
     const body = $('codeRows');
     body.innerHTML = '';
@@ -266,127 +229,6 @@ function renderCodes() {
     });
 }
 
-// Up to two initials for user avatars.
-const initialsOf = name => String(name || '?').trim().split(/\s+/).slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || '?';
-const lower = v => String(v || '').trim().toLowerCase();
-
-// Verified users = approved applications, plus anyone who published a verified profile
-// (e.g. an official whose code was issued by hand). Profiles add the picture and uids.
-// Verified users from profiles, access codes and approved applications, merged.
-function verifiedUsers() {
-    const users = [];
-    const byEmail = new Map();
-    const byCode = new Map();
-    const add = u => {
-        users.push(u);
-        if (u.email) byEmail.set(lower(u.email), u);
-        if (u.code) byCode.set(String(u.code).toUpperCase(), u);
-    };
-    approvedApps.forEach(a => add({
-        key: 'app:' + a.id,
-        name: a.fullName || '', email: a.email || '', phone: a.phone || '',
-        role: a.role || '', organization: a.organization || '',
-        code: a.accessCode || '', idPhoto: a.photoURL || '',
-        avatar: '', uids: [], approvedAt: a.submittedAt || 0
-    }));
-    profiles.forEach(p => {
-        const code = String(p.officialCode || '').toUpperCase();
-        const u = (p.email && byEmail.get(lower(p.email))) || (code && byCode.get(code));
-        const uids = [p.uid, ...(Array.isArray(p.uids) ? p.uids : [])].filter(Boolean);
-        if (u) {
-            u.avatar = u.avatar || p.avatar || '';
-            u.uids = [...new Set([...u.uids, ...uids])];
-            u.name = u.name || p.name || '';
-            u.phone = u.phone || p.phone || '';
-            u.code = u.code || code;
-            u.updatedAt = p.updatedAt;
-            if (u.code) byCode.set(u.code, u);
-        } else {
-            add({
-                key: 'profile:' + p.id,
-                name: p.name || '', email: p.email || '', phone: p.phone || '',
-                role: p.role || '', organization: p.organization || '',
-                code, idPhoto: '', avatar: p.avatar || '', uids, updatedAt: p.updatedAt
-            });
-        }
-    });
-    users.forEach(u => {
-        const uids = new Set(u.uids);
-        const code = String(u.code || '').toUpperCase();
-        const codeInfo = code ? codes.find(c => String(c.code).toUpperCase() === code) : null;
-        u.codeActive = codeInfo ? !!codeInfo.active : null;
-        u.reports = reports.filter(r => (r.uid && uids.has(r.uid)) || (code && String(r.reporterCode || '').toUpperCase() === code));
-    });
-    return users.sort((a, b) => b.reports.length - a.reports.length || String(a.name).localeCompare(String(b.name)));
-}
-
-const openUsers = new Set();
-
-// One verified user.
-function userCard(u) {
-    const card = document.createElement('article');
-    card.className = 'm-user';
-    const open = openUsers.has(u.key);
-    const last = u.reports[0];
-    card.innerHTML = `
-        <div class="m-user-head">
-            <div class="m-avatar"${u.avatar ? ` style="background-image:url('${esc(u.avatar)}')"` : ''}>${u.avatar ? '' : esc(initialsOf(u.name))}</div>
-            <div class="m-user-info">
-                <div class="m-card-top">
-                    <h3>${esc(u.name || 'Unnamed user')}</h3>
-                    ${u.codeActive === false
-                        ? '<span class="m-pill st-off">code revoked</span>'
-                        : '<span class="m-pill st-healthy">verified</span>'}
-                </div>
-                <p class="m-meta">${esc([u.role, u.organization].filter(Boolean).join(' · ') || 'Verified user')}</p>
-                <p class="m-meta">${esc(u.email || 'No email')}${u.phone ? ' · ' + esc(u.phone) : ''}${u.code ? ' · code <code>' + esc(u.code) + '</code>' : ''}</p>
-            </div>
-            <div class="m-user-count"><span>${u.reports.length}</span><small>${u.reports.length === 1 ? 'report' : 'reports'}</small></div>
-        </div>
-        <div class="m-actions">
-            <button type="button" class="ghost-btn" data-act="toggle" aria-expanded="${open}">${open ? 'Hide reports' : 'View reports'}</button>
-            ${u.idPhoto ? `<a class="ghost-btn" href="${esc(u.idPhoto)}" target="_blank" rel="noopener">Verification photo</a>` : ''}
-            <span class="m-meta m-user-last">${last ? 'Last report ' + esc(fmtDate(last.createdAt)) : 'No reports yet'}${u.avatar ? '' : ' · no profile picture yet'}</span>
-        </div>
-        <div class="m-user-reports" ${open ? '' : 'hidden'}></div>`;
-
-    const box = card.querySelector('.m-user-reports');
-    const fill = () => {
-        box.innerHTML = '';
-        if (!u.reports.length) {
-            box.innerHTML = '<p class="m-empty">This user has not posted any reports.</p>';
-            return;
-        }
-        const list = document.createElement('div');
-        list.className = 'm-list';
-        u.reports.forEach(r => list.appendChild(reportCard(r)));
-        box.appendChild(list);
-    };
-    if (open) fill();
-    card.querySelector('[data-act="toggle"]').addEventListener('click', e => {
-        const nowOpen = box.hidden;
-        box.hidden = !nowOpen;
-        e.currentTarget.textContent = nowOpen ? 'Hide reports' : 'View reports';
-        e.currentTarget.setAttribute('aria-expanded', String(nowOpen));
-        if (nowOpen) { openUsers.add(u.key); fill(); } else openUsers.delete(u.key);
-    });
-    return card;
-}
-
-// Verified users list.
-function renderUsers() {
-    const list = $('userList');
-    if (!list) return;
-    const q = $('userSearch').value.trim().toLowerCase();
-    const users = verifiedUsers().filter(u => !q ||
-        [u.name, u.email, u.role, u.organization, u.code].some(v => lower(v).includes(q)));
-    list.innerHTML = '';
-    $('usersEmpty').textContent = q ? 'No verified users match.' : 'No verified users yet.';
-    $('usersEmpty').hidden = users.length > 0;
-    users.forEach(u => list.appendChild(userCard(u)));
-}
-
-// Data checks: reports without photo or river, bad coordinates, duplicate names.
 function renderIntegrity() {
     const noImage = reports.filter(r => !r.imageUrl).length;
     const noRiver = reports.filter(r => !r.riverId).length;
@@ -403,7 +245,7 @@ function renderIntegrity() {
         `<li class="${n ? 'warn' : 'ok'}"><span>${esc(label)}</span><strong>${n}</strong></li>`).join('') + '</ul>';
 }
 
-// Flags a report for review.
+/* ---------- report actions ---------- */
 async function flagReport(r) {
     const reason = prompt('Why is this report being flagged?', '');
     if (reason === null) return;
@@ -416,7 +258,6 @@ async function flagReport(r) {
     } catch (err) { fail('Flag failed', err); }
 }
 
-// Clears a report's flag.
 async function clearFlag(r) {
     try {
         await updateDoc(doc(db, 'reports', r.id), {
@@ -426,7 +267,6 @@ async function clearFlag(r) {
     } catch (err) { fail('Could not clear flag', err); }
 }
 
-// Sets a report's status by hand.
 async function overrideStatus(r, status) {
     if (status === r.status) return;
     try {
@@ -437,7 +277,6 @@ async function overrideStatus(r, status) {
     } catch (err) { fail('Status change failed', err); renderAll(); }
 }
 
-// Deletes a report and its photo.
 async function deleteReport(r) {
     if (!confirm('Permanently delete "' + (r.reportName || 'this report') + '" and its photo? This cannot be undone.')) return;
     try {
@@ -450,7 +289,7 @@ async function deleteReport(r) {
     toast('Report deleted.');
 }
 
-// Clears the river form.
+/* ---------- river actions ---------- */
 function resetRiverForm() {
     $('riverForm').reset();
     $('riverDocId').value = '';
@@ -459,7 +298,6 @@ function resetRiverForm() {
     $('riverError').hidden = true;
 }
 
-// Loads a river into the form for editing.
 function editRiver(r) {
     $('riverDocId').value = r.id;
     $('riverName').value = r.name || '';
@@ -509,7 +347,6 @@ $('riverForm').addEventListener('submit', async e => {
     finally { $('riverSaveBtn').disabled = false; }
 });
 
-// Deletes a river record.
 async function deleteRiver(r) {
     const used = reports.filter(x => String(x.riverId) === r.id).length;
     const warn = used ? '\n\n' + used + ' report(s) still reference this river and will show as its raw ID.' : '';
@@ -518,7 +355,7 @@ async function deleteRiver(r) {
     catch (err) { fail('Delete failed', err); }
 }
 
-// Activates or deactivates an access code.
+/* ---------- access codes ---------- */
 async function toggleCode(c) {
     const next = !c.active;
     if (!next && !confirm('Revoke code ' + c.code + '? ' + (c.officialName || 'This official') + ' will no longer be able to submit reports.')) return;
@@ -528,12 +365,13 @@ async function toggleCode(c) {
     } catch (err) { fail('Could not update code', err); }
 }
 
+/* ---------- export ---------- */
 $('exportReportsBtn').addEventListener('click', () => {
     if (!reports.length) return toast('No reports to export.');
     const cols = ['recordId', 'reportName', 'riverId', 'status', 'score', 'lat', 'lng', 'reporterName', 'reporterRole', 'flagged', 'assessment', 'recommendation', 'imageUrl'];
     const cell = v => {
         let s = String(v == null ? '' : v);
-        if (/^[=+\-@]/.test(s)) s = "'" + s;
+        if (/^[=+\-@]/.test(s)) s = "'" + s; // avoid spreadsheet formula injection
         return '"' + s.replace(/"/g, '""') + '"';
     };
     const rows = [cols.concat('createdAt').join(',')].concat(reports.map(r =>
@@ -546,15 +384,14 @@ $('exportReportsBtn').addEventListener('click', () => {
     URL.revokeObjectURL(url);
 });
 
+/* ---------- ui wiring ---------- */
 document.querySelectorAll('.m-tab').forEach(tab => tab.addEventListener('click', () => {
     document.querySelectorAll('.m-tab').forEach(t => t.classList.toggle('is-active', t === tab));
     document.querySelectorAll('.m-pane').forEach(p => p.classList.toggle('is-active', p.id === 'pane-' + tab.dataset.tab));
 }));
 $('reportSearch').addEventListener('input', renderReports);
-$('userSearch').addEventListener('input', renderUsers);
 $('reportStatus').addEventListener('change', renderReports);
 
-// Shows an error toast and logs the cause.
 function fail(msg, err) {
     console.error(err);
     toast(msg + (err && err.code === 'permission-denied' ? ' — permission denied (check Firebase rules).' : '.'));

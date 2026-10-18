@@ -163,7 +163,7 @@ function inBataan(lat, lng) {
     return lat >= BATAAN.south && lat <= BATAAN.north && lng >= BATAAN.west && lng <= BATAAN.east;
 }
 
-const GOOD_ACCURACY_M = SUGGEST_MAX_DISTANCE_M;
+const GOOD_ACCURACY_M = 20;      // keep refining the GPS fix until it is this precise (or the wait ends)
 const WARN_ACCURACY_M = 150;    
 const LOCATION_WAIT_MS = 15000;  
 const MAX_ACCEPT_ACCURACY_M = 1000;  
@@ -366,7 +366,7 @@ function friendlyError(err) {
     return (err && err.message) || 'Something went wrong while saving. Try again.';
 }
 
-// Uploads the annotated photo, saves the report to Firestore and keeps a local copy.
+// Uploads the original photo, saves the report to Firestore and keeps a local copy.
 async function submitOfficialReport(analysis, imageDataUrl, details) {
     const selection = details.selection;
     const loc = selection.loc;
@@ -391,13 +391,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
     const reco = await recommendationFor(analysis);
     const recommendation = reco.text;
 
-    let uploadImage;
-    try {
-        uploadImage = await createAnnotatedImage(imageDataUrl, analysis.detections, UPLOAD_MAX_DIM);
-    } catch (err) {
-        console.warn('Could not draw detections on the upload, sending the plain photo:', err);
-        uploadImage = await createStoredImage(imageDataUrl, UPLOAD_MAX_DIM);
-    }
+    const uploadImage = await createStoredImage(imageDataUrl, UPLOAD_MAX_DIM);
     const uploaded = await uploadSubmittedImage(recordId, uploadImage, {
         status: analysis.status,
         score: analysis.score,
@@ -436,7 +430,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         await addDoc(collection(db, 'reports'), reportDoc);
     }
 
-    const thumb = await createStoredImage(uploadImage, THUMB_MAX_DIM);
+    const thumb = await createStoredImage(imageDataUrl, THUMB_MAX_DIM);
     const record = {
         id: recordId,
         timestamp: timestamp,
@@ -1845,7 +1839,7 @@ function computeWaterTint(imageDataUrl) {
 
 // Second opinion from CLIP on litter boxes, to drop objects that are not litter.
 const CLIP_VERIFY_WAIT_MS = 8000;
-const CLIP_VERIFY_MAX_BOXES = 6;
+const CLIP_VERIFY_MAX_BOXES = 8;
 const CLIP_VERIFY_MIN_OBJECT = 0.5;
 
 const CLIP_LITTER_CAPTIONS = [
@@ -1854,14 +1848,24 @@ const CLIP_LITTER_CAPTIONS = [
     'a photo of floating litter in water',
     'a photo of a pile of rubbish'
 ];
+// Captions for water-condition boxes (polluted water, algae, oil...).
+const CLIP_WATER_CAPTIONS = [
+    'a photo of dirty or polluted water',
+    'a photo of a river or water surface'
+];
 const CLIP_OBJECT_CAPTIONS = {
     boat: ['a photo of a boat', 'a photo of a small wooden boat or canoe', 'a photo of a fishing boat'],
-    person: ['a photo of a person'],
+    person: ['a photo of a person', 'a photo of people', 'a photo of a person swimming or wading'],
+    sky: ['a photo of clouds', 'a photo of the sky'],
     rock: ['a photo of rocks or stones'],
     vegetation: ['a photo of plants, grass or a tree'],
     house: ['a photo of a house or building'],
     water_reflection: ['a photo of water ripples or reflections']
 };
+// Never reported as detections: people, clouds/sky, boats and rocks are removed from the result.
+const NEVER_DETECT_LABELS = ['person', 'sky', 'boat', 'rock'];
+// Water-condition boxes are only checked for these (a boat on polluted water keeps the water box).
+const SCENE_NEVER_DETECT_LABELS = ['person', 'sky'];
 
 // Crops one detection box (with padding) from the image.
 function cropDetection(img, d, pad) {
@@ -1878,12 +1882,14 @@ function cropDetection(img, d, pad) {
 }
 
 // Asks CLIP whether each litter box really shows litter; relabels the ones that do not.
+// Water-condition boxes are only checked for people and sky.
 async function verifyLitterWithClip(imageDataUrl, detections) {
     const litter = detections
-        .filter(function (d) { return !!POLLUTION_CLASS_INFO[d.label]; })
+        .filter(function (d) { return !!POLLUTION_CLASS_INFO[d.label] || !!SCENE_CLASS_INFO[d.label]; })
         .sort(function (a, b) { return b.score - a.score; })
         .slice(0, CLIP_VERIFY_MAX_BOXES);
     if (!litter.length) return { needed: false, ran: false, relabelled: 0 };
+    const needed = litter.some(function (d) { return !!POLLUTION_CLASS_INFO[d.label]; });
 
     let classifier = null;
     try {
@@ -1894,7 +1900,7 @@ async function verifyLitterWithClip(imageDataUrl, detections) {
     } catch (err) {
         console.warn('[CLIP] Litter double-check unavailable:', err);
     }
-    if (typeof classifier !== 'function') return { needed: true, ran: false, relabelled: 0 };
+    if (typeof classifier !== 'function') return { needed: needed, ran: false, relabelled: 0 };
 
     const captionToObject = {};
     const objectCaptions = [];
@@ -1902,21 +1908,26 @@ async function verifyLitterWithClip(imageDataUrl, detections) {
         CLIP_OBJECT_CAPTIONS[k].forEach(function (c) { objectCaptions.push(c); captionToObject[c] = k; });
     });
     const captions = CLIP_LITTER_CAPTIONS.concat(objectCaptions);
+    const sceneCaptions = CLIP_WATER_CAPTIONS.concat(objectCaptions.filter(function (c) {
+        return SCENE_NEVER_DETECT_LABELS.indexOf(captionToObject[c]) !== -1;
+    }));
 
     const img = await loadImage(imageDataUrl);
     let relabelled = 0;
     for (const d of litter) {
         const crop = cropDetection(img, d, 0.15);
         if (!crop) continue;
+        const isScene = !!SCENE_CLASS_INFO[d.label];
+        const positive = isScene ? CLIP_WATER_CAPTIONS : CLIP_LITTER_CAPTIONS;
         let results;
         try {
-            results = await withTimeout(classifier(crop, captions), 10000, 'Litter double-check');
+            results = await withTimeout(classifier(crop, isScene ? sceneCaptions : captions), 10000, 'Litter double-check');
         } catch (err) {
             console.warn('[CLIP] Double-check stopped:', err);
             break;
         }
         const litterProb = results
-            .filter(function (r) { return CLIP_LITTER_CAPTIONS.indexOf(r.label) !== -1; })
+            .filter(function (r) { return positive.indexOf(r.label) !== -1; })
             .reduce(function (sum, r) { return sum + r.score; }, 0);
         const totals = {};
         results.forEach(function (r) {
@@ -1933,7 +1944,47 @@ async function verifyLitterWithClip(imageDataUrl, detections) {
             relabelled++;
         }
     }
-    return { needed: true, ran: true, relabelled: relabelled };
+    return { needed: needed, ran: true, relabelled: relabelled };
+}
+
+// Removes boxes that show people, clouds/sky, boats or rocks. When CLIP did not run, a box high in
+// the photo that is mostly sky-coloured (blue, or white/grey cloud) is treated as sky.
+async function removePeopleAndSky(imageDataUrl, detections, clipRan) {
+    let img = null;
+    if (!clipRan) {
+        try { img = await loadImage(imageDataUrl); } catch (err) { img = null; }
+    }
+    for (let i = detections.length - 1; i >= 0; i--) {
+        const d = detections[i];
+        if (NEVER_DETECT_LABELS.indexOf(d.label) !== -1 || (img && looksLikeSky(img, d))) {
+            console.log('[Scan] Ignored "' + (d.originalLabel || d.label) + '" box: ' +
+                (NEVER_DETECT_LABELS.indexOf(d.label) !== -1 ? d.label : 'sky (colour check)'));
+            detections.splice(i, 1);
+        }
+    }
+}
+
+// True when the box sits in the top part of the photo and is mostly sky-coloured.
+function looksLikeSky(img, d) {
+    if (d.y2 > img.height * 0.45) return false;
+    const w = Math.max(1, Math.round(d.x2 - d.x1)), h = Math.max(1, Math.round(d.y2 - d.y1));
+    const size = 32;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, d.x1, d.y1, w, h, 0, 0, size, size);
+    const px = ctx.getImageData(0, 0, size, size).data;
+    let sky = 0;
+    for (let i = 0; i < px.length; i += 4) {
+        const r = px[i], g = px[i + 1], b = px[i + 2];
+        const max = Math.max(r, g, b), min = Math.min(r, g, b);
+        const bright = (r + g + b) / 3;
+        const blue = b > r + 15 && b >= g && bright > 110;
+        const cloud = bright > 170 && max - min < 30;
+        if (blue || cloud) sky++;
+    }
+    return sky / (size * size) >= 0.7;
 }
 
 // Combines litter, water, tint, clutter and scene into one score and status.
@@ -2004,10 +2055,11 @@ async function analyzeRiverImage(imageDataUrl) {
     ]);
     const water = await runWaterClassification(imageDataUrl);
     const detections = filterDetections(yoloResult.detections, yoloResult.width, yoloResult.height);
-    if (detections.some(function (d) { return !!POLLUTION_CLASS_INFO[d.label]; })) {
+    if (detections.some(function (d) { return !!POLLUTION_CLASS_INFO[d.label] || !!SCENE_CLASS_INFO[d.label]; })) {
         updateScanLabel('Double-checking detected items\u2026');
     }
     const litterCheck = await verifyLitterWithClip(imageDataUrl, detections);
+    await removePeopleAndSky(imageDataUrl, detections, litterCheck.ran);
 
     const { litterScore, items, contextItems, sceneItems, sceneScore, topScene } = scoreDetections(detections);
     const surface = scoreSurface(stats);
@@ -2031,7 +2083,7 @@ async function analyzeRiverImage(imageDataUrl) {
     if (litterCheck.needed && !litterCheck.ran) {
         warnings.push({
             type: 'verify',
-            message: 'Detected items could not be double-checked yet (the checker is still loading), so a boat or rock may be counted as trash. Scan again in a minute for a checked result.'
+            message: 'Detected items could not be double-checked yet (the checker is still loading), so a boat, rock or person may be counted as trash. Scan again in a minute for a checked result.'
         });
     }
     if (!gate) {
@@ -2147,48 +2199,6 @@ async function drawDetections(imageDataUrl, detections) {
 
     previewImg.hidden = true;
     canvas.hidden = false;
-}
-
-// The submitted photo with the same boxes and labels the user saw on screen, so Mapping,
-// Tracking and the Forum show what the model detected. Box sizes scale with the photo.
-async function createAnnotatedImage(imageDataUrl, detections, maxDim) {
-    const img = await loadImage(imageDataUrl);
-    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-    const w = Math.max(1, Math.round(img.width * scale));
-    const h = Math.max(1, Math.round(img.height * scale));
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
-
-    const unit = Math.max(1, Math.max(w, h) / 640);
-    const fontPx = Math.round(12 * unit);
-    const labelH = Math.round(16 * unit);
-    const pad = Math.round(4 * unit);
-    (detections || []).forEach(function (d) {
-        const x = d.x1 * scale;
-        const y = d.y1 * scale;
-        const bw = (d.x2 - d.x1) * scale;
-        const bh = (d.y2 - d.y1) * scale;
-        const flagged = !!POLLUTION_CLASS_INFO[d.label] || !!SCENE_CLASS_INFO[d.label];
-        const color = flagged ? '#d6574a' : '#4fae8c';
-
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2 * unit;
-        ctx.strokeRect(x, y, bw, bh);
-
-        const label = d.label.replace(/_/g, ' ') + ' ' + Math.round(d.score * 100) + '%';
-        ctx.font = '600 ' + fontPx + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
-        const textW = ctx.measureText(label).width + pad * 2;
-        const labelY = Math.max(0, y - labelH);
-        ctx.fillStyle = color;
-        ctx.fillRect(x, labelY, textW, labelH);
-        ctx.fillStyle = '#0b0c10';
-        ctx.fillText(label, x + pad, labelY + labelH - pad);
-    });
-
-    return canvas.toDataURL('image/jpeg', 0.85);
 }
 
 // Average colour of the photo.

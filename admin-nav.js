@@ -4,7 +4,7 @@
 
 import { auth } from './firebase-config.js';
 import { startReportAlerts } from './Notify.js';
-import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount } from './account.js';
+import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount, initials } from './account.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { isAdminUser } from './admin-role.js';
 
@@ -68,13 +68,22 @@ function ensureGreeting() {
         span.style.cssText = 'display:inline-block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
             'vertical-align:bottom;color:#d9c2ff;font-size:0.9rem;font-weight:600;letter-spacing:0.08em;text-decoration:none;';
         li.appendChild(span);
+        // Round "bubble" before the name: the profile picture, or the initials when there is none.
+        const bubbleCss = 'width:28px;height:28px;margin-right:8px;border-radius:50%;vertical-align:middle;' +
+            'box-shadow:0 0 0 2px rgba(169,86,224,.55);';
         const img = document.createElement('img');
         img.setAttribute('data-nav-avatar', '');
         img.alt = '';
-        img.width = img.height = 24;
+        img.width = img.height = 28;
         img.hidden = true;
-        img.style.cssText = 'width:24px;height:24px;margin-right:8px;border-radius:50%;object-fit:cover;vertical-align:middle;';
-        span.prepend(img);
+        img.style.cssText = bubbleCss + 'object-fit:cover;';
+        img.addEventListener('error', () => paintNavAvatar(''));
+        const initialsEl = document.createElement('span');
+        initialsEl.setAttribute('data-nav-initials', '');
+        initialsEl.setAttribute('aria-hidden', 'true');
+        initialsEl.style.cssText = bubbleCss + 'display:inline-grid;place-items:center;background:#7c3aed;color:#fff;' +
+            'font-size:.72rem;font-weight:700;letter-spacing:0;';
+        span.prepend(img, initialsEl);
         span.append(document.createElement('span'));
         const logout = links.querySelector('[data-logout]');
         links.insertBefore(li, logout || null);
@@ -122,17 +131,27 @@ async function apply(user) {
         greet.hidden = !name;
         greet.firstChild.lastChild.textContent = name ? 'Hi, ' + name : '';
         greet.firstChild.title = name || '';
+        const initialsEl = greet.querySelector('[data-nav-initials]');
+        if (initialsEl) initialsEl.textContent = initials(name);
         paintNavAvatar(user && !user.isAnonymous ? user.photoURL : '');
+        // Same picture as the profile page: the account photo, or the picture saved on this device.
+        if (name) {
+            import('./profile-sync.js')
+                .then(m => { if (user === auth.currentUser) paintNavAvatar(m.getAvatar()); })
+                .catch(e => console.warn('RiCap: could not load the profile picture', e));
+        }
     }
 }
 
 // Shows the profile picture in the greeting, or hides it when there is none.
 function paintNavAvatar(url) {
     const img = document.querySelector('#navLinks [data-nav-avatar]');
+    const initialsEl = document.querySelector('#navLinks [data-nav-initials]');
     if (!img) return;
     img.hidden = !url;
     if (url) img.src = url;
     else img.removeAttribute('src');
+    if (initialsEl) initialsEl.style.display = url ? 'none' : 'inline-grid';
 }
 
 // Pages without their own menu script mark the toggle with data-nav-toggle.

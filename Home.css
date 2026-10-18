@@ -687,6 +687,23 @@ body.forum-page :focus-visible {
     z-index: -1;
 }
 
+/* The bubble links to the reporter's public profile (pfp.html?report=<id>). */
+a.post-avatar { text-decoration: none; cursor: pointer; transition: transform .15s ease; }
+a.post-avatar:hover { transform: scale(1.06); }
+a.post-avatar:focus-visible { outline: 2px solid var(--current); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { a.post-avatar { transition: none; } a.post-avatar:hover { transform: none; } }
+
+/* Reporter profile picture inside the bubble (inside the status ring). */
+.post-avatar img {
+    position: absolute;
+    inset: 1px;
+    width: calc(100% - 2px);
+    height: calc(100% - 2px);
+    border-radius: 50%;
+    object-fit: cover;
+    z-index: 0;
+}
+
 .post-who {
     flex: 1;
     min-width: 0;

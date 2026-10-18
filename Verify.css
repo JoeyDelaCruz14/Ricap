@@ -80,6 +80,9 @@ h1, h2, h3, p, label, li { color: var(--ap-ink); }
     transition: border-color .15s, box-shadow .15s;
 }
 .field input::placeholder { color: var(--ap-muted); opacity: .7; }
+/* Name fields filled from the account (read-only). */
+.field input[readonly] { opacity: .75; cursor: not-allowed; border-style: dashed; }
+#nameFromAccount { margin: -6px 0 0; }
 .field input:focus,
 .field select:focus {
     outline: none; border-color: var(--ap-accent);

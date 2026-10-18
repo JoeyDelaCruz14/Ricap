@@ -1,8 +1,9 @@
 // Profile page (pfp.html): account details, profile picture (crop + upload), official access,
 // email alerts, change password and the user's recent reports.
 
-import { auth, db } from './firebase-config.js';
-import { collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+import { auth, db, storage } from './firebase-config.js';
+import { collection, query, orderBy, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+import { ref as storageRef, getDownloadURL, getMetadata } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import {
     onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
@@ -276,8 +277,94 @@ async function loadMyReports(s) {
     mine.slice(0, RECENT_LIMIT).forEach(r => list.appendChild(reportCard(r)));
 }
 
+// ---- Public profile of another reporter: pfp.html?report=<report id> (from a post bubble on Home).
+// Only what is already public on reports is shown: picture, name, role and their reports.
+// The reporter is found from that report: same uid, same access code (never shown or put in the URL),
+// or, for admin reports, every admin report.
+const viewReportId = new URLSearchParams(location.search).get('report');
+
+function sameReporter(a, b) {
+    if (a.uid && b.uid && a.uid === b.uid) return true;
+    if (a.reporterCode && b.reporterCode && String(a.reporterCode).toUpperCase() === String(b.reporterCode).toUpperCase()) return true;
+    return a.reporterRole === 'Admin' && b.reporterRole === 'Admin';
+}
+
+// First profile picture found among the reporter's uids (profile-pictures/<uid> in Storage).
+async function publicAvatar(uids) {
+    for (const uid of uids) {
+        try {
+            const fileRef = storageRef(storage, 'profile-pictures/' + uid);
+            const [url, meta] = await Promise.all([getDownloadURL(fileRef), getMetadata(fileRef)]);
+            return url + '&v=' + (Date.parse(meta.updated) || 0);
+        } catch (e) { /* no picture for this uid */ }
+    }
+    return '';
+}
+
+async function renderPublicProfile() {
+    $('pfGate').hidden = true;
+    ['pfHero', 'pfGrid'].forEach(id => { $(id).hidden = true; });
+    $('pfPublic').hidden = false;
+    $('pfReportsCard').hidden = false;
+    $('pfReportsCard').querySelector('.pf-reports-head h2').textContent = 'Recent reports';
+    $('pfReportsCard').querySelector('.pf-reports-head a').hidden = true;
+    document.title = 'RiCap — Reporter profile';
+
+    let reports = [];
+    let target = null;
+    try {
+        await ensureAuth();
+        const first = await getDoc(doc(db, 'reports', viewReportId));
+        if (!first.exists()) throw new Error('not-found');
+        target = first.data();
+        const snap = await getDocs(query(collection(db, 'reports'), orderBy('createdAt', 'desc')));
+        reports = snap.docs
+            .map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }))
+            .filter(r => sameReporter(r, target));
+    } catch (err) {
+        console.warn('RiCap: could not load this profile', err && (err.code || err.message));
+        $('pfPublicName').textContent = 'Profile not found';
+        $('pfReportsEmpty').textContent = 'This reporter or report could not be found. It may have been removed.';
+        $('pfReportsEmpty').hidden = false;
+        return;
+    }
+
+    const name = target.reporterRole === 'Admin' ? 'Admin' : (target.reporterName || 'Verified official');
+    $('pfPublicName').textContent = name;
+    $('pfPublicInitials').textContent = initials(name);
+    $('pfPublicAvatar').setAttribute('aria-label', name + '’s profile picture');
+    const badges = [target.reporterRole === 'Admin'
+        ? '<span class="pf-pill is-admin">Admin</span>'
+        : '<span class="pf-pill is-official">Verified official</span>'];
+    if (target.reporterRole && target.reporterRole !== 'Admin') badges.push('<span class="pf-pill">' + esc(target.reporterRole) + '</span>');
+    $('pfPublicBadges').innerHTML = badges.join('');
+
+    const now = new Date();
+    $('pubTotal').textContent = reports.length;
+    $('pubMonth').textContent = reports.filter(r => {
+        const d = toDate(r.createdAt);
+        return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).length;
+    $('pubRivers').textContent = new Set(reports.map(r => r.riverId).filter(Boolean)).size;
+    $('pubLast').textContent = reports.length ? fmtDate(toDate(reports[0].createdAt)) : '—';
+    $('pubLast').classList.toggle('is-text', reports.length > 0);
+
+    const list = $('pfReports');
+    list.innerHTML = '';
+    $('pfReportsEmpty').textContent = 'No reports yet.';
+    $('pfReportsEmpty').hidden = reports.length > 0;
+    reports.slice(0, RECENT_LIMIT).forEach(r => list.appendChild(reportCard(r)));
+
+    const uids = [...new Set(reports.map(r => r.uid).filter(Boolean))];
+    const photo = await publicAvatar(uids);
+    const avatar = $('pfPublicAvatar');
+    avatar.style.backgroundImage = photo ? 'url("' + photo + '")' : '';
+    avatar.classList.toggle('has-photo', !!photo);
+}
+
 // Re-renders the whole page for the current user.
 async function refresh() {
+    if (viewReportId) return;   // showing someone else's public profile instead
     const user = auth.currentUser;
     const isAdmin = await isAdminUser(user);
     if (user !== auth.currentUser) return;
@@ -628,6 +715,7 @@ $('pfPwReset').addEventListener('click', async () => {
     }
 });
 
+if (viewReportId) renderPublicProfile();
 onAuthStateChanged(auth, refresh);
 window.addEventListener('storage', e => { if (e.key) refresh(); });
 checkApproval();

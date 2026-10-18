@@ -9,7 +9,7 @@ import {
     uploadBytes,
     getDownloadURL
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
-import { isVerifiedUser } from './account.js';
+import { isVerifiedUser, isLocalLoggedIn, getAccount } from './account.js';
 import { getApplicationStatus, setApplicationStatus } from './registry.js';
 import { verifyCode } from './Session.js';
 
@@ -48,6 +48,25 @@ if (isVerifiedUser()) {
     successSection.querySelector('.success-copy').textContent =
         'Your account already has official access, so there is no need to apply again.';
 }
+
+// Logged-in users apply under the name they signed up with: first and last name are filled in
+// from the account and locked. (Runs before apply-enhance.js, which then builds the full name.)
+(function lockNamesToAccount() {
+    const a = isLocalLoggedIn() ? getAccount() : null;
+    if (!a) return;
+    const parts = String(a.name || '').trim().split(/\s+/);
+    const first = String(a.firstName || parts[0] || '').trim();
+    const last = String(a.lastName || parts.slice(1).join(' ') || '').trim();
+    [['firstName', first], ['lastName', last]].forEach(([id, value]) => {
+        const input = $(id);
+        if (!input || !value) return;
+        input.value = input.defaultValue = value;
+        input.readOnly = true;
+        input.title = 'From your RiCap account';
+    });
+    const hint = $('nameFromAccount');
+    if (hint && first && last) hint.hidden = false;
+})();
 
 // "Already have an access code?": redeems the code here, the same way as on the Scanner page.
 const codeForm = $('codeForm');

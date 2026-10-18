@@ -115,6 +115,8 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
     cursor: pointer;
 }
 .pf-avatar.has-photo .pf-initials { visibility: hidden; }
+/* Another reporter's picture on their public profile: view only. */
+.pf-public-avatar { cursor: default; }
 .pf-avatar:disabled { cursor: default; }
 .pf-avatar:disabled .pf-avatar-edit { display: none; }
 .pf-avatar-edit {

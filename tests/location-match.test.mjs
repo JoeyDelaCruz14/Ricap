@@ -4,7 +4,7 @@
 // - Permission denied: block location for the site, press "Suggest from my location".
 //   Expect "Location permission was denied…", nothing selected, no river highlighted,
 //   and the river/segment dropdowns still usable.
-// - Accuracy 30 m on a real device: expect the accuracy message with a "Try again" button.
+// - Accuracy above 300 m on a real device: expect the accuracy message with a "Try again" button.
 // - Photo with GPS data: the message names the photo as the source.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,8 +25,8 @@ const twoRivers = { a: lineAt(LAT), b: lineAt(north(LAT, 30)) };
 
 const at = (m, accuracy = null) => ({ lat: north(LAT, m), lng: 120.405, accuracy });
 
-test('threshold is 20 m', () => {
-    assert.equal(SUGGEST_MAX_DISTANCE_M, 20);
+test('threshold is 300 m', () => {
+    assert.equal(SUGGEST_MAX_DISTANCE_M, 300);
 });
 
 test('exactly on the river line matches', () => {
@@ -36,32 +36,32 @@ test('exactly on the river line matches', () => {
     assert.ok(r.hit.m < 0.5);
 });
 
-test('about 15 m away matches', () => {
-    const r = matchLocation(oneRiver, at(15, 5), inBataan);
+test('about 250 m away matches', () => {
+    const r = matchLocation(oneRiver, at(250, 5), inBataan);
     assert.equal(r.kind, 'match');
-    assert.ok(Math.abs(r.hit.m - 15) < 0.5);
+    assert.ok(Math.abs(r.hit.m - 250) < 0.5);
 });
 
-test('about 25 m away does not match and reports the nearest river', () => {
-    const r = matchLocation(oneRiver, at(25, 5), inBataan);
+test('about 350 m away does not match and reports the nearest river', () => {
+    const r = matchLocation(oneRiver, at(350, 5), inBataan);
     assert.equal(r.kind, 'none');
     assert.equal(r.nearest.riverId, 'a');
-    assert.ok(Math.abs(r.nearest.m - 25) < 0.5);
+    assert.ok(Math.abs(r.nearest.m - 350) < 0.5);
 });
 
-test('GPS accuracy of 30 m never auto-selects, even on the line', () => {
-    const r = matchLocation(oneRiver, at(0, 30), inBataan);
+test('GPS accuracy of 400 m never auto-selects, even on the line', () => {
+    const r = matchLocation(oneRiver, at(0, 400), inBataan);
     assert.equal(r.kind, 'inaccurate');
-    assert.equal(r.accuracy, 30);
+    assert.equal(r.accuracy, 400);
 });
 
 test('accuracy is not added to the distance', () => {
-    // 15 m away with ±20 m accuracy is still a match; 25 m away with ±1 m is not.
-    assert.equal(matchLocation(oneRiver, at(15, 20), inBataan).kind, 'match');
-    assert.equal(matchLocation(oneRiver, at(25, 1), inBataan).kind, 'none');
+    // 250 m away with ±200 m accuracy is still a match; 350 m away with ±1 m is not.
+    assert.equal(matchLocation(oneRiver, at(250, 200), inBataan).kind, 'match');
+    assert.equal(matchLocation(oneRiver, at(350, 1), inBataan).kind, 'none');
 });
 
-test('two rivers within 20 m offers sorted choices instead of choosing', () => {
+test('two rivers within 300 m offers sorted choices instead of choosing', () => {
     const r = matchLocation(twoRivers, at(12, 5), inBataan);
     assert.equal(r.kind, 'choices');
     assert.deepEqual(r.hits.map(h => h.riverId), ['a', 'b']);
@@ -74,9 +74,9 @@ test('outside Bataan selects nothing', () => {
     assert.equal(r.kind, 'outside');
 });
 
-test('photo EXIF (no accuracy) follows the same 20 m rule', () => {
-    assert.equal(matchLocation(oneRiver, at(15), inBataan).kind, 'match');
-    assert.equal(matchLocation(oneRiver, at(25), inBataan).kind, 'none');
+test('photo EXIF (no accuracy) follows the same 300 m rule', () => {
+    assert.equal(matchLocation(oneRiver, at(250), inBataan).kind, 'match');
+    assert.equal(matchLocation(oneRiver, at(350), inBataan).kind, 'none');
 });
 
 test('no river geometry loaded means no match', () => {
