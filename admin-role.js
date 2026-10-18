@@ -11,7 +11,8 @@ import { ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-da
 //   node -e "console.log(require('crypto').createHash('sha256').update('EMAIL'.toLowerCase()).digest('hex'))"
 // and add the result below, and add the same email to your database rules.
 const ADMIN_EMAIL_HASHES = [
-    'cac54a617fd7b644a80e0b1dcaff4015406d4cbbb20a779bf43c3fdbb3c039f4'
+    'cac54a617fd7b644a80e0b1dcaff4015406d4cbbb20a779bf43c3fdbb3c039f4',
+    '2f86a5a9bdb92a271930fbf563702b6bd93b6dec0d8abe4a42ee7b53792397ea'
 ];
 const checks = new Map();
 

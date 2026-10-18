@@ -12,6 +12,7 @@ import { getOfficial, verifyCode, signOutOfficial } from './Session.js';
 import { initSteps, onImageFile, getSelection, refreshGate, isGateVerified } from './scanner-steps.js';
 import { getRecommendation, DISCLAIMER } from './Gemini.js';
 import { SUGGEST_MAX_DISTANCE_M } from './location-match.js';
+import { isAdminUser } from './admin-role.js';
 
 let clipModPromise = null;
 // Loads clip-gate.js on demand (it is large) and keeps the promise.
@@ -371,7 +372,11 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
     const loc = selection.loc;
     const riverId = selection.riverId;
     const segmentId = selection.segmentId;
-    const official = getOfficial() || {};
+    let official = getOfficial() || {};
+    // Admins submit without an access code; their reports are labelled as admin reports.
+    if (!official.name && await isAdminUser(auth.currentUser)) {
+        official = { name: auth.currentUser.displayName || 'RiCap Admin', role: 'Admin', code: '' };
+    }
 
     await ensureFirebaseAuth();
     const uid = auth.currentUser ? auth.currentUser.uid : null;

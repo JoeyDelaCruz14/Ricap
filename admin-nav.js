@@ -112,7 +112,8 @@ async function apply(user) {
     document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !isAdmin; });
     loginItems().forEach(li => { li.hidden = loggedIn; });
     const verified = isVerifiedUser();
-    document.querySelectorAll('#navLinks a[href="Verify.html"]').forEach(a => { a.closest('li').hidden = verified; });
+    // Admins never need to verify, so they don't get the Verify link either.
+    document.querySelectorAll('#navLinks a[href="Verify.html"]').forEach(a => { a.closest('li').hidden = verified || isAdmin; });
     paintScannerLinks(verified || isAdmin);
     const logout = document.querySelector('#navLinks [data-logout]');
     if (logout) logout.hidden = !loggedIn;

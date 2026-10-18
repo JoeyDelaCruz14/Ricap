@@ -6,6 +6,7 @@ import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import { getOfficial, hasOfficialClaim, verifyCode } from './Session.js';
 import { isLocalLoggedIn } from './account.js';
+import { isAdminUser } from './admin-role.js';
 import { computeRiverSegments, nearestSegment, SEGMENT_NAMES } from './river-lines.js';
 import { loadCoastDistance } from './bataan-mask.js';
 import { matchLocation, SUGGEST_MAX_DISTANCE_M } from './location-match.js';
@@ -444,7 +445,11 @@ async function runGate() {
 
     let gate = 'guest';
     if (loggedIn) gate = 'unverified';
-    if (official) {
+    // Admins can use the scanner straight away, without an access code.
+    const isAdmin = await isAdminUser(user);
+    if (isAdmin) {
+        gate = 'verified';
+    } else if (official) {
         let ok = await hasOfficialClaim();
         if (!ok && official.code) {
             try { const o = await verifyCode(official.code); ok = (await hasOfficialClaim()) || !!o.legacy; }
@@ -461,7 +466,14 @@ async function runGate() {
     $('verifyBanner').hidden = gate !== 'unverified';
     $('verifiedBar').hidden = gate !== 'verified';
     const name = $('verifiedName');
-    if (name && gate === 'verified') name.textContent = (getOfficial() || {}).name || 'Verified Official';
+    if (name && gate === 'verified') {
+        name.textContent = isAdmin && !getOfficial()
+            ? ((user && user.displayName) || 'RiCap Admin') + ' (admin)'
+            : (getOfficial() || {}).name || 'Verified Official';
+    }
+    // "not you?" only ends an access-code session, so it is hidden for admins without one.
+    const notYou = $('signOutBtn');
+    if (notYou) notYou.hidden = isAdmin && !getOfficial();
 
     const steps = $('scanSteps');
     steps.hidden = gate === 'guest';

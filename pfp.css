@@ -1,5 +1,3 @@
-/* Profile page (pfp.html): profile header, details form, photo crop dialog, side cards and reports. */
-
 :root {
     --bg: #0f0f11;
     --card: rgba(23, 23, 26, 0.82);
@@ -60,8 +58,8 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
     background: linear-gradient(180deg, rgba(11, 12, 16, .75) 0%, rgba(11, 12, 16, .6) 40%, rgba(11, 12, 16, .9) 100%);
 }
 
-.pf-main { padding: 104px 24px 80px; }
-.pf-shell { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--gap); }
+.pf-main { padding: 96px clamp(16px, 3vw, 40px) 64px; }
+.pf-shell { max-width: 1440px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--gap); }
 
 /* Surfaces */
 .pf-card {
@@ -139,7 +137,6 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-email { color: var(--muted); font-size: .92rem; overflow-wrap: anywhere; }
 .pf-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .pf-hero-actions { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
-
 .pf-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line); }
 .pf-stat { padding: 16px 22px; border-left: 1px solid var(--line); }
 .pf-stat:first-child { border-left: 0; }
@@ -169,19 +166,38 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-details { display: flex; flex-direction: column; }
 .pf-details .pf-actions { margin-top: auto; padding-top: 18px; }
 .pf-details .pf-photo-row .pf-actions { padding-top: 0; }
-
-/* Account details gets the full width; the side cards sit in a row underneath it,
-   so the details card no longer stretches to the height of three stacked cards. */
 .pf-grid { grid-template-columns: minmax(0, 1fr); }
-.pf-side {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    align-items: start;
-}
-@media (min-width: 861px) {
-    .pf-details .pf-fields { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .pf-details .pf-field-wide { grid-column: span 2; }
+.pf-side { display: flex; flex-flow: row wrap; align-items: stretch; }
+.pf-side > .pf-card,
+.pf-side > .pf-card:last-child { flex: 1 1 280px; display: flex; flex-direction: column; min-width: 0; }
+.pf-side > .pf-card > .pf-actions:last-child { margin-top: auto; padding-top: 14px; }
+
+@media (min-width: 641px) {
+    .pf-details .pf-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pf-details .pf-field-wide { grid-column: auto; }
     .pf-details .pf-field-wide:first-child { grid-column: 1 / -1; }
+}
+
+/* Larger fields in Account details: taller inputs, bigger text and labels, more room between rows. */
+.pf-details .pf-fields { gap: 10px 22px; }
+.pf-details .pf-field { gap: 10px; }
+.pf-details .pf-field label,
+.pf-details .pf-field-label { font-size: .95rem; }
+.pf-details .pf-field input { min-height: 17px; padding: 12px 10px; font-size: 1.05rem; border-radius: 12px; }
+.pf-details .pf-photo-thumb { width: 76px; height: 76px; font-size: 1.3rem; }
+/* First/Last name (2nd, 3rd) sit a little lower than the picture row,
+   and Email/Mobile number (4th, 5th) a little lower than the name row. */
+.pf-details .pf-fields > .pf-field:nth-child(2),
+.pf-details .pf-fields > .pf-field:nth-child(3),
+.pf-details .pf-fields > .pf-field:nth-child(4),
+.pf-details .pf-fields > .pf-field:nth-child(5) { margin-top: 60px; }
+.pf-details .pf-card-head h2 { font-size: 1.2rem; }
+/* Wide screens: details on the left, the side cards stacked on the right. Both columns end at the
+   same line: the shorter side grows its cards (or the details card) so nothing is left empty below. */
+@media (min-width: 1280px) {
+    .pf-grid:not(.is-single) { grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr); align-items: stretch; }
+    .pf-grid:not(.is-single) .pf-side { flex-flow: column nowrap; }
+    .pf-grid:not(.is-single) .pf-side > .pf-card { flex: 1 1 auto; }
 }
 
 /* Pills */
@@ -338,12 +354,14 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-password .pf-actions { margin-top: 14px; }
 .pf-toggle { display: flex; align-items: flex-start; gap: 10px; font-size: .92rem; cursor: pointer; }
 .pf-toggle input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
-
 /* Recent reports */
 .pf-reports-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .pf-reports-head a { color: #c0a1ee; font-size: .88rem; font-weight: 600; text-decoration: none; }
 .pf-reports-head a:hover { color: #fff; }
-.pf-reports { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+/* Small cards of a fixed width, lined up from the left (not stretched to fill the row). */
+/* "My recent reports" is its own small box in the middle of the page, not full width like the other cards. */
+#pfReportsCard { width: 100%; max-width: 720px; margin: 0 auto; align-self: center; }
+.pf-reports { display: grid; grid-template-columns: repeat(auto-fill, 150px); justify-content: center; gap: 12px; }
 .pf-reports:empty { display: none; }
 .pf-report {
     display: flex;
@@ -358,11 +376,15 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
     transition: border-color .15s, transform .15s;
 }
 .pf-report:hover { border-color: var(--accent); transform: translateY(-2px); }
-.pf-report img, .pf-noimg { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #000; }
-.pf-noimg { display: grid; place-items: center; color: var(--muted); font-size: .8rem; }
-.pf-report-body { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
-.pf-report-top { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
-.pf-report h3 { font-size: .95rem; line-height: 1.3; overflow-wrap: anywhere; }
+/* Small box: square photo with a short caption; long text is cut with "…". */
+.pf-report { border-radius: 10px; }
+.pf-report img, .pf-noimg { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; background: #000; }
+.pf-noimg { display: grid; place-items: center; color: var(--muted); font-size: .7rem; }
+.pf-report-body { display: flex; flex-direction: column; gap: 3px; padding: 7px 8px 8px; }
+.pf-report-top { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.pf-report h3 { width: 100%; font-size: .78rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-report .pf-pill { padding: 1px 7px; font-size: .62rem; }
+.pf-report .pf-meta { width: 100%; font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pf-meta { color: var(--muted); font-size: .8rem; }
 .pf-empty {
     padding: 28px 20px;
