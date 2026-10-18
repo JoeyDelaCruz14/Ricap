@@ -200,8 +200,9 @@ body.submit-page:has(#applyForm) .submit-shell { width: 100%; max-width: 1480px;
         "eyebrow form"
         "title   form"
         "sub     form"
+        "code    form"
         "steps   form";
-    grid-template-rows: auto auto auto 1fr;
+    grid-template-rows: auto auto auto auto 1fr;
     column-gap: clamp(28px, 5vw, 64px);
     align-items: start;
     padding: 0;
@@ -239,6 +240,36 @@ body.submit-page:has(#applyForm) .submit-shell { width: 100%; max-width: 1480px;
     -webkit-backdrop-filter: blur(18px) saturate(140%);
 }
 #applyFormSection > .report-form { grid-area: form; }
+
+/* Access code box (for users who were already approved) */
+#applyFormSection > .code-redeem { grid-area: code; }
+.code-redeem {
+    margin: 0 0 16px;
+    padding: 14px;
+    background: var(--ap-card);
+    border: 1px solid var(--ap-line);
+    border-radius: var(--ap-radius);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+.code-redeem-title { margin: 0 0 10px; font-weight: 700; color: #fff; }
+.code-redeem-row { display: flex; align-items: flex-end; gap: 10px; }
+.code-redeem-row .field { flex: 1; }
+.code-redeem-row input { text-transform: uppercase; letter-spacing: .06em; }
+.code-redeem-row .submit-btn { flex: 0 0 auto; min-height: 44px; }
+.code-error {
+    margin: 10px 0 0;
+    padding: 8px 12px;
+    font-size: .85rem;
+    color: var(--ap-danger);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 138, 0.5);
+    background: rgba(255, 107, 138, 0.08);
+}
+@media (max-width: 560px) {
+    .code-redeem-row { flex-direction: column; align-items: stretch; }
+    .code-redeem-row input { font-size: 16px; }
+}
 
 /* Approval steps */
 .apply-steps {
@@ -426,7 +457,7 @@ body.submit-page:has(#applyForm) .ghost-btn:hover { border-color: var(--ap-accen
 @media (max-width: 900px) {
     #applyFormSection {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "eyebrow" "title" "sub" "steps" "form";
+        grid-template-areas: "eyebrow" "title" "sub" "code" "steps" "form";
         grid-template-rows: none;
     }
     .apply-steps {

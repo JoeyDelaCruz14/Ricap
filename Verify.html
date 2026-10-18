@@ -46,6 +46,19 @@
                 <h1 class="form-title">Apply for Official Access</h1>
                 <p class="form-sub">Take a quick photo of yourself (or your official/volunteer ID) so an admin can verify your application. You'll be emailed an access code once approved.</p>
 
+                <!-- Already approved: redeem the emailed access code here -->
+                <form class="code-redeem" id="codeForm" autocomplete="off" novalidate>
+                    <p class="code-redeem-title">Already have an access code?</p>
+                    <div class="code-redeem-row">
+                        <div class="field">
+                            <label for="codeInput">Access code</label>
+                            <input type="text" id="codeInput" placeholder="RICAP-XXXXXX" maxlength="40" autocapitalize="characters" spellcheck="false" required aria-describedby="codeError">
+                        </div>
+                        <button type="submit" class="submit-btn" id="codeBtn">Verify code</button>
+                    </div>
+                    <p class="form-error code-error" id="codeError" role="alert" hidden></p>
+                </form>
+
                 <ol class="apply-steps" id="applySteps" aria-label="How approval works">
                     <li data-step="details">
                         <span class="apply-step-num" aria-hidden="true">1</span>
@@ -61,7 +74,7 @@
                     </li>
                     <li data-step="code">
                         <span class="apply-step-num" aria-hidden="true">4</span>
-                        <div><strong>Access code by email</strong><span>Enter it on the Scanner to submit official reports.</span></div>
+                        <div><strong>Access code by email</strong><span>Enter it above (or on the Scanner) to submit official reports.</span></div>
                     </li>
                 </ol>
 

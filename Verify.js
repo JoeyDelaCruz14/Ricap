@@ -11,6 +11,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import { isVerifiedUser } from './account.js';
 import { getApplicationStatus, setApplicationStatus } from './registry.js';
+import { verifyCode } from './Session.js';
 
 const $ = id => document.getElementById(id);
 const navToggle = $('navToggle');
@@ -47,6 +48,49 @@ if (isVerifiedUser()) {
     successSection.querySelector('.success-copy').textContent =
         'Your account already has official access, so there is no need to apply again.';
 }
+
+// "Already have an access code?": redeems the code here, the same way as on the Scanner page.
+const codeForm = $('codeForm');
+codeForm?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const input = $('codeInput');
+    const btn = $('codeBtn');
+    const err = $('codeError');
+    const code = input.value.trim().toUpperCase();
+    err.hidden = true;
+    if (!code) {
+        err.textContent = 'Enter the access code from your approval email.';
+        err.hidden = false;
+        input.focus();
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Checking…';
+    try {
+        const official = await verifyCode(code);
+        window.dispatchEvent(new Event('storage'));   // lets the nav show the Scanner link right away
+        formSection.hidden = true;
+        successSection.hidden = false;
+        successSection.querySelector('.success-title').textContent = 'Access code accepted';
+        successSection.querySelector('.success-copy').textContent =
+            'Welcome' + (official && official.name ? ', ' + official.name : '') +
+            '. You can now submit official river reports from the Scanner.';
+        successSection.querySelector('.success-actions').innerHTML =
+            '<a href="Image_Processing.html" class="submit-btn">Go to Scanner</a>' +
+            '<a href="Home.html" class="ghost-btn">Back to Home</a>';
+    } catch (ex) {
+        console.warn('RiCap: access code check failed', ex && (ex.code || ex.message));
+        err.textContent = /Invalid or inactive/i.test(ex && ex.message)
+            ? 'That code didn’t match an active official account. Check it and try again.'
+            : (!navigator.onLine
+                ? 'You are offline. Connect to the internet and try again.'
+                : 'Couldn’t verify that code right now. Please try again.');
+        err.hidden = false;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verify code';
+    }
+});
 
 navToggle?.addEventListener('click', () => {
     const open = navLinks.classList.toggle('open');
