@@ -1,6 +1,7 @@
 // River geometry for the map and scanner: loads Bataan waterways (local file, then the Overpass
 // API with a 7-day cache), picks each river's main stem, splits it into equal segments and draws
 // them on a Leaflet map. Also exports distance helpers used to match a location to a segment.
+// Sa madaling salita: kinukuha nito ang hugis ng mga ilog, hinahati sa mga segment, at sinusukat ang layo mo sa ilog.
 
 
 const BBOX = '14.33,120.02,14.97,120.66';

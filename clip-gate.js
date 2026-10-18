@@ -1,5 +1,6 @@
 // CLIP "is this a river photo?" check, run in the browser with transformers.js (loaded from a CDN).
 // Compares the photo to water and non-water captions; the model (~90 MB) downloads on first use.
+// Sa madaling salita: tinitingnan ng AI kung litrato talaga ng ilog ang in-upload bago ito i-scan.
 
 const LIB_URLS = [
     'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js',

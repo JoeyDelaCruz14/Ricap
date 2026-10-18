@@ -1,21 +1,23 @@
 // Shared nav behaviour on every page: shows Admin/Maintenance links to admins, adds Log out,
 // the greeting with the profile picture, the mobile menu toggle, and keeps the verified state
 // and the published profile up to date. Also exports performLogout() for other scripts.
+// Sa madaling salita: inaayos nito ang menu sa itaas (nav) depende kung sino ang naka-login: admin, opisyal o ordinaryong user.
 
 import { auth } from './firebase-config.js';
 import { startReportAlerts } from './Notify.js';
-import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount, initials } from './account.js';
+import { displayName, isLocalLoggedIn, clearLocalLogin, getOfficialSession, isVerifiedUser, getAccount, saveAccount, initials, rememberLogin } from './account.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import { isAdminUser } from './admin-role.js';
 
-const LOGOUT_REDIRECT = 'main.html';
 const OFFICIAL_KEY = 'ricap_official';  
-// Logs out everything (official session, local account, Firebase) and goes to the landing page.
+// Logs out everything (official session, local account, Firebase), then goes to the landing page,
+// which confirms "You have been logged out".
 export async function performLogout() {
+    // Firebase first: while it is still signed in, the nav would mark the account as logged in again.
+    try { await signOut(auth); } catch (err) { console.warn('Sign-out failed', err); }
     try { localStorage.removeItem(OFFICIAL_KEY); } catch (e) {  }
     clearLocalLogin();
-    try { await signOut(auth); } catch (err) { console.warn('Sign-out failed', err); }
-    window.location.href = LOGOUT_REDIRECT;
+    window.location.href = 'main.html?loggedout=1';
 }
 
 // Adds a hidden Maintenance link to pages that do not declare it. Admin.html is no longer linked:
@@ -114,16 +116,33 @@ function paintScannerLinks(show) {
 async function apply(user) {
     const isAdmin = await isAdminUser(user);
     if (user !== auth.currentUser) return;
+    // Signed in to Firebase with a normal account but not marked on this browser yet (older logins).
+    if (!isAdmin && user && !user.isAnonymous && !isLocalLoggedIn()) rememberLogin(user);
     const loggedIn = isAdmin || isLocalLoggedIn() || !!getOfficialSession();
     ensureAdminLinks();
     ensureLogoutLink();
     const greet = ensureGreeting();
+    // Admins only get Maintenance (plus their name and Log out); other links come back for everyone else.
+    const adminSkip = li => li.hasAttribute('data-admin-only') || li.hasAttribute('data-logout') || li === greet;
+    document.querySelectorAll('#navLinks > li[data-admin-hidden]').forEach(li => {
+        li.removeAttribute('data-admin-hidden');
+        li.hidden = false;
+        li.style.display = '';
+    });
     document.querySelectorAll('[data-admin-only]').forEach(el => { el.hidden = !isAdmin; });
     loginItems().forEach(li => { li.hidden = loggedIn; });
     const verified = isVerifiedUser();
     // Admins never need to verify, so they don't get the Verify link either.
     document.querySelectorAll('#navLinks a[href="Verify.html"]').forEach(a => { a.closest('li').hidden = verified || isAdmin; });
     paintScannerLinks(verified || isAdmin);
+    if (isAdmin) {
+        document.querySelectorAll('#navLinks > li').forEach(li => {
+            if (adminSkip(li)) return;
+            li.setAttribute('data-admin-hidden', '');
+            li.hidden = true;
+            li.style.display = 'none';
+        });
+    }
     const logout = document.querySelector('#navLinks [data-logout]');
     if (logout) logout.hidden = !loggedIn;
     if (greet) {

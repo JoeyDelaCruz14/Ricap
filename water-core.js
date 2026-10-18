@@ -2,6 +2,7 @@
 // RiCapWater.create(canvas, { input, scale, maxCells }) returns { start, stop, resize, drop }.
 // The simulation runs on a small grid that CSS scales up smoothly, steps at a fixed 60 Hz
 // (so 120 Hz screens don't run it twice as fast), and stops drawing when the water is calm.
+// Sa madaling salita: ang "makina" ng gumagalaw na tubig na ginagamit ng login box at Water Ripples.html.
 (function () {
   // Night-river colours taken from the site: #0b0c10 base, #a956e0 light, #d4af6a glints.
   var TOP = [30, 22, 52], BOTTOM = [11, 12, 16];

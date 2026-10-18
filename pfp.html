@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <!-- My Profile: account details, profile picture, official access, alerts, password and recent reports. -->
+<!-- Sa madaling salita: ang profile mo (o ng ibang reporter kapag binuksan mula sa Home). -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RiCap — My Profile</title>
-    <link rel="icon" type="img/jpg" href="images&vids/Ricaplogo.png">
+    <link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="pfp.css">
 </head>
@@ -191,6 +192,27 @@
                         <div class="pf-actions">
                             <button type="submit" class="pf-btn is-primary" id="pfPwSave">Update password</button>
                             <button type="button" class="pf-btn" id="pfPwReset">Email me a reset link</button>
+                        </div>
+                    </form>
+
+                    <!-- Delete account -->
+                    <form class="pf-card pf-delete" id="pfDeleteForm" novalidate hidden>
+                        <div class="pf-card-head"><h2>Delete account</h2></div>
+                        <p class="pf-note">This permanently deletes your login, profile picture and saved details. Reports and comments you posted stay on RiCap, without your picture. This can't be undone.</p>
+                        <input type="email" id="pfDelEmail" autocomplete="username" hidden>
+                        <div class="pf-fields">
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfDelPassword">Current password</label>
+                                <input type="password" id="pfDelPassword" autocomplete="current-password" required>
+                            </div>
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfDelConfirm">Type DELETE to confirm</label>
+                                <input type="text" id="pfDelConfirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+                            </div>
+                        </div>
+                        <p class="pf-error" id="pfDelError" role="alert" hidden></p>
+                        <div class="pf-actions">
+                            <button type="submit" class="pf-btn is-danger" id="pfDelBtn" disabled>Delete my account</button>
                         </div>
                     </form>
                 </div>

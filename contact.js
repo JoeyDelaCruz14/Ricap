@@ -1,4 +1,5 @@
 // Contact form on main.html: checks the fields and shows a confirmation toast.
+// Sa madaling salita: sinusuri nito ang contact form at nagpapakita ng mensahe kapag naipadala.
 
 document.addEventListener("DOMContentLoaded", () => {
     const contactForm = document.getElementById("contactForm");

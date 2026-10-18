@@ -1,6 +1,7 @@
 // Browser pop-up notifications for new river reports.
 // Users can turn on all alerts or alerts per river; startReportAlerts() watches Firestore and
 // shows a notification for each new report that matches.
+// Sa madaling salita: nagpapakita ng notification sa browser kapag may bagong report sa ilog.
 
 import { db } from './firebase-config.js';
 import {collection,query,orderBy,limit,onSnapshot} from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';

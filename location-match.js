@@ -1,10 +1,11 @@
-// 300 m rule for suggesting a river segment from a location (GPS or photo EXIF).
+// Strict 20 m rule for suggesting a river segment from a location (GPS or photo EXIF).
 // Tested in tests/location-match.test.mjs.
+// Sa madaling salita: kapag ang lokasyon mo ay hanggang 20 metro lang mula sa ilog, iyon ang pipiliing segment.
 
 import { segmentDistances } from './river-lines.js';
 
 // Change this one value to widen or tighten the auto-select rule.
-export const SUGGEST_MAX_DISTANCE_M = 300;
+export const SUGGEST_MAX_DISTANCE_M = 20;
 export const MAX_CHOICES = 3;
 
 // Decides what a location may select. Distance is point-to-line on the stored

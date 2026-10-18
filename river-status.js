@@ -1,5 +1,6 @@
 // Live river status from recent reports: watches the last 30 days of reports in Firestore,
 // matches each to the nearest river and combines them, newer reports weighing more.
+// Sa madaling salita: kinukuwenta nito kung malinis o marumi ang bawat ilog base sa mga report nitong huling 30 araw.
 
 import { db } from './firebase-config.js';
 import {

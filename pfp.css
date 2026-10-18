@@ -1,3 +1,6 @@
+/* Profile page (pfp.html): cards, avatar, account fields, report boxes, crop dialog and Delete account. */
+/* Sa madaling salita: itsura ng Profile page. */
+
 :root {
     --bg: #0f0f11;
     --card: rgba(23, 23, 26, 0.82);
@@ -354,6 +357,11 @@ body.profile-page ::selection { background: rgba(139, 92, 246, 0.4); color: #fff
 .pf-pw-status:empty { display: none; }
 .pf-pw-status { margin-top: 10px; }
 .pf-password .pf-actions { margin-top: 14px; }
+
+/* Delete account */
+.pf-delete { border-color: rgba(255, 107, 138, 0.35); }
+.pf-delete .pf-note { margin-bottom: 12px; }
+.pf-delete .pf-actions { margin-top: 14px; }
 .pf-toggle { display: flex; align-items: flex-start; gap: 10px; font-size: .92rem; cursor: pointer; }
 .pf-toggle input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
 /* Recent reports */

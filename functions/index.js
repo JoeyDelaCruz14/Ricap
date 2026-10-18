@@ -2,16 +2,25 @@
 // - sendReportAlerts: when a report with status moderate or worse is created, emails the
 //   subscribers in alertSubscribers through EmailJS.
 // - redeemAccessCode: checks an access code and sets the official claim on the caller.
+// Sa madaling salita: mga code na tumatakbo sa server ng Firebase: nagpapadala ng email alert at sinusuri ang access code.
 
 const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const logger = require('firebase-functions/logger');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 
 admin.initializeApp();
 
 const EMAILJS_PRIVATE_KEY = defineSecret('EMAILJS_PRIVATE_KEY');
+// Secret used to turn an access code into a reporterKey (set with: firebase functions:secrets:set REPORTER_KEY_SECRET).
+const REPORTER_KEY_SECRET = defineSecret('REPORTER_KEY_SECRET');
+
+// ID saved on reports instead of the access code: same official -> same key, but the key cannot be turned back into the code.
+function reporterKeyFor(id) {
+    return crypto.createHmac('sha256', REPORTER_KEY_SECRET.value()).update(String(id)).digest('hex').slice(0, 32);
+}
 
 const EMAILJS_SERVICE_ID = 'service_vlbn60c';
 const EMAILJS_PUBLIC_KEY = '5AaO3u5yFe98nJxv6';
@@ -109,7 +118,7 @@ exports.sendReportAlerts = onDocumentCreated(
     }
 );
 
-exports.redeemAccessCode = onCall({ region: 'asia-southeast1' }, async request => {
+exports.redeemAccessCode = onCall({ region: 'asia-southeast1', secrets: [REPORTER_KEY_SECRET] }, async request => {
     if (!request.auth) {
         throw new HttpsError('unauthenticated', 'Your session has expired. Reload the page and try again.');
     }
@@ -124,7 +133,9 @@ exports.redeemAccessCode = onCall({ region: 'asia-southeast1' }, async request =
     }
 
     const v = snap.val();
-    await admin.auth().setCustomUserClaims(request.auth.uid, { official: true, officialCode: code });
-    logger.info('Official verified', { uid: request.auth.uid, code });
-    return { name: v.officialName || '', role: v.role || '', organization: v.organization || '' };
+    // Keyed on the application, so a reissued code for the same official keeps the same key.
+    const reporterKey = reporterKeyFor(v.applicationId || code);
+    await admin.auth().setCustomUserClaims(request.auth.uid, { official: true, officialCode: code, reporterKey });
+    logger.info('Official verified', { uid: request.auth.uid });
+    return { name: v.officialName || '', role: v.role || '', organization: v.organization || '', reporterKey };
 });

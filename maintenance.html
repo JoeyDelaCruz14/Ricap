@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <!-- Maintenance (admins only): manage reports, rivers, access codes and verified users. -->
+<!-- Sa madaling salita: dito inaayos ng admin ang website. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RiCap — Maintenance Module</title>
-    <link rel="icon" type="img/jpg" href="images&vids/Ricaplogo.png">
+    <link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="maintenance.css">
 </head>
@@ -48,9 +49,9 @@
                 <p class="gate-copy">Restricted to RiCap admin accounts created in Firebase Authentication.</p>
                 <form id="mLoginForm" class="access-form" autocomplete="off">
                     <label for="mEmail">Email</label>
-                    <input type="email" id="mEmail" required>
+                    <input type="email" id="mEmail" autocomplete="username" required>
                     <label for="mPassword">Password</label>
-                    <input type="password" id="mPassword" required>
+                    <input type="password" id="mPassword" autocomplete="current-password" required>
                     <button type="submit">Sign in</button>
                 </form>
                 <p class="access-error" id="mLoginError" hidden></p>

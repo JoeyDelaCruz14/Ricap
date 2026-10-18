@@ -1,4 +1,5 @@
 // Nav for main.html: shadow on scroll and the mobile menu (closes on link click, Esc or outside click).
+// Sa madaling salita: ang menu sa itaas ng main.html (anino kapag nag-scroll at menu sa cellphone).
 
 document.addEventListener('DOMContentLoaded', () => {
 

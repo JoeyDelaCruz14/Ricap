@@ -1,5 +1,6 @@
 // Verify page (Verify.html): application form for official access, with an ID photo from the
 // camera or an upload. Saves the application to the Realtime Database and the photo to Storage.
+// Sa madaling salita: dito nag-a-apply ang user para maging opisyal, kasama ang litrato ng ID.
 
 import { rtdb, storage } from './firebase-config.js';
 import { ref as dbRef, push, serverTimestamp

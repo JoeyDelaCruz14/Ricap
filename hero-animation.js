@@ -1,5 +1,6 @@
 // Hero title letters that appear one by one, then follow the mouse slightly.
 // Not loaded by any page at the moment.
+// Sa madaling salita: animation ng mga letra ng pamagat (hindi pa ginagamit).
 
 document.addEventListener('DOMContentLoaded', () => {
     const heroText = document.getElementById('heroText');

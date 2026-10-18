@@ -1,8 +1,9 @@
 // Realtime Database lookups keyed by email (see emailKey in account.js).
 // Requires rules for accounts/ and applicationEmails/ (see firebase-rules-proposed.md).
+// Sa madaling salita: tinitingnan kung may account na ang email at ano ang status ng application nito.
 
 import { rtdb } from './firebase-config.js';
-import { ref, get, set, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { ref, get, set, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 import { ensureAuth } from './Session.js';
 import { emailKey } from './account.js';
 
@@ -20,6 +21,12 @@ export async function isEmailRegistered(email) {
 export async function registerEmail(email) {
     await ensureAuth();
     await set(ref(rtdb, 'accounts/' + emailKey(email)), { createdAt: serverTimestamp() });
+}
+
+// Account deletion: frees the email so it can sign up again.
+export async function unregisterEmail(email) {
+    await ensureAuth();
+    await remove(ref(rtdb, 'accounts/' + emailKey(email)));
 }
 
 // The official application status for this email: 'pending', 'approved', 'rejected' or null.

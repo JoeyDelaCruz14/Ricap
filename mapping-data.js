@@ -1,6 +1,7 @@
 // Static data shared by the map, scanner, Home, Tracking, profile and Maintenance pages:
 // Bataan bounds and centre, and the list of monitored rivers (id, name, coast, position and a short note).
 // Loaded as a plain script, so these are globals.
+// Sa madaling salita: listahan ng mga ilog at hangganan ng Bataan na ginagamit ng ibang pahina.
 
 const BATAAN_BOUNDS = [
     [14.33, 120.02],

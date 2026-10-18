@@ -1,3 +1,7 @@
+// Official session: redeeming an access code (Cloud Function, or a browser check as fallback), the
+// anonymous Firebase sign-in every page uses (ensureAuth), and logout.
+// Sa madaling salita: dito nire-redeem ang access code ng opisyal at sinisigurong may Firebase login ang bawat bisita.
+
 import { rtdb, auth, app } from './firebase-config.js';
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
 import { ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
@@ -26,7 +30,7 @@ export async function verifyCode(code) {
         const res = await redeem({ code });
         await auth.currentUser.getIdToken(true);
         const v = res.data || {};
-        official = { code, name: v.name, role: v.role, organization: v.organization, uid: auth.currentUser.uid };
+        official = { code, name: v.name, role: v.role, organization: v.organization, uid: auth.currentUser.uid, reporterKey: v.reporterKey || '' };
     } catch (err) {
         const c = String(err && err.code || '');
         if (c === 'functions/permission-denied' || c === 'functions/invalid-argument') {

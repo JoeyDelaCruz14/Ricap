@@ -1,5 +1,6 @@
 // Effects for Home.html: nav shadow, smooth scrolling, back-to-top, mobile menu, posts fading in
 // as they load, card tilt (mouse only) and the counting animation of the stats.
+// Sa madaling salita: mga animation sa Home page (scroll, back-to-top, pagbilang ng stats).
 
 (function () {
     'use strict';

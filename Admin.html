@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <!-- Admin (admins only): review official applications and send access codes. -->
+<!-- Sa madaling salita: pahina ng admin para sa mga application ng opisyal. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>     Admin Review</title>
-    <link rel="icon" type="img/jpg" href="images&vids/Ricaplogo.png">
+    <link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="Admin.css">
 </head>
@@ -40,9 +41,9 @@
 
                 <form id="adminLoginForm" class="access-form" autocomplete="off">
                     <label for="adminEmail">Email</label>
-                    <input type="email" id="adminEmail" required>
+                    <input type="email" id="adminEmail" autocomplete="username" required>
                     <label for="adminPassword">Password</label>
-                    <input type="password" id="adminPassword" required>
+                    <input type="password" id="adminPassword" autocomplete="current-password" required>
                     <button type="submit">Sign in</button>
                 </form>
                 <p class="access-error" id="adminLoginError" hidden></p>

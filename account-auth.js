@@ -1,6 +1,7 @@
 // Sign-up form on main.html (runs before the older handler in home-interactive.js and stops it).
 // Creates a Firebase email/password account, records the email in the registry, saves the local
 // account without the password, and optionally turns on email alerts.
+// Sa madaling salita: ito ang gumagawa ng bagong account kapag nag-sign up, at nagpapadala ng email para i-confirm ito.
 
 import { auth } from './firebase-config.js';
 import { createUserWithEmailAndPassword, updateProfile, signOut, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";

@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <!-- Tracking: your scans and shared reports as cards, a table, a monthly map and a timeline. -->
+<!-- Sa madaling salita: listahan at kasaysayan ng mga scan at report. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tracking</title>
-<link rel="icon" type="img/jpg" href="images&vids/Ricaplogo.png">
+<link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="Tracking.css">
 </head>
 <body>
@@ -137,6 +139,12 @@
                     </thead>
                     <tbody id="timelineTableBody"></tbody>
                 </table>
+                <!-- Table pages (shown when there are more than 20 records) -->
+                <div class="table-pager" id="tablePager" hidden>
+                    <button type="button" class="table-pager-btn" id="tablePrev" aria-label="Previous page">&lsaquo; Prev</button>
+                    <span class="table-pager-info" id="tablePageInfo" aria-live="polite"></span>
+                    <button type="button" class="table-pager-btn" id="tableNext" aria-label="Next page">Next &rsaquo;</button>
+                </div>
             </div>
         </section>
 

@@ -1,3 +1,6 @@
+// Decides whether the signed-in user is the admin (the checks are listed below).
+// Sa madaling salita: sinusuri nito kung admin ang naka-login.
+
 import { rtdb } from './firebase-config.js';
 import { ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 

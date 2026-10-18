@@ -1,4 +1,5 @@
 // Full-screen water surface for Water Ripples.html (engine: water-core.js).
+// Sa madaling salita: ang gumagalaw na tubig sa Water Ripples.html.
 (function () {
   var canvas = document.getElementById('water');
   if (!canvas || !window.RiCapWater) return;

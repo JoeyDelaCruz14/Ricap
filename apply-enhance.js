@@ -1,5 +1,6 @@
 // Extra help for the Verify form: live field validation messages, the progress bar and steps,
 // drag and drop for the ID photo, and pointing out a missing photo on submit.
+// Sa madaling salita: tumutulong ito habang pinupunan ang Verify form (mga paalala, progress bar, pag-drag ng ID photo).
 
 (function () {
     'use strict';

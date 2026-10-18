@@ -1,6 +1,7 @@
 // Local account state kept in localStorage: the signed-up account, the "logged in" flag,
 // the official access-code session and which emails are verified. No Firebase calls here,
 // so any page can read who is logged in without waiting for the network.
+// Sa madaling salita: dito naka-save sa browser kung sino ang naka-login, ang account niya, at kung verified na siya.
 
 export const ACCOUNT_KEY = 'ricapAccount';
 export const LOGGED_KEY = 'ricapLoggedIn';
@@ -61,6 +62,25 @@ export function isVerifiedUser() {
     if (getOfficialSession()) return true;
     const a = getAccount();
     return isLocalLoggedIn() && !!(a && a.verified);
+}
+
+// Marks a Firebase email/password account as logged in on this browser, so Profile, Home and
+// the nav know who it is. Keeps what this browser already saved for the same email.
+export function rememberLogin(user) {
+    if (!user || user.isAnonymous || !user.email) return;
+    const prev = getAccount();
+    const same = prev && String(prev.email || '').toLowerCase() === String(user.email).toLowerCase();
+    const base = same ? prev : {};
+    const name = user.displayName || base.name || String(user.email).split('@')[0];
+    const parts = name.trim().split(/s+/);
+    saveAccount({
+        ...base,
+        name,
+        firstName: base.firstName || parts[0] || '',
+        lastName: base.lastName || parts.slice(1).join(' '),
+        email: user.email
+    });
+    try { localStorage.setItem(LOGGED_KEY, 'true'); } catch (e) {  }
 }
 
 // Logs the account out on this browser but keeps the saved account.

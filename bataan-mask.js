@@ -1,6 +1,7 @@
 // Map mask that darkens everything outside Bataan and outlines its municipalities.
 // Boundary comes from data/bataan-boundaries.geojson, falling back to Nominatim (cached 30 days).
 // Also used by the scanner to measure how far a point is from the coast.
+// Sa madaling salita: pinapadilim nito ang mapa sa labas ng Bataan para kita agad ang mga bayan nito.
 
 
 const BOUNDARY_URL = 'data/bataan-boundaries.geojson';

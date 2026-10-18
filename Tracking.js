@@ -1,5 +1,6 @@
 // Tracking page (Tracking.html): this browser's scans plus shared reports from Firestore,
 // as cards, a table, a monthly map and a timeline, with sorting, filters and a detail view.
+// Sa madaling salita: dito makikita ang lahat ng scan at report mo sa cards o table (20 bawat page), mapa at timeline.
 
 const RECORDS_KEY = 'ricap_river_records';
 const REPORTS_API = '';
@@ -24,7 +25,7 @@ function readStoredJSON(key) {
 function getCurrentUser() {
     const official = readStoredJSON('ricap_official');
     if (official && (official.code || official.name)) {
-        return { id: String(official.code || official.name), name: String(official.name || official.code), code: String(official.code || '') };
+        return { id: String(official.code || official.name), name: String(official.name || official.code), code: String(official.code || ''), key: String(official.reporterKey || '') };
     }
     const account = readStoredJSON('ricapAccount');
     if (account && account.email && localStorage.getItem('ricapLoggedIn') === 'true') {
@@ -51,6 +52,7 @@ function getCurrentUser() {
 function isMine(record) {
     const me = getCurrentUser();
     if (record.uid && myUid && String(record.uid) === myUid) return true;
+    if (record.reporterKey && me.key && String(record.reporterKey) === me.key) return true;
     if (record.reporterCode && me.code && String(record.reporterCode) === me.code) return true;
     if (record.remote) return false;
     if (!record.userId) return true;
@@ -141,6 +143,7 @@ function fromReportDoc(docId, r) {
         recommendationSource: r.recommendationSource || '',
         reporterName: r.reporterName || '',
         reporterRole: r.reporterRole || '',
+        reporterKey: r.reporterKey || '',
         reporterCode: r.reporterCode || '',
         uid: r.uid || ''
     };
@@ -631,6 +634,8 @@ function initTracking() {
     let viewMode = loadViewMode();
     let dataset = [];
     let renderToken = 0;
+    const TABLE_PAGE_SIZE = 20;
+    let tablePage = 1;
 
     sortSelect.value = sortOrder;
     scopeSelect.value = scope;
@@ -664,12 +669,14 @@ function initTracking() {
     sortSelect.addEventListener('change', function () {
         sortOrder = sortSelect.value === 'oldest' ? 'oldest' : 'newest';
         saveSortOrder(sortOrder);
+        tablePage = 1;
         renderRecordsView();
     });
 
     scopeSelect.addEventListener('change', function () {
         scope = scopeSelect.value === 'mine' ? 'mine' : 'all';
         saveScope(scope);
+        tablePage = 1;
         renderList();
     });
 
@@ -680,6 +687,7 @@ function initTracking() {
         trendNext.disabled = chartYear === now.getFullYear() && chartMonth === now.getMonth();
     }
 
+    // Moves the monthly map one month back or forward (not past this month).
     function shiftMonth(delta) {
         const d = new Date(chartYear, chartMonth + delta, 1);
         if (d > new Date(now.getFullYear(), now.getMonth(), 1)) return;
@@ -741,15 +749,20 @@ function initTracking() {
         });
     }
 
-    // Records as table rows.
+    // Records as table rows, 20 per page.
     function renderTableRows() {
         const tbody = document.getElementById('timelineTableBody');
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        const rows = sortRecords(dataset, sortOrder);
-        if (!rows.length) return;
+        const all = sortRecords(dataset, sortOrder);
+        const pages = Math.max(1, Math.ceil(all.length / TABLE_PAGE_SIZE));
+        tablePage = Math.min(Math.max(1, tablePage), pages);
+        renderTablePager(all.length, pages);
+        if (!all.length) return;
 
+        const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+        const rows = all.slice(start, start + TABLE_PAGE_SIZE);
         rows.forEach(function (record) {
             const d = new Date(record.timestamp);
             const dateStr = isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -774,6 +787,29 @@ function initTracking() {
             tbody.appendChild(tr);
         });
     }
+
+    // Page buttons under the table; hidden when everything fits on one page.
+    function renderTablePager(total, pages) {
+        const pager = document.getElementById('tablePager');
+        if (!pager) return;
+        pager.hidden = pages <= 1;
+        if (pages <= 1) return;
+        const first = (tablePage - 1) * TABLE_PAGE_SIZE + 1;
+        const last = Math.min(total, tablePage * TABLE_PAGE_SIZE);
+        document.getElementById('tablePageInfo').textContent =
+            'Page ' + tablePage + ' of ' + pages + ' · ' + first + '–' + last + ' of ' + total;
+        document.getElementById('tablePrev').disabled = tablePage <= 1;
+        document.getElementById('tableNext').disabled = tablePage >= pages;
+    }
+
+    // Moves the table to another page and keeps it in view.
+    function goToTablePage(delta) {
+        tablePage += delta;
+        renderTableRows();
+        timelineTableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    document.getElementById('tablePrev').addEventListener('click', function () { goToTablePage(-1); });
+    document.getElementById('tableNext').addEventListener('click', function () { goToTablePage(1); });
 
     // Renders the records in the current view mode.
     function renderRecordsView() {

@@ -3,6 +3,7 @@
 // checks, the combined score and recommendation, and submitting the official report
 // (photo to Storage, report to Firestore, a copy in this browser for Tracking).
 // River/segment selection and location live in scanner-steps.js.
+// Sa madaling salita: ito ang Scanner. Sinusuri ng AI ang litrato ng ilog (basura, kulay ng tubig), nagbibigay ng score, at sine-save ang report.
 
 import { storage, auth, db } from './firebase-config.js';
 import { ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
@@ -163,7 +164,7 @@ function inBataan(lat, lng) {
     return lat >= BATAAN.south && lat <= BATAAN.north && lng >= BATAAN.west && lng <= BATAAN.east;
 }
 
-const GOOD_ACCURACY_M = 20;      // keep refining the GPS fix until it is this precise (or the wait ends)
+const GOOD_ACCURACY_M = SUGGEST_MAX_DISTANCE_M;
 const WARN_ACCURACY_M = 150;    
 const LOCATION_WAIT_MS = 15000;  
 const MAX_ACCEPT_ACCURACY_M = 1000;  
@@ -417,7 +418,7 @@ async function submitOfficialReport(analysis, imageDataUrl, details) {
         imageUrl: uploaded.url,
         reporterName: official.name || '',
         reporterRole: official.role || '',
-        reporterCode: official.code || '',
+        reporterKey: official.reporterKey || '',
         uid: uid,
         createdAt: serverTimestamp()
     };

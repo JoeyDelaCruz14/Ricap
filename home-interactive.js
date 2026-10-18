@@ -3,6 +3,7 @@
 // show/hide password and the password strength bar.
 // The login and sign-up submit handlers at the end are the old local-only versions; admin-login.js
 // and account-auth.js handle those forms first and stop these from running.
+// Sa madaling salita: mga effect sa main.html at ang pagbukas/pagsara ng login at sign-up box.
 
 document.addEventListener("DOMContentLoaded", () => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

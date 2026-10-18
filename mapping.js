@@ -1,6 +1,7 @@
 // Mapping page (mapping.html): Leaflet map of Bataan rivers with their segments coloured by the
 // reports of the chosen month, popups with the latest scan, a sidebar list with search, a jump
 // search, per-river notifications and the month selector.
+// Sa madaling salita: ipinapakita nito ang mapa ng mga ilog sa Bataan at ang kulay ng bawat parte ayon sa mga report.
 
 import { watchRiverStatuses } from './river-status.js';
 import {

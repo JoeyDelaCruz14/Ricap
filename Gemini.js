@@ -1,7 +1,3 @@
-// Optional AI recommendation text from Google Gemini for a scan result.
-// Falls back to rule-based advice when there is no key, the daily limit is reached or the call fails,
-// and always appends the disclaimer that this is based on photos only.
-
 let GEMINI_KEY = 'AQ.Ab8RN6LzjKNBpnPec2JsN7iyEN8FNTCOkRsIA1dkfEQyC4SS4Q';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 const GEMINI_TIMEOUT_MS = 20000;

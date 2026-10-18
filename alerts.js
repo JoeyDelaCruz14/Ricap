@@ -1,8 +1,9 @@
 // Email alert subscription for logged-in accounts. The subscriber list lives in Firestore
 // (alertSubscribers); the sendReportAlerts Cloud Function emails them when a report is posted.
+// Sa madaling salita: ini-on o ini-off nito ang email alerts kapag may bagong report sa ilog.
 
 import { db } from './firebase-config.js';
-import { doc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ensureAuth } from './Session.js';
 import { getAccount, saveAccount, isLocalLoggedIn, normalizePhone } from './account.js';
 
@@ -32,6 +33,12 @@ export async function setEmailAlerts(on) {
     await writeSubscriber(a, on);
     a.emailAlerts = !!on;
     saveAccount(a);
+}
+
+// Account deletion: removes this user from the subscriber list.
+export async function removeSubscriber() {
+    const uid = await ensureAuth();
+    await deleteDoc(doc(db, 'alertSubscribers', uid));
 }
 
 // Re-saves the subscription on page load, in case it was lost on the server.

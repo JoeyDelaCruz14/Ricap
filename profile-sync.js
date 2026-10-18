@@ -1,9 +1,10 @@
 // Profile data shared between pages: the profile key (email or official code), Firebase uids the
 // user has had, the profile picture (Firebase Storage + Auth photoURL) and the profiles/ document
 // that Maintenance reads. Pictures are checked, cropped to 256x256 and re-encoded (EXIF removed).
+// Sa madaling salita: dito ina-upload at kinukuha ang profile picture para pareho ito sa lahat ng pahina.
 
 import { db, storage, auth } from './firebase-config.js';
-import { doc, setDoc, serverTimestamp, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+import { doc, setDoc, deleteDoc, serverTimestamp, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import { updateProfile } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import { ensureAuth } from './Session.js';
@@ -172,6 +173,18 @@ export function avatarErrorMessage(err) {
     if (/unauthorized|unauthenticated|requires-recent-login/.test(code)) return 'You can only change your own picture. Log out, log in again and retry.';
     if (/quota/.test(code)) return 'The service is busy right now. Try again in a minute.';
     return 'Could not update the profile picture. Try again.';
+}
+
+// Account deletion: removes profiles/{key} and the picture and uid lists kept on this device.
+export async function forgetProfile() {
+    const key = profileKey();
+    if (!key) return;
+    try { await deleteDoc(doc(db, PROFILES, encodeURIComponent(key))); }
+    catch (err) { console.warn('RiCap: could not delete the profile record', err && err.code); }
+    try {
+        localStorage.removeItem(AVATAR_PREFIX + key);
+        localStorage.removeItem(UIDS_PREFIX + key);
+    } catch (e) {  }
 }
 
 // Publishes this browser's verified user to profiles/{key} for Maintenance.

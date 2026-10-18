@@ -1,4 +1,5 @@
 // Zooms the background video in while scrolling past the hero. Not loaded by any page at the moment.
+// Sa madaling salita: pinapalaki ang background video habang nag-i-scroll (hindi pa ginagamit).
 
 document.addEventListener('DOMContentLoaded', () => {
     const video = document.getElementById('bg-video');

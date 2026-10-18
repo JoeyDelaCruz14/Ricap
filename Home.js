@@ -1,6 +1,7 @@
 // Home page (Home.html): the community forum of river reports from Firestore, with votes,
 // comments, sharing, saved posts, status filter, river search, sort and pagination,
 // plus stats, the officials list, notifications and the account box.
+// Sa madaling salita: ito ang forum sa Home: makikita ang mga report, makakapag-vote, comment at search ng ilog.
 
 import { db, auth, storage } from './firebase-config.js';
 import { ref as storageRef, getDownloadURL, getMetadata } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
@@ -14,7 +15,7 @@ import { mountAuthNav, getOfficial, isVerified, logout, ensureAuth } from './Ses
 import {
     requestNotifications, allNotifEnabled, setAllNotifications, startReportAlerts
 } from './Notify.js';
-import { getAccount, isLocalLoggedIn } from './account.js';
+import { getAccount, isLocalLoggedIn, rememberLogin } from './account.js';
 import { emailAlertsEnabled, setEmailAlerts, resyncIfOptedIn } from './alerts.js';
 
 
@@ -115,7 +116,12 @@ ensureAuth().then(uid => { state.uid = uid; render(); }).catch(err => console.wa
 onAuthStateChanged(auth, async user => {
     loadMyAvatar();
     const admin = await isAdminUser(user);
-    if (user !== auth.currentUser || admin === isAdmin) return;
+    if (user !== auth.currentUser) return;
+    if (!admin && user && !user.isAnonymous && !isLocalLoggedIn()) {
+        rememberLogin(user);
+        renderAuthBlock();
+    }
+    if (admin === isAdmin) return;
     isAdmin = admin;
     renderAuthBlock();
 });
@@ -331,7 +337,7 @@ function initFab() {
 // Totals at the top and the list of active officials.
 function renderStatsAndOfficials() {
     const all = state.reports;
-    const officialKey = r => r.reporterCode || r.reporterName;
+    const officialKey = r => r.reporterKey || r.reporterCode || r.reporterName;
 
     $('statReports').textContent = all.length;
     $('statRivers').textContent = new Set(all.map(r => r.riverId).filter(Boolean)).size;
@@ -426,9 +432,10 @@ function loadMyAvatar() {
     }).catch(e => console.warn('RiCap: could not load your profile picture', e));
 }
 
-// Who a post belongs to, beyond its uid: posts with the same access code are the same official,
+// Who a post belongs to, beyond its uid: posts with the same reporterKey (or, on old posts, access code) are the same official,
 // and admin posts are the admin. Used to share a picture across that person's posts.
 function reporterGroup(r) {
+    if (r.reporterKey) return 'key:' + r.reporterKey;
     if (r.reporterCode) return 'code:' + String(r.reporterCode).toUpperCase();
     if (r.reporterRole === 'Admin') return 'admin';
     return '';
@@ -451,6 +458,7 @@ function avatarForReport(r) {
     return '';
 }
 
+// Draws the feed: keeps typed comments, applies filters, sort and paging, then the pager.
 function render() {
     const feed = $('forumFeed');
     if (!feed) return;

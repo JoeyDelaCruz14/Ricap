@@ -1,5 +1,6 @@
 // Water surface inside the login/sign-up box (engine: water-core.js).
 // Runs only while #authModal has the "open" class, so it costs nothing when the modal is closed.
+// Sa madaling salita: ito ang gumagalaw na tubig sa likod ng login/sign-up box.
 (function () {
   var modal = document.getElementById('authModal');
   var box = modal && modal.querySelector('.auth-box');

@@ -1,6 +1,7 @@
 // Official application review, shared by Admin.html and the Applications tab in Maintenance.
 // Lists pending applications live; Approve creates an access code, marks the application approved
 // and emails the code through EmailJS (with a mailto: fallback); Reject marks it rejected.
+// Sa madaling salita: dito ina-aprubahan o nire-reject ang mga application, at gumagawa ng access code para sa naaprubahan.
 
 import { rtdb as db } from './firebase-config.js';
 import { ref, query, orderByChild, equalTo, onValue, set, update, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";

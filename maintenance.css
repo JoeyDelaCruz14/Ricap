@@ -1,4 +1,5 @@
 /* Maintenance page (maintenance.html): admin panels, report cards and forms. */
+/* Sa madaling salita: itsura ng Maintenance page. */
 
 :root {
     --bg: #0f0f11;
@@ -287,6 +288,18 @@ body.maintenance-page ::selection { background: rgba(139, 92, 246, 0.4); color: 
 .m-text { margin-bottom: 10px; font-size: .9rem; overflow-wrap: anywhere; }
 .m-flagnote { margin-bottom: 10px; color: var(--danger); font-size: .85rem; font-weight: 600; }
 .m-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Comments on a report */
+.m-comments-none { margin-bottom: 10px; color: var(--muted); font-size: .82rem; }
+.m-comments { margin-bottom: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card-raised); }
+.m-comments summary { padding: 8px 12px; font-size: .85rem; font-weight: 600; cursor: pointer; }
+.m-comments summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.m-comments ul { list-style: none; margin: 0; padding: 0 12px 10px; max-height: 280px; overflow-y: auto; }
+.m-comments li { padding: 8px 0; border-top: 1px solid var(--line); }
+.m-comment-head { font-size: .8rem; color: var(--muted); }
+.m-comment-head strong { color: var(--ink); }
+.m-comment-badge { padding: 1px 7px; font-size: .68rem; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; }
+.m-comment-text { margin-top: 3px; font-size: .88rem; overflow-wrap: anywhere; }
 
 .m-pill {
     padding: 3px 10px;

@@ -1,6 +1,7 @@
 // Admin page (Admin.html), admins only: reviews official applications, generates access codes
 // and emails them to approved applicants. The review itself lives in applications.js, which the
 // Applications tab in Maintenance uses too.
+// Sa madaling salita: pahina ng admin para tingnan at aprubahan ang mga application ng mga opisyal.
 
 import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";

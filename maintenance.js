@@ -1,3 +1,7 @@
+// Maintenance page (maintenance.html), admins only: report moderation (flag, status, delete, comments),
+// river locations, access codes, data checks, CSV export and the Applications tab.
+// Sa madaling salita: dito inaayos ng admin ang mga report, ilog at access code.
+
 import { db, rtdb, storage, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
@@ -20,6 +24,8 @@ let riverRecords = [];     // Firestore riverLocations
 let codes = [];            // RTDB accessCodes
 let pendingApps = 0;
 let unsubs = [];
+let commentsByReport = new Map();   // reportId -> [comments], oldest first
+const openComments = new Set();     // report ids whose comment list is expanded
 
 /* ---------- helpers ---------- */
 function staticRivers() {
@@ -29,6 +35,7 @@ function staticRivers() {
     return [];
 }
 
+// River name for an id (Firestore river records first, then the built-in list).
 function riverName(id) {
     if (id == null || id === '') return 'Unassigned';
     const hit = riverRecords.find(r => r.id === String(id)) ||
@@ -36,12 +43,14 @@ function riverName(id) {
     return hit ? (hit.name || hit.officialName || String(id)) : String(id);
 }
 
+// Date and time in Philippine format, or "—".
 function fmtDate(ts) {
     const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
     return d && !isNaN(d) ? d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 }
 
 let toastTimer = null;
+// Short message at the bottom of the page.
 function toast(msg) {
     const t = $('mToast');
     t.textContent = msg;
@@ -86,6 +95,18 @@ function startListeners(user) {
         renderAll();
     }, err => onLoadError('reports', err)));
 
+    unsubs.push(onSnapshot(query(collection(db, 'forumComments'), orderBy('createdAt', 'asc')), snap => {
+        const map = new Map();
+        snap.forEach(d => {
+            const c = { id: d.id, ...d.data({ serverTimestamps: 'estimate' }) };
+            if (!map.has(c.reportId)) map.set(c.reportId, []);
+            map.get(c.reportId).push(c);
+        });
+        commentsByReport = map;
+        renderFlagged();
+        renderReports();
+    }, err => onLoadError('comments', err)));
+
     unsubs.push(onSnapshot(collection(db, 'riverLocations'), snap => {
         riverRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }))
             .sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -109,6 +130,7 @@ function startListeners(user) {
 }
 let currentAdmin = '';
 
+// A live list could not load (usually a Firebase rule).
 function onLoadError(what, err) {
     console.error(err);
     toast('Could not load ' + what + ' — check your Firebase rules.');
@@ -124,6 +146,7 @@ function renderAll() {
     renderIntegrity();
 }
 
+// Numbers at the top and the flagged badge.
 function renderStats() {
     const flagged = reports.filter(r => r.flagged).length;
     $('stReports').textContent = reports.length;
@@ -134,6 +157,7 @@ function renderStats() {
     $('flagBadge').hidden = !flagged;
 }
 
+// One report with its photo, details, comments and admin actions.
 function reportCard(r) {
     const status = STATUSES.includes(r.status) ? r.status : 'healthy';
     const card = document.createElement('article');
@@ -148,6 +172,7 @@ function reportCard(r) {
             <p class="m-meta">${esc(riverName(r.riverId))} · ${esc(r.reporterName || 'Unknown reporter')}${r.reporterRole ? ' (' + esc(r.reporterRole) + ')' : ''} · ${esc(fmtDate(r.createdAt))}</p>
             <p class="m-text">${esc(r.assessment || '')}</p>
             ${r.flagged ? `<p class="m-flagnote">Flagged${r.flagReason ? ': ' + esc(r.flagReason) : ''}${r.flaggedBy ? ' — by ' + esc(r.flaggedBy) : ''}</p>` : ''}
+            ${commentsHtml(r)}
             <div class="m-actions">
                 ${r.flagged
                     ? `<button type="button" class="submit-btn" data-act="clear">Keep (clear flag)</button>`
@@ -163,9 +188,26 @@ function reportCard(r) {
     card.querySelector('[data-act="clear"]')?.addEventListener('click', () => clearFlag(r));
     card.querySelector('[data-act="status"]').addEventListener('change', e => overrideStatus(r, e.target.value));
     card.querySelector('[data-act="delete"]').addEventListener('click', () => deleteReport(r));
+    card.querySelector('.m-comments')?.addEventListener('toggle', e => {
+        if (e.target.open) openComments.add(r.id); else openComments.delete(r.id);
+    });
     return card;
 }
 
+// The report's comments from Home (author, text, date), collapsed under "Comments (n)".
+function commentsHtml(r) {
+    const list = commentsByReport.get(r.id) || [];
+    if (!list.length) return '<p class="m-comments-none">No comments yet.</p>';
+    return `<details class="m-comments"${openComments.has(r.id) ? ' open' : ''}>
+        <summary>Comments (${list.length})</summary>
+        <ul>${list.map(c => `<li>
+            <p class="m-comment-head"><strong>${esc(c.author || 'Guest')}</strong>${c.isOfficial ? ' <span class="m-comment-badge">Official</span>' : ''} <span>${esc(fmtDate(c.createdAt))}</span></p>
+            <p class="m-comment-text">${esc(c.text || '')}</p>
+        </li>`).join('')}</ul>
+    </details>`;
+}
+
+// Flagged reports tab.
 function renderFlagged() {
     const list = $('flaggedList');
     const flagged = reports.filter(r => r.flagged);
@@ -174,6 +216,7 @@ function renderFlagged() {
     flagged.forEach(r => list.appendChild(reportCard(r)));
 }
 
+// All reports tab, filtered by the search box and status.
 function renderReports() {
     const q = $('reportSearch').value.trim().toLowerCase();
     const st = $('reportStatus').value;
@@ -189,6 +232,7 @@ function renderReports() {
     rows.forEach(r => list.appendChild(reportCard(r)));
 }
 
+// River locations list.
 function renderRivers() {
     const body = $('riverRows');
     body.innerHTML = '';
@@ -211,6 +255,7 @@ function renderRivers() {
     });
 }
 
+// Access codes list.
 function renderCodes() {
     const body = $('codeRows');
     body.innerHTML = '';
@@ -229,6 +274,7 @@ function renderCodes() {
     });
 }
 
+// Data checks: missing photos, unlinked reports, bad coordinates, duplicates.
 function renderIntegrity() {
     const noImage = reports.filter(r => !r.imageUrl).length;
     const noRiver = reports.filter(r => !r.riverId).length;
@@ -258,6 +304,7 @@ async function flagReport(r) {
     } catch (err) { fail('Flag failed', err); }
 }
 
+// Keeps a flagged report and clears the flag.
 async function clearFlag(r) {
     try {
         await updateDoc(doc(db, 'reports', r.id), {
@@ -267,6 +314,7 @@ async function clearFlag(r) {
     } catch (err) { fail('Could not clear flag', err); }
 }
 
+// Changes a report's status by hand.
 async function overrideStatus(r, status) {
     if (status === r.status) return;
     try {
@@ -277,6 +325,7 @@ async function overrideStatus(r, status) {
     } catch (err) { fail('Status change failed', err); renderAll(); }
 }
 
+// Deletes a report and its photo.
 async function deleteReport(r) {
     if (!confirm('Permanently delete "' + (r.reportName || 'this report') + '" and its photo? This cannot be undone.')) return;
     try {
@@ -298,6 +347,7 @@ function resetRiverForm() {
     $('riverError').hidden = true;
 }
 
+// Fills the river form to edit a record.
 function editRiver(r) {
     $('riverDocId').value = r.id;
     $('riverName').value = r.name || '';
@@ -347,6 +397,7 @@ $('riverForm').addEventListener('submit', async e => {
     finally { $('riverSaveBtn').disabled = false; }
 });
 
+// Deletes a river record.
 async function deleteRiver(r) {
     const used = reports.filter(x => String(x.riverId) === r.id).length;
     const warn = used ? '\n\n' + used + ' report(s) still reference this river and will show as its raw ID.' : '';
@@ -392,6 +443,7 @@ document.querySelectorAll('.m-tab').forEach(tab => tab.addEventListener('click',
 $('reportSearch').addEventListener('input', renderReports);
 $('reportStatus').addEventListener('change', renderReports);
 
+// Error message, pointing at the rules when permission was denied.
 function fail(msg, err) {
     console.error(err);
     toast(msg + (err && err.code === 'permission-denied' ? ' — permission denied (check Firebase rules).' : '.'));

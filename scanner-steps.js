@@ -1,6 +1,7 @@
 // Scanner steps: access check, choosing a river and segment, and the location (GPS, photo EXIF
-// or a pin on the map). Suggests a segment only under the 300 m rule in location-match.js;
+// or a pin on the map). Suggests a segment only under the strict 20 m rule in location-match.js;
 // the user can always choose manually.
+// Sa madaling salita: mga hakbang bago mag-scan: pumili ng ilog at segment, at kunin ang lokasyon mo.
 
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
@@ -234,7 +235,7 @@ function pinLocation(lat, lng) {
 }
 
 
-// Saves the location and suggests a segment if one is within 300 m.
+// Saves the location and suggests a segment if one is within 20 m.
 async function setLocation(loc) {
     state.loc = loc;
     showLocationOnMap();

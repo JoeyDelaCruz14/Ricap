@@ -1,4 +1,5 @@
 // Reveals an SVG title while scrolling. Not loaded by any page at the moment.
+// Sa madaling salita: unti-unting lumalabas ang pamagat habang nag-i-scroll (hindi pa ginagamit).
 
 document.addEventListener('DOMContentLoaded', () => {
     const wrap = document.getElementById('letterRevealWrap');

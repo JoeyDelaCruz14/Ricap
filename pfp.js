@@ -1,20 +1,21 @@
 // Profile page (pfp.html): account details, profile picture (crop + upload), official access,
 // email alerts, change password and the user's recent reports.
+// Sa madaling salita: ito ang Profile page: palitan ang pangalan, litrato at password, makita ang mga report mo, o burahin ang account.
 
 import { auth, db, storage } from './firebase-config.js';
 import { collection, query, orderBy, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
 import { ref as storageRef, getDownloadURL, getMetadata } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
 import {
-    onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail
+    onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, updateProfile, deleteUser
 } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
-import { getAccount, saveAccount, isLocalLoggedIn, getOfficialSession, isVerifiedUser, displayName, normalizePhone, initials } from './account.js';
+import { getAccount, saveAccount, isLocalLoggedIn, getOfficialSession, isVerifiedUser, displayName, normalizePhone, initials, rememberLogin, clearLocalLogin, ACCOUNT_KEY, OFFICIAL_KEY } from './account.js';
 import { ensureAuth, signOutOfficial } from './Session.js';
 import { performLogout } from './admin-nav.js';
-import { setEmailAlerts, emailAlertsEnabled, resyncIfOptedIn } from './alerts.js';
-import { getApplicationStatus } from './registry.js';
+import { setEmailAlerts, emailAlertsEnabled, resyncIfOptedIn, removeSubscriber } from './alerts.js';
+import { getApplicationStatus, unregisterEmail } from './registry.js';
 import {
     getAvatar, syncProfile, knownUids, rememberUid, canHaveAvatar, legacyAvatar,
-    checkAvatarFile, renderAvatar, uploadAvatar, removeAvatar, avatarErrorMessage
+    checkAvatarFile, renderAvatar, uploadAvatar, removeAvatar, avatarErrorMessage, forgetProfile
 } from './profile-sync.js';
 import { isAdminUser } from './admin-role.js';
 
@@ -249,10 +250,11 @@ async function loadMyReports(s) {
         rememberUid(uid);
         const uids = new Set([uid, ...knownUids()].filter(Boolean));
         const code = s.official && s.official.code ? String(s.official.code) : '';
+        const key = s.official && s.official.reporterKey ? String(s.official.reporterKey) : '';
         const snap = await getDocs(query(collection(db, 'reports'), orderBy('createdAt', 'desc')));
         mine = snap.docs
             .map(d => ({ id: d.id, ...d.data({ serverTimestamps: 'estimate' }) }))
-            .filter(r => uids.has(r.uid) || (code && r.reporterCode === code) || localIds.has(String(r.recordId)));
+            .filter(r => uids.has(r.uid) || (key && r.reporterKey === key) || (code && r.reporterCode === code) || localIds.has(String(r.recordId)));
     } catch (err) {
         console.error('RiCap: could not load your reports', err);
         $('pfReportsEmpty').textContent = 'Could not load your reports right now. Check your connection and refresh.';
@@ -283,8 +285,10 @@ async function loadMyReports(s) {
 // or, for admin reports, every admin report.
 const viewReportId = new URLSearchParams(location.search).get('report');
 
+// True if two reports are from the same person: same account, same official, or both admin.
 function sameReporter(a, b) {
     if (a.uid && b.uid && a.uid === b.uid) return true;
+    if (a.reporterKey && b.reporterKey && a.reporterKey === b.reporterKey) return true;
     if (a.reporterCode && b.reporterCode && String(a.reporterCode).toUpperCase() === String(b.reporterCode).toUpperCase()) return true;
     return a.reporterRole === 'Admin' && b.reporterRole === 'Admin';
 }
@@ -301,6 +305,7 @@ async function publicAvatar(uids) {
     return '';
 }
 
+// Read-only profile of another reporter, opened from a post on Home (pfp.html?report=<id>).
 async function renderPublicProfile() {
     $('pfGate').hidden = true;
     ['pfHero', 'pfGrid'].forEach(id => { $(id).hidden = true; });
@@ -368,6 +373,7 @@ async function refresh() {
     const user = auth.currentUser;
     const isAdmin = await isAdminUser(user);
     if (user !== auth.currentUser) return;
+    if (!isAdmin && user && !user.isAnonymous && !isLocalLoggedIn()) rememberLogin(user);
     const s = currentState(user, isAdmin);
     $('pfGate').hidden = s.signedIn;
     ['pfHero', 'pfGrid', 'pfReportsCard'].forEach(id => { $(id).hidden = !s.signedIn; });
@@ -377,6 +383,7 @@ async function refresh() {
     renderOfficial(s);
     renderAlerts(s);
     renderPassword();
+    renderDelete(s);
     moveLegacyAvatar();
     if (!reportsLoaded) {
         reportsLoaded = true;
@@ -429,8 +436,15 @@ $('pfForm').addEventListener('submit', async e => {
     }
 
     $('pfSaveBtn').disabled = true;
-    saveAccount({ ...a, firstName, lastName, name: firstName + ' ' + lastName, phone });
-    await resyncIfOptedIn();
+    const name = firstName + ' ' + lastName;
+    saveAccount({ ...a, firstName, lastName, name, phone });
+    // Also on the Firebase account, so the new name stays after logging in again or on another device.
+    const u = auth.currentUser;
+    if (u && !u.isAnonymous && u.displayName !== name) {
+        try { await updateProfile(u, { displayName: name }); }
+        catch (e) { console.warn('RiCap: could not update the account name', e && e.code); }
+    }
+    try { await resyncIfOptedIn(); } catch (e) { console.warn('RiCap: could not update alerts', e); }
     $('pfSaveBtn').disabled = false;
     setEditing(false);
     // Lets the nav greeting pick up the new name.
@@ -713,6 +727,70 @@ $('pfPwReset').addEventListener('click', async () => {
     } finally {
         setBusy(btn, false, 'Email me a reset link');
     }
+});
+
+// Shows the Delete account card for email/password accounts (not the admin).
+function renderDelete(s) {
+    const u = passwordUser();
+    $('pfDeleteForm').hidden = !u || s.isAdmin;
+    if (u) $('pfDelEmail').value = u.email;
+}
+
+// Error line in the Delete account card.
+function setDelError(msg) {
+    $('pfDelError').textContent = msg || '';
+    $('pfDelError').hidden = !msg;
+}
+
+// The button only works once the password is filled in and DELETE is typed.
+function updateDeleteButton() {
+    $('pfDelBtn').disabled = !$('pfDelPassword').value || $('pfDelConfirm').value.trim() !== 'DELETE';
+}
+$('pfDelPassword').addEventListener('input', updateDeleteButton);
+$('pfDelConfirm').addEventListener('input', updateDeleteButton);
+
+$('pfDeleteForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const user = passwordUser();
+    const password = $('pfDelPassword').value;
+    if (!user || !password || $('pfDelConfirm').value.trim() !== 'DELETE') return;
+    const btn = $('pfDelBtn');
+    setBusy(btn, true, 'Deleting…');
+    setDelError('');
+    try {
+        await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+    } catch (err) {
+        setDelError(passwordError(err));
+        setBusy(btn, false, 'Delete my account');
+        return;
+    }
+
+    // Each part is removed if the rules allow it; the login itself is deleted last.
+    const email = user.email;
+    try { await removeAvatar(); } catch (err) { console.warn('RiCap: could not delete the profile picture', err && err.code); }
+    try { await removeSubscriber(); } catch (err) { console.warn('RiCap: could not remove the alert subscription', err && err.code); }
+    await forgetProfile();
+    try { await unregisterEmail(email); } catch (err) { console.warn('RiCap: could not free the email for sign-up', err && err.code); }
+    try {
+        await deleteUser(user);
+    } catch (err) {
+        const code = String((err && err.code) || '');
+        setDelError(code === 'auth/requires-recent-login'
+            ? 'For your security, log out, log in again and retry.'
+            : (code === 'auth/network-request-failed' || !navigator.onLine)
+                ? 'No connection. Check your internet and try again.'
+                : 'Could not delete your account. Try again.');
+        console.warn('RiCap: account deletion failed', code);
+        setBusy(btn, false, 'Delete my account');
+        return;
+    }
+
+    clearLocalLogin();
+    try {
+        localStorage.removeItem(ACCOUNT_KEY);
+        localStorage.removeItem(OFFICIAL_KEY);
+    } catch (e) {  }
+    location.href = 'main.html?deleted=1';
 });
 
 if (viewReportId) renderPublicProfile();
