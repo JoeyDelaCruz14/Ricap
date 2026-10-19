@@ -1,3 +1,6 @@
+// Staggered fade-in for .reveal elements. Not loaded by any page at the moment.
+// Sa madaling salita: unti-unting lumalabas ang mga bahagi habang nag-i-scroll (hindi pa ginagamit).
+
 document.addEventListener('DOMContentLoaded', () => {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const elements = Array.from(document.querySelectorAll('.reveal'));

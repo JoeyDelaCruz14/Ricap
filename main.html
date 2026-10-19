@@ -1,14 +1,18 @@
 <!DOCTYPE html>
+<!-- Landing page: hero, features, how it works, contact, and the login / sign-up modal. -->
+<!-- Sa madaling salita: ang unang pahina ng RiCap, kasama ang login at sign-up. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>River Intelligence</title>
+  <title>RiCap - Explore</title>
+  <link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="Responsive.css">
   <link rel="stylesheet" href="home-auth.css">
-</head>
+</head> 
 <body class="home-page">
+  <!-- Background video -->
   <div class="video-background">
     <video autoplay muted loop playsinline id="bg-video">
       <source src="images&vids/Sequence_01_2.mp4" type="video/mp4">
@@ -16,35 +20,31 @@
     <div class="video-overlay"></div>
   </div>
 
+      <!-- Top navigation -->
       <nav class="nav" id="nav">
     <div class="nav-inner">
+        <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
         <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
 
         <ul class="nav-links" id="navLinks">
-            <li><a href= "Home.html">Home</a></li>
+            <li><a href="Home.html">Home</a></li>
             <li><a href="mapping.html">Mapping</a></li>
-            <li><a href="#features">Features</a></li>
-            <li><a href="#how-it-works">How It Works</a></li>
-            <li><a href="#contact">Contact</a></li>
-            <li><a href ="#loginbutton">Login</a></li>
-            <li><a href="Apply.html">Verify</a></li>
-            <!-- Admin-only: shown once an admin is signed in (see admin-nav.js) -->
-            <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+            <li><a href="Image_Processing.html">Scanner</a></li>
+            <li><a href="Tracking.html">Tracking</a></li>
+            <li><a href="#loginbutton">Login</a></li>
+            <li><a href="Verify.html">Verify</a></li>
             <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
         </ul>
     </div>
     <div class="nav-scrub"><div class="nav-scrub-fill" id="navScrubFill"></div></div>
 </nav>
-
-
   <main>
-
-    <section class="hero-section" id="home">
+    <!-- Hero -->
+    <section class="hero-section" id="home"> 
       <div class="hero-content">
-        <p class="hero-small reveal">RIVER INTELLIGENCE</p>
-
+        <p class="hero-small reveal">RIVER INTELLIGENCE</p> <!--hero text--> 
         <h1 class="hero-title reveal">
           See the river
           <span>differently.</span>
@@ -61,6 +61,7 @@
       </div>
       </div>
     </section>
+    <!-- Features -->
     <section class="features-section section" id="features">
       <div class="section-number reveal"></div>
 
@@ -78,7 +79,7 @@
               <img src="images&vids/Camera-removebg-preview.png" alt="Image Analysis">
             </div>
             <div class="feature-info">
-              <h3>Image Analysis</h3>
+              <h3>Image <br>Analysis</h3>
               <p>
                 Upload or capture river images and receive a visual
                 assessment of possible pollution conditions.
@@ -115,6 +116,7 @@
       </div>
     </section>
 
+    <!-- How it works -->
     <section class="process-section section" id="how-it-works">
       <div class="section-number reveal"></div>
 
@@ -162,6 +164,7 @@
       </div>
     </section>
 
+    <!-- Call to action (opens login / sign-up) -->
     <section class="cta-section section" id="loginbutton">
       <div class="cta-content reveal">
         <h2>
@@ -173,6 +176,7 @@
       </div>
     </section>
 
+    <!-- Contact form -->
     <section class="contact-section section" id="contact">
       <div class="section-content">
         <p class="section-label reveal">CONTACT</p>
@@ -206,10 +210,12 @@
 
   </main>
 
+  <!-- Login / sign-up modal (water surface inside the box) -->
   <div class="auth-modal" id="authModal">
     <div class="auth-backdrop"></div>
 
     <div class="auth-box">
+      <canvas class="auth-water" id="authWater" aria-hidden="true"></canvas>
       <button class="auth-close" id="authClose">×</button>
 
       <div class="auth-header">
@@ -223,16 +229,17 @@
         <button class="auth-tab" data-tab="signup">Sign Up</button>
       </div>
 
+      <!-- Login form (admin-login.js) -->
       <form class="auth-form active" id="loginForm">
         <div class="form-group">
           <label for="loginEmail">EMAIL</label>
-          <input type="email" id="loginEmail" placeholder="you@example.com" required>
+          <input type="email" id="loginEmail" autocomplete="username" placeholder="you@example.com" required>
         </div>
 
         <div class="form-group password-field">
           <label for="loginPassword">PASSWORD</label>
           <div class="password-wrapper">
-            <input type="password" id="loginPassword" placeholder="Enter your password" required>
+            <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Enter your password" required>
             <button type="button" class="password-toggle" data-target="loginPassword">Show</button>
           </div>
         </div>
@@ -250,26 +257,26 @@
         </button>
       </form>
 
+      <!-- Sign-up form (account-auth.js) -->
       <form class="auth-form" id="signupForm">
         <div class="form-group">
-          <label for="signupName">FULL NAME</label>
-          <input type="text" id="signupName" placeholder="Your full name" required>
+          <label for="signupFirstName">First Name</label>
+          <input type="text" id="signupFirstName" placeholder="Your first name" required>
+        </div>
+        <div class="form-group">
+          <label for="signupLastName">Last Name</label>
+          <input type="text" id="signupLastName" placeholder="Your last name" required> 
         </div>
 
         <div class="form-group">
           <label for="signupEmail">EMAIL</label>
-          <input type="email" id="signupEmail" placeholder="you@example.com" required>
-        </div>
-
-        <div class="form-group">
-          <label for="signupPhone">MOBILE NUMBER <span style="opacity:.6">(optional)</span></label>
-          <input type="tel" id="signupPhone" inputmode="tel" placeholder="09171234567" autocomplete="tel">
+          <input type="email" id="signupEmail" autocomplete="email" placeholder="you@example.com" required>
         </div>
 
         <div class="form-group password-field">
           <label for="signupPassword">PASSWORD</label>
           <div class="password-wrapper">
-            <input type="password" id="signupPassword" placeholder="Create a password" required>
+            <input type="password" id="signupPassword" autocomplete="new-password" placeholder="Create a password" required>
             <button type="button" class="password-toggle" data-target="signupPassword">Show</button>
           </div>
         </div>
@@ -292,19 +299,23 @@
         </label>
 
         <button type="submit" class="primary-btn auth-submit">
-          Create Account <span>↗</span>
+          Create Account 
         </button>
       </form>
     </div>
   </div>
 
+  <!-- Toast message -->
   <div class="toast" id="toast">
     <span class="toast-icon">✓</span>
     <span id="toastMessage">Done.</span>
   </div>
+  <!-- Scripts -->
   <script src="nav.js"></script>
   <script src="contact.js"></script>
   <script src="home-interactive.js"></script>
+  <script src="water-core.js"></script>
+  <script src="auth-ripples.js"></script>
   <script type="module" src="admin-nav.js"></script>
   <script type="module" src="admin-login.js"></script>
   <script type="module" src="account-auth.js"></script>

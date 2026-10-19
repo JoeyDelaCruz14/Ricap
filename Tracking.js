@@ -1,32 +1,36 @@
-/* ==========================================================================
-   RiCap Tracking
-   Shows OFFICIAL REPORTS from ALL accounts (not just the logged-in one),
-   plus a "My scans" view for the current user's own scans.
-   ========================================================================== */
+// Tracking page (Tracking.html): this browser's scans plus shared reports from Firestore,
+// as cards, a table, a monthly map and a timeline, with sorting, filters and a detail view.
+// Sa madaling salita: dito makikita ang lahat ng scan at report mo sa cards o table (20 bawat page), mapa at timeline.
 
-/* ---------- Configuration ---------- */
-
-// Local cache written by Image_Processing.js (this browser only)
 const RECORDS_KEY = 'ricap_river_records';
-
-// Shared reports endpoint. Leave '' until the backend exists.
-//   GET    REPORTS_API            -> JSON array of ALL official reports (every account)
-//   POST   REPORTS_API            -> body: one record, saves it as an official report
-//   DELETE REPORTS_API/<id>       -> delete a report (server must check ownership/admin)
-// Example: const REPORTS_API = 'api/reports.php';
 const REPORTS_API = '';
-
-// Where your login code stores the signed-in user (JSON with id/email/username, or a plain string).
-// Change this key to match your login system.
 const USER_KEY = 'ricap_current_user';
-
 const PAGE_PATH = window.location.pathname.split('/').pop() || 'Tracking.html';
 const SORT_KEY = 'ricap_tracking_sort';
 const SCOPE_KEY = 'ricap_tracking_scope';
+const VIEW_KEY = 'ricap_tracking_view'; 
 
-/* ---------- Current user ---------- */
 
+const FIRESTORE_URL = 'https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js';
+const SHARED_CACHE_MS = 30000;
+let myUid = '';
+let sharedCache = null;
+
+// Reads and parses a localStorage value.
+function readStoredJSON(key) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
+}
+
+// Who is looking: the official (code) or the logged-in account.
 function getCurrentUser() {
+    const official = readStoredJSON('ricap_official');
+    if (official && (official.code || official.name)) {
+        return { id: String(official.code || official.name), name: String(official.name || official.code), code: String(official.code || ''), key: String(official.reporterKey || '') };
+    }
+    const account = readStoredJSON('ricapAccount');
+    if (account && account.email && localStorage.getItem('ricapLoggedIn') === 'true') {
+        return { id: String(account.email), name: String(account.name || account.email) };
+    }
     try {
         const raw = localStorage.getItem(USER_KEY);
         if (!raw) return { id: '', name: '' };
@@ -36,43 +40,58 @@ function getCurrentUser() {
                 const id = String(u.id || u.email || u.username || '');
                 return { id: id, name: String(u.name || u.username || u.email || id) };
             }
-        } catch (e) { /* plain string */ }
+        } catch (e) {  }
         return { id: String(raw), name: String(raw) };
     } catch (err) {
         return { id: '', name: '' };
     }
 }
 
-// A record is "mine" if it carries my user id. Old records with no owner were made in this browser, so they count as mine.
+
+// True if the record was made by the current user.
 function isMine(record) {
-    const me = getCurrentUser().id;
+    const me = getCurrentUser();
+    if (record.uid && myUid && String(record.uid) === myUid) return true;
+    if (record.reporterKey && me.key && String(record.reporterKey) === me.key) return true;
+    if (record.reporterCode && me.code && String(record.reporterCode) === me.code) return true;
+    if (record.remote) return false;
     if (!record.userId) return true;
-    return !!me && String(record.userId) === me;
+    return !!me.id && String(record.userId) === me.id;
 }
 
+// Name shown for who made the record.
 function reporterLabel(record) {
     if (record.reporter) return record.reporter;
+    if (record.reporterName) return record.reporterName + (record.reporterRole ? ' (' + record.reporterRole + ')' : '');
     if (record.userId) return String(record.userId);
     return 'Anonymous';
 }
 
-/* ---------- Storage / data layer ---------- */
 
+// Saved preferences (sort, scope, view) in localStorage.
 function loadSortOrder() {
     try { return localStorage.getItem(SORT_KEY) === 'oldest' ? 'oldest' : 'newest'; }
     catch (err) { return 'newest'; }
 }
 function saveSortOrder(order) {
-    try { localStorage.setItem(SORT_KEY, order); } catch (err) { /* ignore */ }
+    try { localStorage.setItem(SORT_KEY, order); } catch (err) {  }
 }
 function loadScope() {
     try { return localStorage.getItem(SCOPE_KEY) === 'mine' ? 'mine' : 'all'; }
     catch (err) { return 'all'; }
 }
 function saveScope(scope) {
-    try { localStorage.setItem(SCOPE_KEY, scope); } catch (err) { /* ignore */ }
+    try { localStorage.setItem(SCOPE_KEY, scope); } catch (err) {  }
+}
+function loadViewMode() {
+    try { return localStorage.getItem(VIEW_KEY) === 'table' ? 'table' : 'cards'; }
+    catch (err) { return 'cards'; }
+}
+function saveViewMode(mode) {
+    try { localStorage.setItem(VIEW_KEY, mode); } catch (err) {  }
 }
 
+// Scans saved in this browser.
 function loadRecords() {
     try {
         const raw = localStorage.getItem(RECORDS_KEY);
@@ -84,6 +103,7 @@ function loadRecords() {
     }
 }
 
+// Saves scans in this browser.
 function saveRecords(records) {
     try {
         localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
@@ -94,10 +114,65 @@ function saveRecords(records) {
     }
 }
 
-// Pulls every account's official reports from the shared backend.
-// Returns { records, shared } — shared=false means no backend answered.
+// Firestore timestamp or date to an ISO string.
+function toIso(ts) {
+    try {
+        const d = ts && typeof ts.toDate === 'function' ? ts.toDate() : (ts ? new Date(ts) : null);
+        return d && !isNaN(d.getTime()) ? d.toISOString() : '';
+    } catch (e) { return ''; }
+}
+
+// Converts a Firestore report into the record format used on this page.
+function fromReportDoc(docId, r) {
+    return {
+        id: String(r.recordId || docId),
+        docId: docId,
+        remote: true,
+        reported: true,
+        timestamp: toIso(r.createdAt) || new Date().toISOString(),
+        name: r.reportName || '',
+        riverId: r.riverId,
+        segmentId: r.segmentId,
+        image: r.imageUrl || '',
+        lat: typeof r.lat === 'number' ? r.lat : undefined,
+        lng: typeof r.lng === 'number' ? r.lng : undefined,
+        status: r.status || 'moderate',
+        score: r.score != null ? r.score : 0,
+        assessment: r.assessment || '',
+        recommendation: r.recommendation || '',
+        recommendationSource: r.recommendationSource || '',
+        reporterName: r.reporterName || '',
+        reporterRole: r.reporterRole || '',
+        reporterKey: r.reporterKey || '',
+        reporterCode: r.reporterCode || '',
+        uid: r.uid || ''
+    };
+}
+
+// Loads shared reports from Firestore.
+async function fetchFirestoreReports() {
+    if (sharedCache && Date.now() - sharedCache.at < SHARED_CACHE_MS) return sharedCache.result;
+    try {
+        const [{ db }, { ensureAuth }, fs] = await Promise.all([
+            import('./firebase-config.js'),
+            import('./Session.js'),
+            import(FIRESTORE_URL)
+        ]);
+        try { myUid = String(await ensureAuth() || ''); } catch (e) { console.warn('Could not sign in to load reports:', e); }
+        const snap = await fs.getDocs(fs.query(fs.collection(db, 'reports'), fs.orderBy('createdAt', 'desc')));
+        const records = snap.docs.map(function (d) { return fromReportDoc(d.id, d.data({ serverTimestamps: 'estimate' })); });
+        const result = { records: records, shared: true };
+        sharedCache = { at: Date.now(), result: result };
+        return result;
+    } catch (err) {
+        console.error('Could not load shared reports:', err);
+        return { records: [], shared: false, failed: true };
+    }
+}
+
+// Shared reports, cached for SHARED_CACHE_MS.
 async function fetchSharedReports() {
-    if (!REPORTS_API) return { records: [], shared: false };
+    if (!REPORTS_API) return fetchFirestoreReports();
     try {
         const res = await fetch(REPORTS_API, { headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -110,25 +185,40 @@ async function fetchSharedReports() {
     }
 }
 
-// Builds the list to display for the chosen scope.
-//   all  -> every official report from every account (+ official reports saved in this browser)
-//   mine -> all of the current user's scans, reported or not
+// Local and shared records merged by id, filtered by scope (mine / all).
 async function getDataset(scope) {
     const local = loadRecords();
-
-    if (scope === 'mine') {
-        return { records: local.filter(isMine), shared: false };
-    }
-
     const remote = await fetchSharedReports();
     const byId = new Map();
     remote.records.forEach(function (r) { if (r && r.id != null) byId.set(String(r.id), r); });
     local.forEach(function (r) {
-        if (r.reported && !byId.has(String(r.id))) byId.set(String(r.id), r);
+        const key = String(r.id);
+        const shared = byId.get(key);
+        // The browser copy has the full scan details; the shared copy has who reported it.
+        if (shared) byId.set(key, Object.assign({}, shared, r, { image: r.image || shared.image, remote: false }));
+        else if (r.reported || scope === 'mine') byId.set(key, r);
     });
-    return { records: Array.from(byId.values()), shared: remote.shared, failed: !!remote.failed };
+    let records = Array.from(byId.values());
+    if (scope === 'mine') records = records.filter(isMine);
+    return { records: records, shared: remote.shared, failed: !!remote.failed };
 }
 
+// Deletes a shared report the user owns.
+async function deleteSharedReport(record) {
+    if (REPORTS_API) return deleteReportOnServer(record.id);
+    if (!record.docId) return true;
+    try {
+        const [{ db }, fs] = await Promise.all([import('./firebase-config.js'), import(FIRESTORE_URL)]);
+        await fs.deleteDoc(fs.doc(db, 'reports', record.docId));
+        sharedCache = null;
+        return true;
+    } catch (err) {
+        console.error('Could not delete report:', err);
+        return false;
+    }
+}
+
+// Optional custom backend (REPORTS_API); does nothing when empty.
 async function sendReportToServer(record) {
     if (!REPORTS_API) return true;
     try {
@@ -144,6 +234,7 @@ async function sendReportToServer(record) {
     }
 }
 
+// Deletes a record on the optional custom backend (REPORTS_API).
 async function deleteReportOnServer(id) {
     if (!REPORTS_API) return true;
     try {
@@ -155,8 +246,7 @@ async function deleteReportOnServer(id) {
     }
 }
 
-/* ---------- Helpers ---------- */
-
+// Sorts records newest or oldest first.
 function sortRecords(records, order) {
     const time = function (r) {
         const t = new Date(r.timestamp).getTime();
@@ -167,15 +257,18 @@ function sortRecords(records, order) {
     });
 }
 
+// Nav shadow on scroll and the mobile menu.
 function initNav() {
     const nav = document.getElementById('siteNav');
     const toggle = document.getElementById('navToggle');
     const links = document.getElementById('navLinks');
 
+    // Nav shadow once the page is scrolled.
     function onScroll() {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         nav.classList.toggle('scrolled', scrollTop > 12);
     }
+    // Opens or closes the mobile menu.
     function onToggleClick() {
         const isOpen = links.classList.toggle('open');
         toggle.classList.toggle('open', isOpen);
@@ -194,6 +287,7 @@ function initNav() {
     onScroll();
 }
 
+// Readable date and time.
 function formatTimestamp(iso) {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '';
@@ -201,46 +295,56 @@ function formatTimestamp(iso) {
         ' · ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
-const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted' };
+const statusLabels = { healthy: 'Healthy', moderate: 'Moderate', polluted: 'Polluted', critical: 'Critical' };
 
-/* ---------- Monthly river map ---------- */
 
 const STATUS_COLORS = { healthy: '#4fae8c', moderate: '#e6b207', polluted: '#d6574a' };
 
+// Status group used for colours.
 function bucketOf(status) {
     return status === 'healthy' || status === 'moderate' ? status : 'polluted';
 }
 
+// Escapes text before putting it into HTML.
 function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
     });
 }
 
+// True if the record has coordinates.
 function hasPoint(r) {
     return typeof r.lat === 'number' && typeof r.lng === 'number' && isFinite(r.lat) && isFinite(r.lng);
 }
 
+// River name for a record.
 function riverNameFor(record) {
     try {
         if (typeof RIVER_DATA !== 'undefined' && record.riverId) {
             const found = RIVER_DATA.find(function (x) { return String(x.id) === String(record.riverId); });
             if (found) return found.name;
         }
-    } catch (e) { /* ignore */ }
+    } catch (e) {  }
     return record.name || 'Unnamed spot';
 }
 
+// True if the record is in the given month.
 function inMonth(record, year, month) {
     const t = new Date(record.timestamp);
     return !isNaN(t.getTime()) && t.getFullYear() === year && t.getMonth() === month;
 }
 
+// Map group for a record: its river, or its rounded position if it has no river.
+function groupKeyFor(r) {
+    return r.riverId ? String(r.riverId) : 'pt:' + r.lat.toFixed(3) + ',' + r.lng.toFixed(3);
+}
+
+// Groups a month's records by river for the map.
 function groupByRiver(records, year, month) {
     const groups = new Map();
     records.forEach(function (r) {
         if (!inMonth(r, year, month) || !hasPoint(r)) return;
-        const key = r.riverId ? String(r.riverId) : 'pt:' + r.lat.toFixed(3) + ',' + r.lng.toFixed(3);
+        const key = groupKeyFor(r);
         let g = groups.get(key);
         if (!g) {
             g = { key: key, name: riverNameFor(r), count: 0, scoreSum: 0, latest: r, counts: { healthy: 0, moderate: 0, polluted: 0 } };
@@ -259,6 +363,7 @@ let trendMap = null;
 let trendLayer = null;
 let trendMarkers = {};
 
+// Creates the monthly map once.
 function ensureMap() {
     if (trendMap) return trendMap;
     const el = document.getElementById('trendMap');
@@ -277,6 +382,7 @@ function ensureMap() {
     return trendMap;
 }
 
+// Map popup for a river group, compared with the previous month.
 function popupHtml(g, prev) {
     const st = bucketOf(g.latest.status);
     let html = '<p class="pop-title">' + esc(g.name) + '</p>' +
@@ -299,10 +405,12 @@ function popupHtml(g, prev) {
     return html;
 }
 
+// One stat tile under the monthly map.
 function statTile(label, value) {
     return '<div class="trend-stat"><p class="label">' + label + '</p><p class="value">' + value + '</p></div>';
 }
 
+// Draws the monthly map and its stats.
 function renderMonthMap(records, year, month, noun) {
     const title = document.getElementById('trendTitle');
     const stats = document.getElementById('trendStats');
@@ -387,12 +495,121 @@ function renderMonthMap(records, year, month, noun) {
     }
 }
 
-/* ---------- Page logic ---------- */
 
+// yyyy-mm-dd key for grouping by day.
+function dayKey(d) {
+    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+}
+
+// Readable day name for the timeline.
+function dayLabel(d) {
+    const now = new Date();
+    const startOfDay = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+    const diffDays = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return d.toLocaleDateString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric'
+    });
+}
+
+// Day-by-day timeline beside the map.
+function renderTimelineSidebar(records, year, month, noun, onViewDetails) {
+    const sidebar = document.getElementById('timelineSidebar');
+    if (!sidebar) return;
+
+    const monthRecords = records.filter(function (r) { return inMonth(r, year, month); });
+    sidebar.innerHTML = '';
+
+    if (!monthRecords.length) {
+        sidebar.innerHTML = '<p class="timeline-empty">No ' + noun + 's this month.</p>';
+        return;
+    }
+
+    const days = new Map();
+    monthRecords.forEach(function (r) {
+        const d = new Date(r.timestamp);
+        if (isNaN(d.getTime())) return;
+        const key = dayKey(d);
+        if (!days.has(key)) days.set(key, { date: d, items: [] });
+        days.get(key).items.push(r);
+    });
+    days.forEach(function (group) {
+        group.items.sort(function (a, b) { return new Date(a.timestamp) - new Date(b.timestamp); });
+    });
+
+    Array.from(days.values())
+        .sort(function (a, b) { return b.date - a.date; })
+        .forEach(function (group) {
+            const section = document.createElement('div');
+            section.className = 'timeline-day-group';
+
+            const header = document.createElement('div');
+            header.className = 'timeline-day-header';
+            header.textContent = dayLabel(group.date);
+            section.appendChild(header);
+
+            group.items.forEach(function (record) {
+                const st = bucketOf(record.status);
+                const time = new Date(record.timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                item.dataset.id = record.id;
+                item.setAttribute('role', 'button');
+                item.setAttribute('tabindex', '0');
+
+                item.innerHTML =
+                    '<span class="timeline-item-time">' + esc(time) + '</span>' +
+                    '<span class="timeline-item-dot" style="background:' + STATUS_COLORS[st] + '"></span>' +
+                    '<span class="timeline-item-body">' +
+                        '<p class="timeline-item-title">' + esc(riverNameFor(record)) + '</p>' +
+                        '<p class="timeline-item-sub">' + esc(statusLabels[st] || st) + ' · ' + (Number(record.score) || 0) + '/100' +
+                            (noun === 'report' ? ' · ' + esc(reporterLabel(record)) : '') +
+                        '</p>' +
+                    '</span>' +
+                    '<button type="button" class="timeline-item-view" aria-label="View full report">&rsaquo;</button>';
+
+                // Highlights this timeline item and flies the map to it.
+                function activate() {
+                    sidebar.querySelectorAll('.timeline-item.active').forEach(function (el) { el.classList.remove('active'); });
+                    item.classList.add('active');
+
+                    if (trendMap && hasPoint(record)) {
+                        trendMap.flyTo([record.lat, record.lng], Math.max(trendMap.getZoom(), 14), { duration: 0.6 });
+                        const marker = trendMarkers[groupKeyFor(record)];
+                        if (marker) marker.openPopup();
+                    }
+                }
+
+                item.addEventListener('click', activate);
+                item.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); }
+                });
+
+                const viewBtn = item.querySelector('.timeline-item-view');
+                viewBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    if (onViewDetails) onViewDetails(record.id);
+                });
+
+                section.appendChild(item);
+            });
+
+            sidebar.appendChild(section);
+        });
+}
+
+
+// Page entry point: controls, views and the detail panel.
 function initTracking() {
     const listState = document.getElementById('listState');
     const detailState = document.getElementById('detailState');
     const recordGrid = document.getElementById('recordGrid');
+    const timelineTableWrap = document.getElementById('timelineTableWrap');
     const recordCount = document.getElementById('recordCount');
     const docsEmpty = document.getElementById('docsEmpty');
     const docsEmptyText = document.getElementById('docsEmptyText');
@@ -405,6 +622,8 @@ function initTracking() {
     const clearAllBtn = document.getElementById('clearAllBtn');
     const trendPrev = document.getElementById('trendPrev');
     const trendNext = document.getElementById('trendNext');
+    const viewCardsBtn = document.getElementById('viewCardsBtn');
+    const viewTableBtn = document.getElementById('viewTableBtn');
 
     const now = new Date();
     let chartYear = now.getFullYear();
@@ -412,31 +631,63 @@ function initTracking() {
     let currentId = null;
     let sortOrder = loadSortOrder();
     let scope = loadScope();
-    let dataset = [];          // what is currently displayed
-    let renderToken = 0;       // guards against out-of-order async loads
+    let viewMode = loadViewMode();
+    let dataset = [];
+    let renderToken = 0;
+    const TABLE_PAGE_SIZE = 20;
+    let tablePage = 1;
 
     sortSelect.value = sortOrder;
     scopeSelect.value = scope;
 
     function noun() { return scope === 'all' ? 'report' : 'scan'; }
 
+    // Switches between cards and table.
+    function applyViewMode() {
+        viewCardsBtn.classList.toggle('active', viewMode === 'cards');
+        viewTableBtn.classList.toggle('active', viewMode === 'table');
+        viewCardsBtn.setAttribute('aria-selected', String(viewMode === 'cards'));
+        viewTableBtn.setAttribute('aria-selected', String(viewMode === 'table'));
+    }
+    applyViewMode();
+
+    viewCardsBtn.addEventListener('click', function () {
+        if (viewMode === 'cards') return;
+        viewMode = 'cards';
+        saveViewMode(viewMode);
+        applyViewMode();
+        renderRecordsView();
+    });
+    viewTableBtn.addEventListener('click', function () {
+        if (viewMode === 'table') return;
+        viewMode = 'table';
+        saveViewMode(viewMode);
+        applyViewMode();
+        renderRecordsView();
+    });
+
     sortSelect.addEventListener('change', function () {
         sortOrder = sortSelect.value === 'oldest' ? 'oldest' : 'newest';
         saveSortOrder(sortOrder);
-        renderList();
+        tablePage = 1;
+        renderRecordsView();
     });
 
     scopeSelect.addEventListener('change', function () {
         scope = scopeSelect.value === 'mine' ? 'mine' : 'all';
         saveScope(scope);
+        tablePage = 1;
         renderList();
     });
 
+    // Monthly map and timeline for the chosen month.
     function renderChart() {
         renderMonthMap(dataset, chartYear, chartMonth, noun());
+        renderTimelineSidebar(dataset, chartYear, chartMonth, noun(), showDetail);
         trendNext.disabled = chartYear === now.getFullYear() && chartMonth === now.getMonth();
     }
 
+    // Moves the monthly map one month back or forward (not past this month).
     function shiftMonth(delta) {
         const d = new Date(chartYear, chartMonth + delta, 1);
         if (d > new Date(now.getFullYear(), now.getMonth(), 1)) return;
@@ -448,55 +699,23 @@ function initTracking() {
     trendPrev.addEventListener('click', function () { shiftMonth(-1); });
     trendNext.addEventListener('click', function () { shiftMonth(1); });
 
+    // Note above the list about where the records come from.
     function describeSource(result) {
-        if (scope === 'mine') return 'Showing only your own scans from this browser.';
-        if (result.failed) return 'Could not reach the reports server, so only official reports saved in this browser are shown.';
-        if (!result.shared) return 'No shared reports server is connected yet, so only official reports from this browser are shown. Connect REPORTS_API in Tracking.js to see every account’s reports.';
+        if (result.failed) return 'Could not reach the reports server, so only records saved in this browser are shown.';
+        if (scope === 'mine') return 'Showing only the reports and scans you submitted.';
         return '';
     }
 
-    async function renderList() {
-        const token = ++renderToken;
-        const result = await getDataset(scope);
-        if (token !== renderToken) return;   // a newer render superseded this one
-
-        dataset = result.records;
-        renderChart();
-
-        const n = dataset.length;
-        const label = scope === 'all' ? 'official report' : 'scan';
-        recordCount.textContent = n === 1 ? '1 ' + label + (scope === 'all' ? '' : ' logged')
-            : n + ' ' + label + 's' + (scope === 'all' ? '' : ' logged');
-
-        const msg = describeSource(result);
-        sourceNote.textContent = msg;
-        sourceNote.hidden = !msg;
-
-        // "Delete all" only ever touches this user's own local scans
-        clearAllBtn.hidden = scope !== 'mine' || n === 0;
-
-        docsEmptyText.textContent = scope === 'all'
-            ? 'No official reports yet. Run a scan and press "Submit Official Report" to add it here.'
-            : 'You have no saved scans yet. Run a scan to add one here.';
-
-        if (n === 0) {
-            docsEmpty.hidden = false;
-            recordGrid.hidden = true;
-            recordGrid.innerHTML = '';
-            return;
-        }
-
-        docsEmpty.hidden = true;
-        recordGrid.hidden = false;
+    // Records as cards.
+    function renderCardsGrid() {
         recordGrid.innerHTML = '';
-
         sortRecords(dataset, sortOrder).forEach(function (record) {
             const card = document.createElement('button');
             card.type = 'button';
             card.className = 'record-card';
             card.dataset.id = record.id;
             card.innerHTML =
-                '<div class="record-thumb"><img src="' + esc(record.image) + '" alt="Processed river photo"></div>' +
+                '<div class="record-thumb"><img src="' + esc(record.image || record.firebaseUrl || '') + '" alt="Processed river photo" loading="lazy"></div>' +
                 '<div class="record-body">' +
                     '<div class="record-status">' +
                         '<span class="status-dot ' + esc(record.status) + '"></span>' +
@@ -514,7 +733,6 @@ function initTracking() {
             item.className = 'record-item';
             item.appendChild(card);
 
-            // Only the owner can delete a record
             if (isMine(record)) {
                 const delBtn = document.createElement('button');
                 delBtn.type = 'button';
@@ -531,6 +749,120 @@ function initTracking() {
         });
     }
 
+    // Records as table rows, 20 per page.
+    function renderTableRows() {
+        const tbody = document.getElementById('timelineTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        const all = sortRecords(dataset, sortOrder);
+        const pages = Math.max(1, Math.ceil(all.length / TABLE_PAGE_SIZE));
+        tablePage = Math.min(Math.max(1, tablePage), pages);
+        renderTablePager(all.length, pages);
+        if (!all.length) return;
+
+        const start = (tablePage - 1) * TABLE_PAGE_SIZE;
+        const rows = all.slice(start, start + TABLE_PAGE_SIZE);
+        rows.forEach(function (record) {
+            const d = new Date(record.timestamp);
+            const dateStr = isNaN(d.getTime()) ? '—' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const timeStr = isNaN(d.getTime()) ? '—' : d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+            const st = bucketOf(record.status);
+
+            const tr = document.createElement('tr');
+            tr.dataset.id = record.id;
+            tr.tabIndex = 0;
+            tr.innerHTML =
+                '<td>' + esc(dateStr) + '</td>' +
+                '<td>' + esc(timeStr) + '</td>' +
+                '<td>' + esc(riverNameFor(record)) + '</td>' +
+                '<td><span class="table-status-pill" style="background:' + STATUS_COLORS[st] + '">' + esc(statusLabels[record.status] || record.status) + '</span></td>' +
+                '<td>' + esc(record.score) + '/100</td>' +
+                '<td>' + esc(reporterLabel(record)) + '</td>';
+
+            tr.addEventListener('click', function () { showDetail(record.id); });
+            tr.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showDetail(record.id); }
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Page buttons under the table; hidden when everything fits on one page.
+    function renderTablePager(total, pages) {
+        const pager = document.getElementById('tablePager');
+        if (!pager) return;
+        pager.hidden = pages <= 1;
+        if (pages <= 1) return;
+        const first = (tablePage - 1) * TABLE_PAGE_SIZE + 1;
+        const last = Math.min(total, tablePage * TABLE_PAGE_SIZE);
+        document.getElementById('tablePageInfo').textContent =
+            'Page ' + tablePage + ' of ' + pages + ' · ' + first + '–' + last + ' of ' + total;
+        document.getElementById('tablePrev').disabled = tablePage <= 1;
+        document.getElementById('tableNext').disabled = tablePage >= pages;
+    }
+
+    // Moves the table to another page and keeps it in view.
+    function goToTablePage(delta) {
+        tablePage += delta;
+        renderTableRows();
+        timelineTableWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    document.getElementById('tablePrev').addEventListener('click', function () { goToTablePage(-1); });
+    document.getElementById('tableNext').addEventListener('click', function () { goToTablePage(1); });
+
+    // Renders the records in the current view mode.
+    function renderRecordsView() {
+        if (viewMode === 'table') {
+            recordGrid.hidden = true;
+            timelineTableWrap.hidden = false;
+            renderTableRows();
+        } else {
+            timelineTableWrap.hidden = true;
+            recordGrid.hidden = false;
+            renderCardsGrid();
+        }
+    }
+
+    // Loads the records and renders the list view.
+    async function renderList() {
+        const token = ++renderToken;
+        const result = await getDataset(scope);
+        if (token !== renderToken) return;
+
+        dataset = result.records;
+        renderChart();
+
+        const n = dataset.length;
+        const label = scope === 'all' ? 'official report' : 'scan';
+        recordCount.textContent = n === 1 ? '1 ' + label + (scope === 'all' ? '' : ' logged')
+            : n + ' ' + label + 's' + (scope === 'all' ? '' : ' logged');
+
+        const msg = describeSource(result);
+        sourceNote.textContent = msg;
+        sourceNote.hidden = !msg;
+
+        clearAllBtn.hidden = scope !== 'mine' || n === 0;
+
+        docsEmptyText.textContent = scope === 'all'
+            ? 'No official reports yet. Run a scan and press "Submit Official Report" to add it here.'
+            : 'You have no saved scans yet. Run a scan to add one here.';
+
+        if (n === 0) {
+            docsEmpty.hidden = false;
+            recordGrid.hidden = true;
+            timelineTableWrap.hidden = true;
+            recordGrid.innerHTML = '';
+            const tbody = document.getElementById('timelineTableBody');
+            if (tbody) tbody.innerHTML = '';
+            return;
+        }
+
+        docsEmpty.hidden = true;
+        renderRecordsView();
+    }
+
+    // Deletes a record (local and, if shared, in Firestore).
     async function deleteRecord(id) {
         const target = dataset.find(function (r) { return String(r.id) === String(id); });
         if (target && !isMine(target)) {
@@ -539,9 +871,9 @@ function initTracking() {
         }
         if (!confirm('Delete this record? This cannot be undone.')) return false;
 
-        if (target && target.reported && REPORTS_API) {
-            if (!(await deleteReportOnServer(id))) {
-                alert('Could not delete the report from the server.');
+        if (target && target.reported) {
+            if (!(await deleteSharedReport(target))) {
+                alert('Could not delete the report from the server. Submitted official reports can only be removed by an admin in the Maintenance module.');
                 return false;
             }
         }
@@ -565,6 +897,7 @@ function initTracking() {
         renderList();
     });
 
+    // Back from the detail view to the list.
     function showList() {
         currentId = null;
         listState.hidden = false;
@@ -573,10 +906,10 @@ function initTracking() {
         renderList();
     }
 
+    // Detail view for one record: photo, status, assessment, recommendation, metrics.
     async function showDetail(id) {
         let record = dataset.find(function (r) { return String(r.id) === String(id); });
         if (!record) {
-            // Opened via ?id=... before the list loaded: load it now
             const result = await getDataset('all');
             dataset = result.records;
             record = dataset.find(function (r) { return String(r.id) === String(id); }) ||
@@ -592,35 +925,48 @@ function initTracking() {
         detailState.hidden = false;
         history.replaceState(null, '', PAGE_PATH + '?id=' + encodeURIComponent(record.id));
 
-        document.getElementById('detailImage').src = record.image;
+        const dash = function (v) { return v == null || v === '' ? '—' : v; };
+        const hasConfidence = isFinite(Number(record.confidence)) && record.confidence !== null && record.confidence !== '';
+        const confidence = hasConfidence ? Number(record.confidence) : 0;
+
+        document.getElementById('detailImage').src = record.image || record.firebaseUrl || '';
         document.getElementById('detailTimestamp').textContent = formatTimestamp(record.timestamp);
         document.getElementById('detailReporter').textContent = 'Reported by ' + reporterLabel(record);
 
         document.getElementById('detailStatusDot').className = 'status-dot ' + record.status;
         document.getElementById('detailStatusTitle').textContent = statusLabels[record.status] || record.status;
-        document.getElementById('detailScoreValue').textContent = record.score;
-        document.getElementById('detailConfidenceValue').textContent = record.confidence + '%';
-        document.getElementById('detailConfidenceFill').style.width = record.confidence + '%';
-        document.getElementById('detailAssessmentText').textContent = record.assessment;
+        document.getElementById('detailScoreValue').textContent = dash(record.score);
+        document.getElementById('detailConfidenceValue').textContent = hasConfidence ? confidence + '%' : '—';
+        document.getElementById('detailConfidenceFill').style.width = confidence + '%';
+        document.getElementById('detailAssessmentText').textContent = record.assessment || record.recommendation || '';
 
-        const accent = STATUS_COLORS[record.status] || '#e6b207';
+        const accent = STATUS_COLORS[bucketOf(record.status)] || '#e6b207';
         const box = document.getElementById('detailAssessmentBox');
         box.style.borderLeftColor = accent;
         box.style.background = accent + '0f';
 
-        document.getElementById('detailColorCast').textContent = record.colorCast;
-        document.getElementById('detailSurfaceClarity').textContent = record.surfaceClarity;
-        document.getElementById('detailLighting').textContent = record.lighting;
-        document.getElementById('detailOverall').textContent = record.overallReading;
+        // The recommendation saved with the report: Gemini's wording when it was available, else the rules text.
+        const recoBox = document.getElementById('detailRecoBox');
+        const reco = String(record.recommendation || '').trim();
+        recoBox.hidden = !reco;
+        document.getElementById('detailRecoText').textContent = reco;
+        document.getElementById('detailRecoSource').textContent = record.recommendationSource === 'rules+gemini'
+            ? 'AI recommendation: rule-based advice reworded by Gemini.'
+            : record.recommendationSource === 'rules' ? 'Rule-based recommendation (Gemini was not used for this report).' : '';
+
+        document.getElementById('detailColorCast').textContent = dash(record.colorCast);
+        document.getElementById('detailSurfaceClarity').textContent = dash(record.surfaceClarity);
+        document.getElementById('detailLighting').textContent = dash(record.lighting);
+        document.getElementById('detailOverall').textContent = dash(record.overallReading);
 
         const avg = record.avgColor || { r: 0, g: 0, b: 0 };
         document.getElementById('detailColorSwatch').style.background =
             'rgb(' + avg.r + ',' + avg.g + ',' + avg.b + ')';
-        document.getElementById('detailMetaLine').textContent =
-            'Analyzed ' + (record.sampledPixels || 0).toLocaleString() + ' sampled pixels · avg color rgb(' +
-            avg.r + ', ' + avg.g + ', ' + avg.b + ') · score ' + record.score + '/100';
+        document.getElementById('detailMetaLine').textContent = record.avgColor
+            ? 'Analyzed ' + (record.sampledPixels || 0).toLocaleString() + ' sampled pixels · avg color rgb(' +
+                avg.r + ', ' + avg.g + ', ' + avg.b + ') · score ' + record.score + '/100'
+            : 'Shared report · full scan details are only stored on the device that submitted it · score ' + dash(record.score) + '/100';
 
-        // Log button: only the owner can submit; hidden on other accounts' reports
         const mine = isMine(record);
         logReportBtn.hidden = !mine;
         logReportBtn.disabled = !!record.reported;

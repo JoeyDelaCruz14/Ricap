@@ -1,3 +1,6 @@
+/* Background video positioning. Not linked by any page at the moment. */
+/* Sa madaling salita: posisyon ng background video (hindi pa ginagamit). */
+
 #bg-video {
     transition: none;
     will-change: transform;
@@ -13,6 +16,7 @@
     will-change: opacity;
 }
 
+/* Cursor glow */
 .cursor-glow {
     left: 0;
     top: 0;
@@ -26,7 +30,7 @@
     -webkit-backdrop-filter: blur(8px);
 }
 
-/* Keep tilt items on their own layer while they animate */
+/* Scroll tilt */
 .scroll-tilt {
     backface-visibility: hidden;
 }

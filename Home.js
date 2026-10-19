@@ -1,4 +1,12 @@
-import { db } from './firebase-config.js';
+// Home page (Home.html): the community forum of river reports from Firestore, with votes,
+// comments, sharing, saved posts, status filter, river search, sort and pagination,
+// plus stats, the officials list, notifications and the account box.
+// Sa madaling salita: ito ang forum sa Home: makikita ang mga report, makakapag-vote, comment at search ng ilog.
+
+import { db, auth, storage } from './firebase-config.js';
+import { ref as storageRef, getDownloadURL, getMetadata } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js';
+import { isAdminUser } from './admin-role.js';
+import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js';
 import {
     collection, query, orderBy, limit, onSnapshot,
     doc, setDoc, deleteDoc, addDoc, serverTimestamp
@@ -7,39 +15,43 @@ import { mountAuthNav, getOfficial, isVerified, logout, ensureAuth } from './Ses
 import {
     requestNotifications, allNotifEnabled, setAllNotifications, startReportAlerts
 } from './Notify.js';
-import { getAccount, isLocalLoggedIn } from './account.js';
+import { getAccount, isLocalLoggedIn, rememberLogin } from './account.js';
 import { emailAlertsEnabled, setEmailAlerts, resyncIfOptedIn } from './alerts.js';
 
 
 const STATUS_COLORS = {
     healthy: '#4fae8c',
     moderate: '#d9a441',
-    polluted: '#bf5b2e',
-    critical: '#c1443c'
+    polluted: '#bf5b2e'
 };
 const COAST_LABELS = { east: 'Manila Bay side', west: 'South China Sea side' };
 const SAVED_KEY = 'ricap_saved_posts';
 const WEEK_MS = 7 * 864e5;
 
+// The river list from mapping-data.js.
 function resolveRivers() {
     try { if (typeof RIVER_DATA !== 'undefined' && Array.isArray(RIVER_DATA)) return RIVER_DATA; } catch (e) {}
     if (Array.isArray(window.RIVER_DATA)) return window.RIVER_DATA;
     return [];
 }
 const rivers = resolveRivers();
+// River from mapping-data.js by id.
 const riverById = id => rivers.find(r => String(r.id) === String(id));
 
+// Escapes text before putting it into HTML.
 function escapeHtml(v) {
     return String(v ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
+// Up to two initials for the avatar circle.
 function initials(name) {
     const parts = String(name || '?').trim().split(/\s+/).slice(0, 2);
     return parts.map(p => p[0] || '').join('').toUpperCase() || '?';
 }
 
+// Relative time such as "5 min ago".
 function timeAgo(date) {
     const s = Math.max(1, Math.round((Date.now() - date.getTime()) / 1000));
     if (s < 60) return 'just now';
@@ -52,6 +64,7 @@ function timeAgo(date) {
     return date.toLocaleDateString();
 }
 
+// Firestore timestamp to Date.
 function toDate(ts) {
     try { return ts.toDate(); } catch (e) { return ts ? new Date(ts) : new Date(); }
 }
@@ -68,21 +81,24 @@ const ICON = {
 
 const state = {
     reports: [],
-    votes: new Map(),      // reportId -> { count, mine }
-    comments: new Map(),   // reportId -> [comment]
+    votes: new Map(),
+    comments: new Map(),
     filter: 'all',
+    search: '',
     sort: 'newest',
     uid: null,
     loaded: false,
-    error: null
+    error: null,
+    page: 1
 };
+const PAGE_SIZE = 9;
+let isAdmin = false;   // set once Firebase confirms an admin login (see onAuthStateChanged below)
 const expanded = new Set();
 let saved = new Set();
 try { saved = new Set(JSON.parse(localStorage.getItem(SAVED_KEY) || '[]')); } catch (e) {}
 
 const $ = id => document.getElementById(id);
 
-/* ---------------- boot ---------------- */
 
 initNav();
 mountAuthNav();
@@ -94,6 +110,22 @@ startReportAlerts();
 resyncIfOptedIn();
 ensureAuth().then(uid => { state.uid = uid; render(); }).catch(err => console.warn('Anonymous auth failed', err));
 
+// Admins sign in with Firebase only (no local account), so the account box waits for Firebase
+// to restore the login and redraws as "Admin" instead of "guest".
+onAuthStateChanged(auth, async user => {
+    loadMyAvatar();
+    const admin = await isAdminUser(user);
+    if (user !== auth.currentUser) return;
+    if (!admin && user && !user.isAnonymous && !isLocalLoggedIn()) {
+        rememberLogin(user);
+        renderAuthBlock();
+    }
+    if (admin === isAdmin) return;
+    isAdmin = admin;
+    renderAuthBlock();
+});
+
+// Nav shadow on scroll and the mobile menu.
 function initNav() {
     const t = $('navToggle'), l = $('navLinks');
     if (!t || !l) return;
@@ -104,8 +136,8 @@ function initNav() {
     });
 }
 
-/* ---------------- Firestore listeners ---------------- */
 
+// Live Firestore listeners for reports, votes and comments.
 function startListeners() {
     onSnapshot(
         query(collection(db, 'reports'), orderBy('createdAt', 'desc'), limit(100)),
@@ -155,13 +187,57 @@ function startListeners() {
     );
 }
 
-/* ---------------- sidebar ---------------- */
 
+// Lower case, no accents, single spaces, so "río  talisay" finds "Rio Talisay".
+function normalizeSearch(v) {
+    return String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// True if the report matches every word in the river search.
+function matchesSearch(r) {
+    if (!state.search) return true;
+    const river = riverById(r.riverId);
+    const text = normalizeSearch([
+        river ? river.name : 'Unmapped river',
+        river && COAST_LABELS[river.coast] ? COAST_LABELS[river.coast] : '',
+        r.reportName || ''
+    ].join(' '));
+    return state.search.split(' ').every(word => text.includes(word));
+}
+
+// River search box: suggestions plus filtering as you type.
+function initRiverSearch() {
+    const input = $('riverSearch');
+    if (!input) return;
+    const list = $('riverSearchList');
+    const names = [...new Set(rivers.map(r => r.name).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        list.appendChild(opt);
+    });
+    let timer = 0;
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            state.search = normalizeSearch(input.value);
+            state.page = 1;
+            render();
+        }, 150);
+    });
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && input.value) { input.value = ''; input.dispatchEvent(new Event('input')); }
+    });
+}
+
+// Search, status chips, sort and the notifications button.
 function initSidebarControls() {
+    initRiverSearch();
     $('statusChips').addEventListener('click', e => {
         const chip = e.target.closest('.chip');
         if (!chip) return;
         state.filter = chip.dataset.status;
+        state.page = 1;
         document.querySelectorAll('#statusChips .chip')
             .forEach(c => c.classList.toggle('is-active', c === chip));
         render();
@@ -169,13 +245,14 @@ function initSidebarControls() {
 
     $('sortSelect').addEventListener('change', e => {
         state.sort = e.target.value;
+        state.page = 1;
         render();
     });
 
     const btn = $('notifBtn');
     const paint = () => {
         const on = allNotifEnabled();
-        btn.textContent = on ? '🔔 Alerts on for all rivers' : '🔕 Alert me on new reports';
+        btn.textContent = on ? 'Alerts on for all rivers' : 'Alert me on new reports';
         btn.classList.toggle('is-active', on);
     };
     btn.addEventListener('click', async () => {
@@ -185,7 +262,6 @@ function initSidebarControls() {
         } else if (await requestNotifications()) {
             setAllNotifications(true);
         }
-        // logged-in account: alerts are also sent by email
         if (isLocalLoggedIn() && getAccount()) {
             try { await setEmailAlerts(turnOn); } catch (err) { console.warn('Email alert toggle failed', err); }
             renderAuthBlock();
@@ -195,10 +271,22 @@ function initSidebarControls() {
     paint();
 }
 
+// Account box: official, logged-in account or guest.
 function renderAuthBlock() {
     const box = $('authBlock');
     const o = getOfficial();
-    if (o) {
+    if (isAdmin) {
+        box.innerHTML = `
+            <div class="official-row">
+                <span class="official-avatar">A</span>
+                <div>
+                    <p class="official-name">Admin</p>
+                    <p class="official-role">Logged in · comments show as Admin</p>
+                </div>
+            </div>
+            <button type="button" class="preview-btn" id="authLogout" style="width:100%;margin-top:12px">Log out</button>`;
+        $('authLogout').addEventListener('click', logout);
+    } else if (o) {
         box.innerHTML = `
             <div class="official-row">
                 <span class="official-avatar">${escapeHtml(initials(o.name))}</span>
@@ -237,6 +325,7 @@ function renderAuthBlock() {
     }
 }
 
+// Floating "New report" button for verified officials.
 function initFab() {
     const fab = $('fabSubmit');
     if (!fab) return;
@@ -244,9 +333,10 @@ function initFab() {
     fab.addEventListener('click', () => { location.href = 'Image_Processing.html'; });
 }
 
+// Totals at the top and the list of active officials.
 function renderStatsAndOfficials() {
     const all = state.reports;
-    const officialKey = r => r.reporterCode || r.reporterName;
+    const officialKey = r => r.reporterKey || r.reporterCode || r.reporterName;
 
     $('statReports').textContent = all.length;
     $('statRivers').textContent = new Set(all.map(r => r.riverId).filter(Boolean)).size;
@@ -282,15 +372,16 @@ function renderStatsAndOfficials() {
         .join('');
 }
 
-/* ---------------- feed rendering ---------------- */
 
+// Re-renders the stats and the feed.
 function renderAll() {
     renderStatsAndOfficials();
     render();
 }
 
+// Reports after the status filter and search, sorted.
 function visibleReports() {
-    let list = state.reports.filter(r => state.filter === 'all' || r.status === state.filter);
+    let list = state.reports.filter(r => (state.filter === 'all' || r.status === state.filter) && matchesSearch(r));
     const votes = r => (state.votes.get(r.id) || { count: 0 }).count;
     const comms = r => (state.comments.get(r.id) || []).length;
     const time = r => (r.createdAt ? toDate(r.createdAt).getTime() : Date.now());
@@ -303,11 +394,74 @@ function visibleReports() {
     return list;
 }
 
+// Renders the current page of posts, keeping comment drafts and focus.
+// Reporter profile pictures for the post bubbles. Each picture lives at profile-pictures/<uid> in
+// Storage (only accounts that uploaded one have it); looked up once per reporter and cached.
+// Until it arrives, or when there is none, the bubble shows the initials.
+const avatars = new Map();
+let avatarRepaint = 0;
+function avatarFor(uid) {
+    if (!uid) return '';
+    if (!avatars.has(uid)) {
+        avatars.set(uid, '');
+        const fileRef = storageRef(storage, 'profile-pictures/' + uid);
+        // The file is cached for a year and keeps its URL when replaced, so the update time
+        // is added to the URL to always show the current picture.
+        Promise.all([getDownloadURL(fileRef), getMetadata(fileRef)])
+            .then(([url, meta]) => {
+                avatars.set(uid, url + '&v=' + (Date.parse(meta.updated) || 0));
+                clearTimeout(avatarRepaint);
+                avatarRepaint = setTimeout(render, 120);   // one redraw for a batch of pictures
+            })
+            .catch(() => { /* no picture (or not readable): keep the initials */ });
+    }
+    return avatars.get(uid);
+}
+
+// The viewer's own picture and every Firebase uid they have used on this device, so all of their
+// posts show their current picture even if some were made under an older session.
+let mine = { uids: new Set(), photo: '' };
+function loadMyAvatar() {
+    import('./profile-sync.js').then(m => {
+        const uids = new Set(m.knownUids());
+        const u = auth.currentUser;
+        if (u && !u.isAnonymous) uids.add(u.uid);
+        mine = { uids, photo: m.getAvatar() };
+        render();
+    }).catch(e => console.warn('RiCap: could not load your profile picture', e));
+}
+
+// Who a post belongs to, beyond its uid: posts with the same reporterKey (or, on old posts, access code) are the same official,
+// and admin posts are the admin. Used to share a picture across that person's posts.
+function reporterGroup(r) {
+    if (r.reporterKey) return 'key:' + r.reporterKey;
+    if (r.reporterCode) return 'code:' + String(r.reporterCode).toUpperCase();
+    if (r.reporterRole === 'Admin') return 'admin';
+    return '';
+}
+
+// Picture for a post bubble: the viewer's own picture on their posts, else the picture of the
+// account that posted it, else a picture found on another post by the same official / admin.
+function avatarForReport(r) {
+    if (mine.photo && r.uid && mine.uids.has(r.uid)) return mine.photo;
+    const direct = avatarFor(r.uid);
+    if (direct) return direct;
+    const group = reporterGroup(r);
+    if (!group) return '';
+    for (const other of state.reports) {
+        if (other.uid && other.uid !== r.uid && reporterGroup(other) === group) {
+            const url = avatarFor(other.uid);
+            if (url) return url;
+        }
+    }
+    return '';
+}
+
+// Draws the feed: keeps typed comments, applies filters, sort and paging, then the pager.
 function render() {
     const feed = $('forumFeed');
     if (!feed) return;
 
-    // keep whatever the user was typing
     const drafts = {};
     feed.querySelectorAll('.post-add-comment input').forEach(i => {
         if (i.value) drafts[i.dataset.id] = i.value;
@@ -326,12 +480,24 @@ function render() {
     }
 
     const list = visibleReports();
+    const count = $('riverSearchCount');
+    if (count) {
+        const q = $('riverSearch').value.trim();
+        count.textContent = state.search
+            ? list.length + (list.length === 1 ? ' report' : ' reports') + ' for “' + q + '”'
+            : '';
+    }
     if (!list.length) {
-        feed.innerHTML = '<div class="feed-empty">No reports match this filter yet.</div>';
+        feed.innerHTML = state.search
+            ? '<div class="feed-empty">No reports found for “' + escapeHtml($('riverSearch').value.trim()) + '”. Try another river name.</div>'
+            : '<div class="feed-empty">No reports match this filter yet.</div>';
         return;
     }
 
-    feed.innerHTML = list.map(postHtml).join('');
+    const pages = Math.ceil(list.length / PAGE_SIZE);
+    state.page = Math.min(Math.max(state.page, 1), pages);
+    const start = (state.page - 1) * PAGE_SIZE;
+    feed.innerHTML = list.slice(start, start + PAGE_SIZE).map(postHtml).join('') + pagerHtml(pages);
 
     feed.querySelectorAll('.post-add-comment input').forEach(i => {
         if (drafts[i.dataset.id]) i.value = drafts[i.dataset.id];
@@ -342,11 +508,28 @@ function render() {
     }
 }
 
+// Page buttons under the feed.
+function pagerHtml(pages) {
+    if (pages <= 1) return '';
+    const p = state.page;
+    const nums = Array.from({ length: pages }, (_, i) => i + 1).map(n =>
+        `<button type="button" class="pager-btn${n === p ? ' is-active' : ''}" data-act="page" data-page="${n}"${n === p ? ' aria-current="page"' : ''}>${n}</button>`
+    ).join('');
+    return `
+    <nav class="feed-pager" aria-label="Report pages">
+        <button type="button" class="pager-btn" data-act="page" data-page="${p - 1}"${p === 1 ? ' disabled' : ''}>Prev</button>
+        ${nums}
+        <button type="button" class="pager-btn" data-act="page" data-page="${p + 1}"${p === pages ? ' disabled' : ''}>Next</button>
+    </nav>`;
+}
+
+// Markup for one post.
 function postHtml(r) {
     const river = riverById(r.riverId);
     const riverName = river ? river.name : 'Unmapped river';
     const coast = river && COAST_LABELS[river.coast] ? ' · ' + COAST_LABELS[river.coast] : '';
     const color = STATUS_COLORS[r.status] || '#7c0ae7';
+    const photo = avatarForReport(r);
     const date = r.createdAt ? toDate(r.createdAt) : new Date();
     const v = state.votes.get(r.id) || { count: 0, mine: false };
     const cs = state.comments.get(r.id) || [];
@@ -375,7 +558,10 @@ function postHtml(r) {
     return `
     <article class="post" data-id="${id}">
         <header class="post-head">
-            <div class="post-avatar" style="--ring-color:${color}">${escapeHtml(initials(r.reporterName))}</div>
+            <a class="post-avatar${photo ? ' has-photo' : ''}" style="--ring-color:${color}" href="pfp.html?report=${encodeURIComponent(r.id)}"
+               aria-label="View ${escapeHtml(r.reporterName || 'reporter')}’s profile" title="View profile">${photo
+                ? `<img src="${escapeHtml(photo)}" alt="" loading="lazy">`
+                : escapeHtml(initials(r.reporterName))}</a>
             <div class="post-who">
                 <p class="post-name">
                     ${escapeHtml(r.reporterName || 'Verified official')}
@@ -407,7 +593,7 @@ function postHtml(r) {
         ${ai}
         ${commentsLink}
         ${shown.length ? `<ul class="post-comment-list">${shown.map(c => `
-            <li><strong>${escapeHtml(c.author || 'Guest')}</strong>${c.isOfficial ? ' ✓' : ''} ${escapeHtml(c.text)}</li>`).join('')}</ul>` : ''}
+            <li><strong>${escapeHtml(c.author || 'Guest')}</strong>${c.isOfficial ? ' ✓' : ''}: ${escapeHtml(c.text)}</li>`).join('')}</ul>` : ''}
         <p class="post-time" title="${escapeHtml(date.toLocaleString())}">${escapeHtml(timeAgo(date))}</p>
 
         <div class="post-add-comment">
@@ -417,7 +603,6 @@ function postHtml(r) {
     </article>`;
 }
 
-/* ---------------- actions ---------------- */
 
 const feedEl = $('forumFeed');
 
@@ -441,6 +626,11 @@ feedEl.addEventListener('click', async e => {
             try { localStorage.setItem(SAVED_KEY, JSON.stringify([...saved])); } catch (err) {}
             return render();
         case 'share': return sharePost(id, btn);
+        case 'page':
+            state.page = Number(btn.dataset.page);
+            render();
+            feedEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
         case 'post-comment': {
             const input = feedEl.querySelector(`.post-add-comment input[data-id="${CSS.escape(id)}"]`);
             return submitComment(id, input);
@@ -455,6 +645,7 @@ feedEl.addEventListener('keydown', e => {
     }
 });
 
+// Adds or removes the user's vote.
 async function toggleLike(reportId) {
     try {
         const uid = state.uid || await ensureAuth();
@@ -474,6 +665,7 @@ async function toggleLike(reportId) {
     }
 }
 
+// Posts a comment.
 async function submitComment(reportId, input) {
     if (!input) return;
     const text = input.value.trim().slice(0, 300);
@@ -484,7 +676,12 @@ async function submitComment(reportId, input) {
         const uid = state.uid || await ensureAuth();
         state.uid = uid;
         const o = getOfficial();
-        await addDoc(collection(db, 'forumComments'), { reportId,  text, uid,  author: o ? o.name : 'Guest', isOfficial: !!o, createdAt: serverTimestamp()});
+        // Admins always comment as "Admin" (with the badge); officials use their name; logged-in
+        // citizens use their account name; only people who are not logged in are "Guest".
+        const admin = await isAdminUser(auth.currentUser);
+        const acc = isLocalLoggedIn() ? getAccount() : null;
+        const author = admin ? 'Admin' : (o ? o.name : (acc && acc.name ? String(acc.name).slice(0, 80) : 'Guest'));
+        await addDoc(collection(db, 'forumComments'), { reportId,  text, uid,  author, isOfficial: admin || !!o, createdAt: serverTimestamp()});
         input.value = '';
         expanded.add(reportId);
     } catch (err) {
@@ -496,6 +693,7 @@ async function submitComment(reportId, input) {
     }
 }
 
+// Shares a post (system share sheet, or copies the link).
 async function sharePost(reportId, btn) {
     const r = state.reports.find(x => x.id === reportId);
     if (!r) return;
@@ -511,5 +709,5 @@ async function sharePost(reportId, btn) {
             btn.textContent = 'Copied';
             setTimeout(() => { btn.innerHTML = old; }, 1200);
         }
-    } catch (err) { /* user cancelled */ }
+    } catch (err) {  }
 }

@@ -1,3 +1,6 @@
+// Zooms the background video in while scrolling past the hero. Not loaded by any page at the moment.
+// Sa madaling salita: pinapalaki ang background video habang nag-i-scroll (hindi pa ginagamit).
+
 document.addEventListener('DOMContentLoaded', () => {
     const video = document.getElementById('bg-video');
     const hero = document.querySelector('.hero');
@@ -9,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxScale = 1.85; 
     let ticking = false;
 
+    // Scales the video by how far the hero has scrolled.
     function update() {
         ticking = false;
 
@@ -19,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         video.style.transform = `scale(${scale})`;
     }
 
+    // Runs update() at most once per frame.
     function onScroll() {
         if (!ticking) {
             ticking = true;

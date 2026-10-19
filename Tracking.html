@@ -1,13 +1,15 @@
 <!DOCTYPE html>
+<!-- Tracking: your scans and shared reports as cards, a table, a monthly map and a timeline. -->
+<!-- Sa madaling salita: listahan at kasaysayan ng mga scan at report. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RiCap — Tracking</title>
-<link rel="stylesheet" href="Image_Processing.css">
+<title>Tracking</title>
+<link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="Tracking.css">
-<link rel="stylesheet" href="Responsive.css">
 </head>
 <body>
 
@@ -15,6 +17,7 @@
     <source src="images&vids/River3.mp4" type="video/mp4">
 </video>
 
+<!-- Top navigation -->
 <nav class="nav" id="siteNav">
     <div class="nav-inner">
         <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
@@ -24,29 +27,29 @@
         </button>
 
         <ul class="nav-links" id="navLinks">
-            <li><a href="main.html">Home</a></li>
+            <li><a href="Home.html">Home</a></li>
             <li><a href="mapping.html">Mapping</a></li>
-            <li><a href="Submit.html">Submit</a></li>
             <li><a href="Image_Processing.html">Scanner</a></li>
-            <li><a href="Tracking.html">Tracking</a></li>
-            <li><a href="forum.html">Forum</a></li>
-            <li><a href="main.html#about">About</a></li>
-            <li><a href="main.html#contact">Contact</a></li>
+            <li><a href="Tracking.html" class="nav-link--active" aria-current="page">Tracking</a></li>
+            <li><a href="main.html#loginbutton">Login</a></li>
+            <li><a href="Verify.html">Verify</a></li>
+            <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
         </ul>
     </div>
 </nav>
 
-<!-- HERO -->
+<!-- Page title -->
 <header class="scan-hero">
     <p class="scan-eyebrow">Tracking</p>
-    <h1 class="scan-heading">Every river you've scanned, on record.</h1>
-    <p class="scan-sub">Open any past scan to see the exact photo RiCap read and the full pollution breakdown behind its score.</p>
+    <h1 class="scan-heading">Track your reports.</h1>
 </header>
 
 <main class="docs-section">
     <div class="docs-shell">
 
+        <!-- List view -->
         <section id="listState">
+            <!-- Monthly map and timeline -->
             <section class="card trend-card" id="trendCard">
                 <div class="trend-head">
                     <div>
@@ -64,9 +67,13 @@
 
                 <div class="trend-stats" id="trendStats"></div>
 
-                <div class="trend-map-wrap">
-                    <div class="trend-map" id="trendMap" role="img" aria-label="Map of rivers scanned this month"></div>
-                    <p class="trend-empty trend-map-empty" id="trendEmpty" hidden>No scans with a location in this month yet.</p>
+                <div class="trend-timeline-wrap">
+                    <aside class="trend-timeline-sidebar" id="timelineSidebar" aria-label="Timeline of scans this month"></aside>
+
+                    <div class="trend-map-wrap">
+                        <div class="trend-map" id="trendMap" role="img" aria-label="Map of rivers scanned this month"></div>
+                        <p class="trend-empty trend-map-empty" id="trendEmpty" hidden>No scans with a location in this month yet.</p>
+                    </div>
                 </div>
 
                 <div class="trend-legend">
@@ -85,6 +92,10 @@
                     <h2 class="card-heading" id="recordCount">0 scans logged</h2>
                 </div>
                 <div class="docs-header-actions">
+                    <div class="view-toggle" role="tablist" aria-label="Choose how records are shown">
+                        <button type="button" class="view-toggle-btn" id="viewCardsBtn" role="tab" aria-selected="true" data-view="cards">Cards</button>
+                        <button type="button" class="view-toggle-btn" id="viewTableBtn" role="tab" aria-selected="false" data-view="table">Table</button>
+                    </div>
                     <label class="docs-filter" for="scopeFilter">
                         <span class="docs-filter-label">Show</span>
                         <select id="scopeFilter" class="docs-filter-select" aria-label="Choose which records to show">
@@ -104,24 +115,76 @@
                 </div>
             </div>
 
+            <!-- Empty state -->
             <div class="docs-empty" id="docsEmpty" hidden>
                 <p id="docsEmptyText">No official reports yet. Run a scan and press "Submit Official Report" to add it here.</p>
                 <a href="Image_Processing.html" class="btn btn-outline">Go to Scanner</a>
             </div>
 
+            <!-- Records as cards -->
             <div class="record-grid" id="recordGrid"></div>
+
+            <!-- Records as a table -->
+            <div class="timeline-table-wrap" id="timelineTableWrap" hidden>
+                <table class="timeline-table" id="timelineTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>River</th>
+                            <th>Status</th>
+                            <th>Score</th>
+                            <th>Reporter</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timelineTableBody"></tbody>
+                </table>
+                <!-- Table pages (shown when there are more than 20 records) -->
+                <div class="table-pager" id="tablePager" hidden>
+                    <button type="button" class="table-pager-btn" id="tablePrev" aria-label="Previous page">&lsaquo; Prev</button>
+                    <span class="table-pager-info" id="tablePageInfo" aria-live="polite"></span>
+                    <button type="button" class="table-pager-btn" id="tableNext" aria-label="Next page">Next &rsaquo;</button>
+                </div>
+            </div>
         </section>
 
+        <!-- Detail view for one record -->
         <section id="detailState" hidden>
             <button class="back-link" id="backToList" type="button">&larr; All records</button>
 
             <div class="detail-grid">
 
-                <div class="card detail-image-panel">
-                    <p class="card-eyebrow">Processed Photo</p>
-                    <img id="detailImage" alt="Processed river photo">
-                    <p class="detail-timestamp" id="detailTimestamp"></p>
-                    <p class="detail-timestamp" id="detailReporter"></p>
+                <div class="detail-side">
+                    <div class="card detail-image-panel">
+                        <p class="card-eyebrow">Processed Photo</p>
+                        <img id="detailImage" alt="Processed river photo">
+                        <p class="detail-timestamp" id="detailTimestamp"></p>
+                        <p class="detail-timestamp" id="detailReporter"></p>
+                    </div>
+
+                    <div class="card detail-indicators-panel">
+                        <p class="indicator-heading">Visual Indicators</p>
+                        <div class="metric-grid">
+                            <div class="metric-tile">
+                                <p class="label">Color Cast</p>
+                                <p class="value" id="detailColorCast"></p>
+                            </div>
+                            <div class="metric-tile">
+                                <p class="label">Surface Clarity</p>
+                                <p class="value" id="detailSurfaceClarity"></p>
+                            </div>
+                            <div class="metric-tile">
+                                <p class="label">Lighting</p>
+                                <p class="value" id="detailLighting"></p>
+                            </div>
+                            <div class="metric-tile">
+                                <p class="label">Overall Reading</p>
+                                <p class="value" id="detailOverall"></p>
+                            </div>
+                        </div>
+
+                        <p class="meta-line" id="detailMetaLine"></p>
+                    </div>
                 </div>
 
                 <div class="card detail-analysis-panel">
@@ -148,27 +211,11 @@
                         <p id="detailAssessmentText"></p>
                     </div>
 
-                    <p class="indicator-heading">Visual Indicators</p>
-                    <div class="metric-grid">
-                        <div class="metric-tile">
-                            <p class="label">Color Cast</p>
-                            <p class="value" id="detailColorCast"></p>
-                        </div>
-                        <div class="metric-tile">
-                            <p class="label">Surface Clarity</p>
-                            <p class="value" id="detailSurfaceClarity"></p>
-                        </div>
-                        <div class="metric-tile">
-                            <p class="label">Lighting</p>
-                            <p class="value" id="detailLighting"></p>
-                        </div>
-                        <div class="metric-tile">
-                            <p class="label">Overall Reading</p>
-                            <p class="value" id="detailOverall"></p>
-                        </div>
+                    <div class="assessment-box reco-box" id="detailRecoBox" hidden>
+                        <span class="label">Recommendation</span>
+                        <p id="detailRecoText"></p>
+                        <small class="reco-source" id="detailRecoSource"></small>
                     </div>
-
-                    <p class="meta-line" id="detailMetaLine"></p>
 
                     <div class="disclaimer-box">
                         <span class="icon">i</span>
@@ -187,8 +234,10 @@
     </div>
 </main>
 
+<!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="mapping-data.js"></script>
 <script src="Tracking.js"></script>
+<script type="module" src="admin-nav.js"></script>
 </body>
 </html>

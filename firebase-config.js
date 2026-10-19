@@ -1,3 +1,9 @@
+// Firebase setup shared by every page: one app instance plus the services the site uses.
+// Import { app, db, rtdb, storage, auth } from here instead of calling initializeApp again.
+// db = Firestore (reports, forum, profiles), rtdb = Realtime Database (access codes, applications,
+// account registry), storage = Cloud Storage (photos), auth = Firebase Authentication.
+// Sa madaling salita: dito nakakonekta ang website sa Firebase (database, storage at login).
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";

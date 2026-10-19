@@ -1,11 +1,16 @@
+// Contact form on main.html: checks the fields and shows a confirmation toast.
+// Sa madaling salita: sinusuri nito ang contact form at nagpapakita ng mensahe kapag naipadala.
+
 document.addEventListener("DOMContentLoaded", () => {
     const contactForm = document.getElementById("contactForm");
     const toast = document.getElementById("toast");
     const toastMessage = document.getElementById("toastMessage");
+    // Simple email format check.
     function isValidEmail(value) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
     }
 
+    // Confirmation message.
     function showContactToast(message) {
         if (!toast || !toastMessage) return;
         toastMessage.textContent = message;

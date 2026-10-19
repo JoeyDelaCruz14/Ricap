@@ -1,18 +1,24 @@
 <!DOCTYPE html>
+<!-- Mapping: map of Bataan rivers and their segments, coloured by this month's reports. -->
+<!-- Sa madaling salita: mapa ng mga ilog sa Bataan. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RiCap – Bataan River Map</title>
-
+<link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
+<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="mapping.css">
 </head>
 
 <body>
 
+<!-- Top navigation -->
 <nav class="nav scrolled" id="siteNav">
     <div class="nav-inner">
+        <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+
         <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
             <span></span>
             <span></span>
@@ -20,13 +26,13 @@
         </button>
 
         <ul class="nav-links" id="navLinks">
-            <li><a href="main.html">Home</a></li>
-            <li><a href="mapping.html" class="nav-link--active">Mapping</a></li>
+            <li><a href="Home.html">Home</a></li>
+            <li><a href="mapping.html" class="nav-link--active" aria-current="page">Mapping</a></li>
             <li><a href="Image_Processing.html">Scanner</a></li>
             <li><a href="Tracking.html">Tracking</a></li>
-            <li><a href="forum.html">Forum</a></li>
-            <li><a href="main.html#about">About</a></li>
-            <li><a href="main.html#contact">Contact</a></li>
+            <li><a href="main.html#loginbutton">Login</a></li>
+            <li><a href="Verify.html">Verify</a></li>
+            <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
         </ul>
 
     </div>
@@ -34,19 +40,31 @@
 
 <main class="map-page">
 
-    <button class="sidebar-toggle" id="sidebarToggle"aria-label="Toggle river list"aria-expanded="false"> ☰ </button>
+    <!-- Mobile button for the river list -->
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Show river list" aria-controls="mapSidebar" aria-expanded="false">
+        <span class="st-open" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><path d="M7 5h10M7 10h10M7 15h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="3.5" cy="5" r="1.2" fill="currentColor"/><circle cx="3.5" cy="10" r="1.2" fill="currentColor"/><circle cx="3.5" cy="15" r="1.2" fill="currentColor"/></svg>
+            Rivers
+        </span>
+        <span class="st-close" aria-hidden="true">
+            <svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </span>
+    </button>
 
+
+
+
+    <!-- Sidebar: search, month, river list, legend -->
     <aside class="map-sidebar" id="mapSidebar">
 
         <div class="sidebar-header">
             <p class="sidebar-eyebrow">Bataan</p>
-            <p class="sidebar-stat" id="sidebarStat">
-                Loading rivers…
-            </p>
+            <p class="sidebar-stat" id="sidebarStat">Loading rivers…</p>
         </div>
 
         <div class="sidebar-search">
-            <input type="search" id="riverSearch" placeholder="Search rivers..." autocomplete="off">
+            <input type="search" id="riverSearch" placeholder="Search rivers or towns…" autocomplete="off" aria-label="Search rivers or municipalities">
+            <ul class="search-results" id="searchResults" role="listbox" aria-label="Matching rivers and municipalities" hidden></ul>
         </div>
 
         <div
@@ -60,6 +78,12 @@
         </div>
 
         <div class="sidebar-footer">
+
+            <label class="waterways-toggle" for="otherWaterways">
+                <input type="checkbox" id="otherWaterways" role="switch" checked>
+                <span class="waterways-switch" aria-hidden="true"></span>
+                Show other waterways
+            </label>
 
             <button
                 type="button"
@@ -80,15 +104,19 @@
 
     <div
         class="map-canvas"
-        id="map">
+        id="map"
+        role="region"
+        aria-label="Map of Bataan. Use the arrow keys to pan and plus or minus to zoom; press Tab to reach the river markers.">
     </div>
 
 </main>
 
+<!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script src="mapping-data.js"></script>
 
+<!-- Nav: Verify link and mobile menu -->
 <script type="module">
 import { mountAuthNav } from './Session.js';
 mountAuthNav();
@@ -101,6 +129,7 @@ t.addEventListener('click', () => {
 </script>
 
 <script type="module" src="mapping.js"></script>
+<script type="module" src="admin-nav.js"></script>
 
 </body>
 </html>

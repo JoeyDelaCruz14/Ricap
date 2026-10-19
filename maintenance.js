@@ -1,14 +1,19 @@
+// Maintenance page (maintenance.html), admins only: report moderation (flag, status, delete, comments),
+// river locations, access codes, data checks, CSV export and the Applications tab.
+// Sa madaling salita: dito inaayos ng admin ang mga report, ilog at access code.
+
 import { db, rtdb, storage, auth } from './firebase-config.js';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 import {
     collection, query, orderBy, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import { ref as storageRef, deleteObject } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-storage.js";
-import { ref as rtRef, onValue, update as rtUpdate } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { ref as rtRef, onValue, get as rtGet, update as rtUpdate, serverTimestamp as rtNow } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { generateAccessCode, sendAccessCodeEmail, markEmail } from './applications.js';
 
 const STORAGE_FOLDER = 'Submitted images';
 const BATAAN = { south: 14.33, west: 120.02, north: 14.97, east: 120.66 };
-const STATUSES = ['healthy', 'moderate', 'polluted', 'critical'];
+const STATUSES = ['healthy', 'moderate', 'polluted'];
 const COAST_LABELS = { east: 'Manila Bay (east)', west: 'South China Sea (west)' };
 
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +24,11 @@ let reports = [];          // [{id, ...data}]
 let riverRecords = [];     // Firestore riverLocations
 let codes = [];            // RTDB accessCodes
 let pendingApps = 0;
+let apps = [];             // RTDB officialApplications [{id, ...data}], newest first
+const busyApps = new Set(); // application ids with a save or email in progress
 let unsubs = [];
+let commentsByReport = new Map();   // reportId -> [comments], oldest first
+const openComments = new Set();     // report ids whose comment list is expanded
 
 /* ---------- helpers ---------- */
 function staticRivers() {
@@ -29,6 +38,7 @@ function staticRivers() {
     return [];
 }
 
+// River name for an id (Firestore river records first, then the built-in list).
 function riverName(id) {
     if (id == null || id === '') return 'Unassigned';
     const hit = riverRecords.find(r => r.id === String(id)) ||
@@ -36,12 +46,14 @@ function riverName(id) {
     return hit ? (hit.name || hit.officialName || String(id)) : String(id);
 }
 
+// Date and time in Philippine format, or "—".
 function fmtDate(ts) {
     const d = ts && ts.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
     return d && !isNaN(d) ? d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 }
 
 let toastTimer = null;
+// Short message at the bottom of the page.
 function toast(msg) {
     const t = $('mToast');
     t.textContent = msg;
@@ -86,6 +98,18 @@ function startListeners(user) {
         renderAll();
     }, err => onLoadError('reports', err)));
 
+    unsubs.push(onSnapshot(query(collection(db, 'forumComments'), orderBy('createdAt', 'asc')), snap => {
+        const map = new Map();
+        snap.forEach(d => {
+            const c = { id: d.id, ...d.data({ serverTimestamps: 'estimate' }) };
+            if (!map.has(c.reportId)) map.set(c.reportId, []);
+            map.get(c.reportId).push(c);
+        });
+        commentsByReport = map;
+        renderFlagged();
+        renderReports();
+    }, err => onLoadError('comments', err)));
+
     unsubs.push(onSnapshot(collection(db, 'riverLocations'), snap => {
         riverRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }))
             .sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -102,13 +126,18 @@ function startListeners(user) {
 
     const offApps = onValue(rtRef(rtdb, 'officialApplications'), snap => {
         const val = snap.val() || {};
-        pendingApps = Object.values(val).filter(a => a && a.status === 'pending').length;
+        apps = Object.entries(val).map(([id, d]) => ({ id, ...d }))
+            .sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+        pendingApps = apps.filter(a => a.status === 'pending').length;
+        renderApps();
+        renderUsers();
         renderIntegrity();
-    }, () => { });
+    }, err => onLoadError('applications', err));
     unsubs.push(offApps);
 }
 let currentAdmin = '';
 
+// A live list could not load (usually a Firebase rule).
 function onLoadError(what, err) {
     console.error(err);
     toast('Could not load ' + what + ' — check your Firebase rules.');
@@ -121,9 +150,11 @@ function renderAll() {
     renderReports();
     renderRivers();
     renderCodes();
+    renderUsers();
     renderIntegrity();
 }
 
+// Numbers at the top and the flagged badge.
 function renderStats() {
     const flagged = reports.filter(r => r.flagged).length;
     $('stReports').textContent = reports.length;
@@ -134,8 +165,9 @@ function renderStats() {
     $('flagBadge').hidden = !flagged;
 }
 
+// One report with its photo, details, comments and admin actions.
 function reportCard(r) {
-    const status = STATUSES.includes(r.status) ? r.status : 'healthy';
+    const status = STATUSES.includes(r.status) ? r.status : r.status === 'critical' ? 'polluted' : 'healthy'; // older "critical" reports count as polluted
     const card = document.createElement('article');
     card.className = 'm-card' + (r.flagged ? ' is-flagged' : '');
     card.innerHTML = `
@@ -148,6 +180,7 @@ function reportCard(r) {
             <p class="m-meta">${esc(riverName(r.riverId))} · ${esc(r.reporterName || 'Unknown reporter')}${r.reporterRole ? ' (' + esc(r.reporterRole) + ')' : ''} · ${esc(fmtDate(r.createdAt))}</p>
             <p class="m-text">${esc(r.assessment || '')}</p>
             ${r.flagged ? `<p class="m-flagnote">Flagged${r.flagReason ? ': ' + esc(r.flagReason) : ''}${r.flaggedBy ? ' — by ' + esc(r.flaggedBy) : ''}</p>` : ''}
+            ${commentsHtml(r)}
             <div class="m-actions">
                 ${r.flagged
                     ? `<button type="button" class="submit-btn" data-act="clear">Keep (clear flag)</button>`
@@ -163,9 +196,26 @@ function reportCard(r) {
     card.querySelector('[data-act="clear"]')?.addEventListener('click', () => clearFlag(r));
     card.querySelector('[data-act="status"]').addEventListener('change', e => overrideStatus(r, e.target.value));
     card.querySelector('[data-act="delete"]').addEventListener('click', () => deleteReport(r));
+    card.querySelector('.m-comments')?.addEventListener('toggle', e => {
+        if (e.target.open) openComments.add(r.id); else openComments.delete(r.id);
+    });
     return card;
 }
 
+// The report's comments from Home (author, text, date), collapsed under "Comments (n)".
+function commentsHtml(r) {
+    const list = commentsByReport.get(r.id) || [];
+    if (!list.length) return '<p class="m-comments-none">No comments yet.</p>';
+    return `<details class="m-comments"${openComments.has(r.id) ? ' open' : ''}>
+        <summary>Comments (${list.length})</summary>
+        <ul>${list.map(c => `<li>
+            <p class="m-comment-head"><strong>${esc(c.author || 'Guest')}</strong>${c.isOfficial ? ' <span class="m-comment-badge">Official</span>' : ''} <span>${esc(fmtDate(c.createdAt))}</span></p>
+            <p class="m-comment-text">${esc(c.text || '')}</p>
+        </li>`).join('')}</ul>
+    </details>`;
+}
+
+// Flagged reports tab.
 function renderFlagged() {
     const list = $('flaggedList');
     const flagged = reports.filter(r => r.flagged);
@@ -174,6 +224,7 @@ function renderFlagged() {
     flagged.forEach(r => list.appendChild(reportCard(r)));
 }
 
+// All reports tab, filtered by the search box and status.
 function renderReports() {
     const q = $('reportSearch').value.trim().toLowerCase();
     const st = $('reportStatus').value;
@@ -189,6 +240,7 @@ function renderReports() {
     rows.forEach(r => list.appendChild(reportCard(r)));
 }
 
+// River locations list.
 function renderRivers() {
     const body = $('riverRows');
     body.innerHTML = '';
@@ -211,6 +263,7 @@ function renderRivers() {
     });
 }
 
+// Access codes list.
 function renderCodes() {
     const body = $('codeRows');
     body.innerHTML = '';
@@ -229,6 +282,7 @@ function renderCodes() {
     });
 }
 
+// Data checks: missing photos, unlinked reports, bad coordinates, duplicates.
 function renderIntegrity() {
     const noImage = reports.filter(r => !r.imageUrl).length;
     const noRiver = reports.filter(r => !r.riverId).length;
@@ -258,6 +312,7 @@ async function flagReport(r) {
     } catch (err) { fail('Flag failed', err); }
 }
 
+// Keeps a flagged report and clears the flag.
 async function clearFlag(r) {
     try {
         await updateDoc(doc(db, 'reports', r.id), {
@@ -267,6 +322,7 @@ async function clearFlag(r) {
     } catch (err) { fail('Could not clear flag', err); }
 }
 
+// Changes a report's status by hand.
 async function overrideStatus(r, status) {
     if (status === r.status) return;
     try {
@@ -277,6 +333,7 @@ async function overrideStatus(r, status) {
     } catch (err) { fail('Status change failed', err); renderAll(); }
 }
 
+// Deletes a report and its photo.
 async function deleteReport(r) {
     if (!confirm('Permanently delete "' + (r.reportName || 'this report') + '" and its photo? This cannot be undone.')) return;
     try {
@@ -298,6 +355,7 @@ function resetRiverForm() {
     $('riverError').hidden = true;
 }
 
+// Fills the river form to edit a record.
 function editRiver(r) {
     $('riverDocId').value = r.id;
     $('riverName').value = r.name || '';
@@ -347,6 +405,7 @@ $('riverForm').addEventListener('submit', async e => {
     finally { $('riverSaveBtn').disabled = false; }
 });
 
+// Deletes a river record.
 async function deleteRiver(r) {
     const used = reports.filter(x => String(x.riverId) === r.id).length;
     const warn = used ? '\n\n' + used + ' report(s) still reference this river and will show as its raw ID.' : '';
@@ -363,6 +422,145 @@ async function toggleCode(c) {
         await rtUpdate(rtRef(rtdb, 'accessCodes/' + c.code), { active: next });
         toast(next ? 'Code reactivated.' : 'Code revoked.');
     } catch (err) { fail('Could not update code', err); }
+}
+
+/* ---------- applications ---------- */
+const isHttps = u => /^https:\/\//i.test(String(u || ''));
+
+// Applications tab: pending applications, newest first, and the tab badge.
+function renderApps() {
+    const list = $('appList');
+    const pending = apps.filter(a => a.status === 'pending');
+    list.innerHTML = '';
+    $('appsEmpty').hidden = pending.length > 0;
+    $('appBadge').textContent = pending.length;
+    $('appBadge').hidden = !pending.length;
+    pending.forEach(a => {
+        const busy = busyApps.has(a.id);
+        const card = document.createElement('div');
+        card.className = 'app-card';
+        card.innerHTML = `
+            ${isHttps(a.photoURL) ? `<img src="${esc(a.photoURL)}" alt="Verification photo for ${esc(a.fullName)}" loading="lazy">` : '<div class="m-noimg">No photo</div>'}
+            <div class="app-card-body">
+                <p class="app-card-name">${esc(a.fullName || 'Unnamed applicant')}</p>
+                <p class="app-card-meta">
+                    ${esc(a.role || '—')} · ${esc(a.organization || '—')}<br>
+                    ${esc(a.email || '—')}${a.phone ? ' · ' + esc(a.phone) : ''}<br>
+                    Submitted ${esc(fmtDate(a.submittedAt))}
+                </p>
+                <div class="app-card-actions">
+                    <button type="button" class="submit-btn" data-act="approve"${busy ? ' disabled' : ''}>${busy ? 'Saving…' : 'Approve &amp; email code'}</button>
+                    <button type="button" class="ghost-btn reject-btn" data-act="reject"${busy ? ' disabled' : ''}>Reject</button>
+                </div>
+            </div>`;
+        card.querySelector('[data-act="approve"]').addEventListener('click', () => approveApp(a));
+        card.querySelector('[data-act="reject"]').addEventListener('click', () => rejectApp(a));
+        list.appendChild(card);
+    });
+}
+
+// New code + application status in one write, then emails the code.
+async function approveApp(a) {
+    if (!a.email) return toast('This application has no email address.');
+    if (!confirm('Approve ' + (a.fullName || 'this applicant') + ' and email an access code to ' + a.email + '?')) return;
+    busyApps.add(a.id);
+    renderApps();
+    const path = 'officialApplications/' + a.id + '/';
+    let code;
+    try {
+        do { code = generateAccessCode(); }
+        while (codes.some(c => c.code === code) || (await rtGet(rtRef(rtdb, 'accessCodes/' + code))).exists());
+        await rtUpdate(rtRef(rtdb), {
+            ['accessCodes/' + code]: {
+                active: true, officialName: a.fullName || '', role: a.role || '',
+                organization: a.organization || '', applicationId: a.id, createdAt: rtNow()
+            },
+            [path + 'status']: 'approved',
+            [path + 'accessCode']: code,
+            [path + 'reviewedBy']: currentAdmin,
+            [path + 'reviewedAt']: rtNow()
+        });
+    } catch (err) {
+        busyApps.delete(a.id);
+        renderApps();
+        return fail('Approval failed', err);
+    }
+    markEmail(a.email, 'approved');
+    try { await emailCode({ ...a, accessCode: code }); }
+    finally { busyApps.delete(a.id); renderUsers(); }
+}
+
+// Emails the code; if it fails the approval stays and Resend shows in Verified users.
+async function emailCode(a) {
+    try {
+        await sendAccessCodeEmail(a, a.accessCode);
+    } catch (err) {
+        console.error('Email failed:', err);
+        return toast('Code ' + a.accessCode + ' is approved, but the email to ' + a.email + ' failed — use Resend in Verified users.');
+    }
+    try { await rtUpdate(rtRef(rtdb, 'officialApplications/' + a.id), { emailSent: true, emailedAt: rtNow() }); }
+    catch (err) { console.warn('Could not record emailSent', err); }
+    toast('Access code ' + a.accessCode + ' emailed to ' + a.email + '.');
+}
+
+// Rejects with an optional reason; no code is created.
+async function rejectApp(a) {
+    const reason = prompt('Reject ' + (a.fullName || 'this applicant') + '? Optional reason:', '');
+    if (reason === null) return;
+    busyApps.add(a.id);
+    renderApps();
+    try {
+        await rtUpdate(rtRef(rtdb, 'officialApplications/' + a.id), {
+            status: 'rejected', rejectReason: reason.trim().slice(0, 200),
+            reviewedBy: currentAdmin, reviewedAt: rtNow()
+        });
+        markEmail(a.email, 'rejected');
+        toast('Application rejected.');
+    } catch (err) { fail('Reject failed', err); }
+    finally { busyApps.delete(a.id); renderApps(); }
+}
+
+// Verified users tab: approved applicants with their code and its state.
+function renderUsers() {
+    const q = $('userSearch').value.trim().toLowerCase();
+    const list = $('userList');
+    list.innerHTML = '';
+    const rows = apps.filter(a => a.status === 'approved' && a.accessCode && (!q ||
+        [a.fullName, a.email, a.role, a.organization, a.accessCode].some(v => String(v || '').toLowerCase().includes(q))));
+    $('usersEmpty').hidden = rows.length > 0;
+    rows.forEach(a => {
+        const c = codes.find(x => x.code === a.accessCode);
+        const active = !!(c && c.active);
+        const busy = busyApps.has(a.id);
+        const card = document.createElement('article');
+        card.className = 'm-user';
+        card.innerHTML = `
+            <div class="m-user-head">
+                <div class="m-user-info">
+                    <h3>${esc(a.fullName || 'Unnamed')}</h3>
+                    <p class="m-meta">${esc(a.role || '—')} · ${esc(a.organization || '—')}<br>${esc(a.email || '—')}${a.phone ? ' · ' + esc(a.phone) : ''}</p>
+                    <p class="m-meta">Approved ${esc(fmtDate(a.reviewedAt))}${a.reviewedBy ? ' by ' + esc(a.reviewedBy) : ''} · ${a.emailSent ? 'emailed ' + esc(fmtDate(a.emailedAt)) : '<strong>code not emailed</strong>'}</p>
+                </div>
+                <code>${esc(a.accessCode)}</code>
+                <span class="m-pill ${active ? 'st-healthy' : 'st-off'}">${c ? (active ? 'active' : 'revoked') : 'missing'}</span>
+            </div>
+            <div class="m-actions">
+                <button type="button" class="ghost-btn" data-act="resend"${busy || !active ? ' disabled' : ''}>${busy ? 'Sending…' : 'Resend code'}</button>
+                ${c ? `<button type="button" class="ghost-btn${active ? ' danger' : ''}" data-act="toggle">${active ? 'Revoke' : 'Reactivate'}</button>` : ''}
+            </div>`;
+        card.querySelector('[data-act="resend"]').addEventListener('click', () => resendCode(a));
+        card.querySelector('[data-act="toggle"]')?.addEventListener('click', () => toggleCode(c));
+        list.appendChild(card);
+    });
+}
+
+// Emails an approved user's code again.
+async function resendCode(a) {
+    if (!confirm('Email access code ' + a.accessCode + ' to ' + a.email + ' again?')) return;
+    busyApps.add(a.id);
+    renderUsers();
+    try { await emailCode(a); }
+    finally { busyApps.delete(a.id); renderUsers(); }
 }
 
 /* ---------- export ---------- */
@@ -391,7 +589,9 @@ document.querySelectorAll('.m-tab').forEach(tab => tab.addEventListener('click',
 }));
 $('reportSearch').addEventListener('input', renderReports);
 $('reportStatus').addEventListener('change', renderReports);
+$('userSearch').addEventListener('input', renderUsers);
 
+// Error message, pointing at the rules when permission was denied.
 function fail(msg, err) {
     console.error(err);
     toast(msg + (err && err.code === 'permission-denied' ? ' — permission denied (check Firebase rules).' : '.'));

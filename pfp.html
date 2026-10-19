@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!-- My Profile: account details, profile picture, official access, alerts, password and recent reports. -->
+<!-- Sa madaling salita: ang profile mo (o ng ibang reporter kapag binuksan mula sa Home). -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiCap — My Profile</title>
+    <link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="pfp.css">
+</head>
+<body class="profile-page">
+
+    <!-- Background video -->
+    <div class="video-background" aria-hidden="true">
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="images&vids/5.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+    </div>
+
+    <!-- Top navigation -->
+    <nav class="nav" id="nav">
+        <div class="nav-inner">
+            <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks" data-nav-toggle>
+                <span></span><span></span><span></span>
+            </button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="Home.html">Home</a></li>
+                <li><a href="mapping.html">Mapping</a></li>
+                <li><a href="Image_Processing.html">Scanner</a></li>
+                <li><a href="Tracking.html">Tracking</a></li>
+                <li><a href="main.html#loginbutton">Login</a></li>
+                <li><a href="Verify.html">Verify</a></li>
+                <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="pf-main">
+        <div class="pf-shell">
+
+            <!-- Shown when not signed in -->
+            <section class="pf-card pf-gate" id="pfGate" hidden>
+                <p class="eyebrow">Profile</p>
+                <h1>You're not signed in</h1>
+                <p class="pf-copy">Log in to your RiCap account, or verify with an official access code, to see your profile.</p>
+                <div class="pf-actions">
+                    <a href="main.html#loginbutton" class="pf-btn is-primary">Log in</a>
+                    <a href="Verify.html" class="pf-btn">Verify as official</a>
+                </div>
+            </section>
+
+            <!-- Public profile of another reporter (pfp.html?report=<id>, opened from a post on Home) -->
+            <section class="pf-card pf-hero pf-public" id="pfPublic" hidden>
+                <div class="pf-hero-top">
+                    <div class="pf-avatar pf-public-avatar" id="pfPublicAvatar" role="img" aria-label="Profile picture">
+                        <span class="pf-initials" id="pfPublicInitials" aria-hidden="true">?</span>
+                    </div>
+                    <div class="pf-identity">
+                        <p class="eyebrow">Reporter profile</p>
+                        <h1 class="pf-name" id="pfPublicName">Loading…</h1>
+                        <div class="pf-badges" id="pfPublicBadges"></div>
+                    </div>
+                    <div class="pf-hero-actions">
+                        <a href="Home.html" class="pf-btn">Back to Home</a>
+                    </div>
+                </div>
+                <div class="pf-stats">
+                    <div class="pf-stat"><span id="pubTotal">–</span><small>Reports submitted</small></div>
+                    <div class="pf-stat"><span id="pubMonth">–</span><small>This month</small></div>
+                    <div class="pf-stat"><span id="pubRivers">–</span><small>Rivers covered</small></div>
+                    <div class="pf-stat"><span id="pubLast">–</span><small>Last report</small></div>
+                </div>
+            </section>
+
+            <!-- Profile header: picture, name, badges, stats -->
+            <section class="pf-card pf-hero" id="pfHero" hidden>
+                <div class="pf-hero-top">
+                    <button type="button" class="pf-avatar" id="pfAvatar" aria-label="Change profile picture">
+                        <span class="pf-initials" id="pfInitials" aria-hidden="true">?</span>
+                        <span class="pf-avatar-edit" aria-hidden="true">Change</span>
+                    </button>
+                    <div class="pf-identity">
+                        <p class="eyebrow">My profile</p>
+                        <h1 class="pf-name" id="pfName"></h1>
+                        <p class="pf-email" id="pfEmail"></p>
+                        <div class="pf-badges" id="pfBadges"></div>
+                    </div>
+                    <div class="pf-hero-actions">
+                        <a href="Tracking.html" class="pf-btn">View all records</a>
+                        <button type="button" class="pf-btn is-danger" id="pfLogout">Log out</button>
+                    </div>
+                </div>
+                <div class="pf-stats">
+                    <div class="pf-stat"><span id="stTotal">–</span><small>Reports submitted</small></div>
+                    <div class="pf-stat"><span id="stMonth">–</span><small>This month</small></div>
+                    <div class="pf-stat"><span id="stLocal">0</span><small>Scans on this device</small></div>
+                    <div class="pf-stat"><span id="stLast">–</span><small>Last report</small></div>
+                </div>
+            </section>
+
+            <div class="pf-grid" id="pfGrid" hidden>
+                <!-- Account details and profile picture -->
+                <form class="pf-card pf-details" id="pfForm" autocomplete="on" novalidate hidden>
+                    <div class="pf-card-head">
+                        <h2>Account details</h2>
+                        <button type="button" class="pf-btn is-small" id="pfEditBtn">Edit profile</button>
+                    </div>
+
+                    <div class="pf-fields">
+                        <div class="pf-field pf-field-wide">
+                            <span class="pf-field-label">Profile picture</span>
+                            <div class="pf-photo-row">
+                                <div class="pf-photo-thumb" id="pfThumb" role="img" aria-label="Your profile picture"><span class="pf-initials" id="pfThumbInitials" aria-hidden="true">?</span></div>
+                                <div>
+                                    <div class="pf-actions">
+                                        <button type="button" class="pf-btn is-small" id="pfPhotoBtn">Change photo</button>
+                                        <button type="button" class="pf-btn is-small is-danger" id="pfPhotoRemove" hidden>Remove photo</button>
+                                    </div>
+                                    <p class="pf-hint">JPEG, PNG or WebP, up to 2 MB. Location data is removed.</p>
+                                </div>
+                            </div>
+                            <input type="file" id="pfPhotoInput" accept="image/jpeg,image/png,image/webp" aria-label="Choose a profile picture" hidden>
+                        </div>
+                        <div class="pf-field">
+                            <label for="pfFirst">First name</label>
+                            <input type="text" id="pfFirst" maxlength="40" required readonly autocomplete="given-name">
+                        </div>
+                        <div class="pf-field">
+                            <label for="pfLast">Last name</label>
+                            <input type="text" id="pfLast" maxlength="40" required readonly autocomplete="family-name">
+                        </div>
+                        <div class="pf-field pf-field-wide">
+                            <label for="pfEmailInput">Email</label>
+                            <input type="email" id="pfEmailInput" readonly>
+                        </div>
+                        <div class="pf-field pf-field-wide">
+                            <label for="pfPhone">Mobile number <span class="pf-optional">(optional)</span></label>
+                            <input type="tel" id="pfPhone" maxlength="16" readonly placeholder="09171234567" autocomplete="tel">
+                        </div>
+                    </div>
+                    <p class="pf-error" id="pfError" hidden></p>
+                    <div class="pf-actions" id="pfEditActions" hidden>
+                        <button type="submit" class="pf-btn is-primary" id="pfSaveBtn">Save changes</button>
+                        <button type="button" class="pf-btn" id="pfCancelBtn">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="pf-side">
+                    <!-- Official access -->
+                    <div class="pf-card" id="pfOfficialCard">
+                        <div class="pf-card-head"><h2>Official access</h2></div>
+                        <dl class="pf-dl" id="pfOfficial"></dl>
+                        <p class="pf-note" id="pfOfficialNote" hidden></p>
+                        <div class="pf-actions" id="pfOfficialActions"></div>
+                    </div>
+
+                    <!-- Email alerts -->
+                    <div class="pf-card" id="pfAlerts" hidden>
+                        <div class="pf-card-head"><h2>Alerts</h2></div>
+                        <label class="pf-toggle" for="pfEmailAlerts">
+                            <input type="checkbox" id="pfEmailAlerts">
+                            <span>Email me when a new river report is submitted</span>
+                        </label>
+                        <p class="pf-note pf-alert-note" id="pfAlertsNote" hidden></p>
+                    </div>
+
+                    <!-- Change password -->
+                    <form class="pf-card pf-password" id="pfPasswordForm" novalidate hidden>
+                        <div class="pf-card-head"><h2>Change password</h2></div>
+                        <input type="email" id="pfPwEmail" autocomplete="username" hidden>
+                        <div class="pf-fields">
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfPwCurrent">Current password</label>
+                                <input type="password" id="pfPwCurrent" autocomplete="current-password" required>
+                            </div>
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfPwNew">New password</label>
+                                <input type="password" id="pfPwNew" autocomplete="new-password" minlength="6" required aria-describedby="pfPwHint">
+                            </div>
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfPwConfirm">Confirm new password</label>
+                                <input type="password" id="pfPwConfirm" autocomplete="new-password" minlength="6" required>
+                            </div>
+                        </div>
+                        <p class="pf-hint" id="pfPwHint">At least 6 characters.</p>
+                        <p class="pf-error" id="pfPwError" role="alert" hidden></p>
+                        <p class="pf-note pf-pw-status" id="pfPwStatus" role="status" aria-live="polite"></p>
+                        <div class="pf-actions">
+                            <button type="submit" class="pf-btn is-primary" id="pfPwSave">Update password</button>
+                            <button type="button" class="pf-btn" id="pfPwReset">Email me a reset link</button>
+                        </div>
+                    </form>
+
+                    <!-- Delete account -->
+                    <form class="pf-card pf-delete" id="pfDeleteForm" novalidate hidden>
+                        <div class="pf-card-head"><h2>Delete account</h2></div>
+                        <p class="pf-note">This permanently deletes your login, profile picture and saved details. Reports and comments you posted stay on RiCap, without your picture. This can't be undone.</p>
+                        <input type="email" id="pfDelEmail" autocomplete="username" hidden>
+                        <div class="pf-fields">
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfDelPassword">Current password</label>
+                                <input type="password" id="pfDelPassword" autocomplete="current-password" required>
+                            </div>
+                            <div class="pf-field pf-field-wide">
+                                <label for="pfDelConfirm">Type DELETE to confirm</label>
+                                <input type="text" id="pfDelConfirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+                            </div>
+                        </div>
+                        <p class="pf-error" id="pfDelError" role="alert" hidden></p>
+                        <div class="pf-actions">
+                            <button type="submit" class="pf-btn is-danger" id="pfDelBtn" disabled>Delete my account</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- My recent reports -->
+            <section class="pf-card" id="pfReportsCard" hidden>
+                <div class="pf-reports-head">
+                    <h2>My recent reports</h2>
+                    <a href="Tracking.html">See all &rsaquo;</a>
+                </div>
+                <p class="pf-empty" id="pfReportsEmpty">Loading your reports…</p>
+                <div class="pf-reports" id="pfReports"></div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Photo crop dialog -->
+    <dialog class="pf-card pf-crop" id="pfCropDialog" aria-labelledby="pfCropTitle">
+        <div class="pf-card-head"><h2 id="pfCropTitle">Adjust your photo</h2></div>
+        <div class="pf-crop-stage" id="pfCropStage" tabindex="0" role="img" aria-label="Preview of your new profile picture" aria-describedby="pfCropHint">
+            <canvas id="pfCropCanvas" width="512" height="512"></canvas>
+        </div>
+        <p class="pf-hint" id="pfCropHint">Drag the photo to move it. Use the slider, or the arrow keys and + / − on the preview.</p>
+        <label class="pf-crop-zoom" for="pfCropZoom">
+            <span>Zoom</span>
+            <input type="range" id="pfCropZoom" min="1" max="4" step="0.01" value="1">
+        </label>
+        <p class="pf-crop-status" id="pfCropStatus" role="status" aria-live="polite"></p>
+        <div class="pf-actions">
+            <button type="button" class="pf-btn is-primary" id="pfCropSave">Save photo</button>
+            <button type="button" class="pf-btn" id="pfCropCancel">Cancel</button>
+        </div>
+    </dialog>
+
+    <!-- Toast message -->
+    <div class="pf-toast" id="pfToast" role="status" hidden></div>
+
+    <!-- Scripts -->
+    <script src="mapping-data.js"></script>
+    <script type="module" src="pfp.js"></script>
+    <script type="module" src="admin-nav.js"></script>
+</body>
+</html>

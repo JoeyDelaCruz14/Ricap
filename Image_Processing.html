@@ -1,135 +1,216 @@
 <!DOCTYPE html>
+<!-- Scanner: choose a river and segment, upload or take a photo, scan it and submit an official report. -->
+<!-- Sa madaling salita: dito ina-upload at sina-scan ang litrato ng ilog. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Image Processing</title>
+<title>Scanner</title>
+<link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="Image_Processing.css">
 <link rel="stylesheet" href="Responsive.css">
-<style>
-.reco-box{margin-top:16px;padding:14px 16px;border-radius:12px;background:rgba(97,11,235,.12);border:1px solid rgba(97,11,235,.4)}                                                                                                                  
-.verify-banner{margin:0 0 18px;padding:16px 18px;border-radius:12px;background:rgba(212,175,106,.08);border:1px solid rgba(212,175,106,.4)}
-.verify-title{margin:0 0 4px;font-family:Georgia,serif;font-weight:700;font-size:1.05rem}
-.verify-copy{margin:0 0 12px;font-size:.85rem;line-height:1.5;color:rgba(255,255,255,.6)}
-.verify-form{display:flex;gap:10px}
-.verify-form input{flex:1;min-width:0;box-sizing:border-box;padding:11px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:#0b0c10;color:#fff;font-family:inherit;font-size:.9rem;text-transform:uppercase}
-.verify-form .btn{flex:none;padding:11px 22px}
-.verify-error{margin:10px 0 0;font-size:.8rem;color:#d6574a}
-.verify-foot{margin:12px 0 0;font-size:.8rem;color:rgba(255,255,255,.55)}
-.verify-foot a{color:#d4af6a}
-
-.verified-bar{margin:0 0 18px;padding:10px 14px;border-radius:10px;background:rgba(79,174,140,.1);border:1px solid rgba(79,174,140,.45);font-size:.85rem}
-.link-btn{background:none;border:none;padding:0;color:#d4af6a;font:inherit;text-decoration:underline;cursor:pointer}
-</style>
 </head>
-<body>
+<body class="scanner-page" data-gate="checking">
 
 <video autoplay muted loop playsinline id="bg-video">
-    <source src="images&vids/River3.mp4" type="video/mp4">
+    <source src="images&vids/Sequence_01_3.mp4" type="video/mp4">
 </video>
 
+<!-- Top navigation -->
 <nav class="nav" id="siteNav">
     <div class="nav-inner">
         <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
         <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
             <span></span><span></span><span></span>
         </button>
+        
         <ul class="nav-links" id="navLinks">
             <li><a href="Home.html">Home</a></li>
             <li><a href="mapping.html">Mapping</a></li>
-            <li><a href="Image_Processing.html" class="nav-link--active">Scanner</a></li>
+            <li><a href="Image_Processing.html" class="nav-link--active" aria-current="page">Scanner</a></li>
             <li><a href="Tracking.html">Tracking</a></li>
-            <li><a href="forum.html">Forum</a></li>
-            <li><a href="main.html#about">About</a></li>
-            <li><a href="main.html#contact">Contact</a></li>
+            <li><a href="main.html#loginbutton">Login</a></li>
+            <li><a href="Verify.html">Verify</a></li>
+            <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
         </ul>
     </div>
 </nav>
 
+<!-- Page title -->
 <header class="scan-hero">
     <p class="scan-eyebrow">Image Processing</p>
     <h1 class="scan-heading">Scan a river photo, get an instant pollution read.</h1>
-    <p class="scan-sub">Upload or drag in a photo of a river, stream, or shoreline. RiCap runs a real object-detection model (YOLOv11) to spot litter and dumped items, combines that with a visual read of tint and surface texture, and an AI model suggests what to do next. Only verified officials can submit official reports.</p>
+    <p class="scan-sub">Results are saved to that river segment on the map. Only verified officials can scan and submit.</p>
 </header>
 
 <main class="scan-section">
-    <div class="scan-grid">
-        <section class="card scanner-card" aria-label="River image scanner">
-            <p class="card-eyebrow">Capture</p>
-            <h2 class="card-heading">River Scanner</h2>
-            <p class="card-desc">Drop a photo below or click to browse. Clear daylight shots work best.</p>
-            <div class="scanner-viewport" id="dropzone" tabindex="0" role="button" aria-label="Upload a river image">
-                <div class="scanline" aria-hidden="true"></div>
-                <div class="scanner-placeholder" id="scannerPlaceholder">
-                    <strong>Drop an image here</strong>
-                    or click to browse<br>
-                    JPG · PNG · WEBP
+    <!-- Access check: login / access code -->
+    <section class="card gate-card" id="gateCard" aria-live="polite">
+        <div class="gate-checking" id="gateChecking">
+            <span class="gate-spinner" aria-hidden="true"></span> Checking your access…
+        </div>
+
+        <div class="gate-guest" id="gateGuest" hidden>
+            <div>
+                <p class="gate-title">Log in to use the scanner</p>
+                <p class="gate-copy">River reports come from verified officials. Log in or create an account, then verify with the access code you received after applying.</p>
+            </div>
+            <div class="gate-actions">
+                <a class="btn btn-solid" href="main.html#loginbutton">Log in</a>
+                <a class="btn btn-outline" href="main.html#home">Create account</a>
+            </div>
+        </div>
+
+        <div class="verify-banner" id="verifyBanner" hidden>
+            <div>
+                <p class="verify-title">Verify to submit reports</p>
+                <p class="verify-copy">You are logged in, but only verified officials can upload and submit. Enter the access code from your approval email.</p>
+            </div>
+            <form id="accessForm" class="verify-form" autocomplete="off">
+                <label class="visually-hidden" for="accessCode">Official access code</label>
+                <input type="text" id="accessCode" placeholder="RICAP-XXXXXX" autocapitalize="characters" spellcheck="false">
+                <button type="submit" class="btn btn-solid" id="accessBtn">Verify</button>
+            </form>
+            <p class="verify-error" id="accessError" role="alert" hidden></p>
+            <p class="verify-foot">No code yet? <a href="Verify.html">Apply for official access</a>. Approval and the code arrive by email.</p>
+        </div>
+
+        <div class="verified-bar" id="verifiedBar" hidden>
+            <span class="verified-dot" aria-hidden="true"></span>
+            Verified as <strong id="verifiedName">Verified Official</strong> · <button type="button" id="signOutBtn" class="link-btn">not you?</button>
+        </div>
+    </section>
+
+    <div class="scan-steps" id="scanSteps" hidden>
+
+        <!-- Step 1: river, segment and location -->
+        <section class="card step-card step-river" aria-labelledby="stepRiverTitle">
+            <div class="step-head">
+                <span class="step-num" aria-hidden="true">1</span>
+                <div>
+                    <h2 class="card-heading" id="stepRiverTitle">Choose the river and segment</h2>
+                    <p class="card-desc">Every river line on the map is split into 4 parts, from the source to the mouth.</p>
                 </div>
-                <img id="previewImg" alt="Uploaded river image preview" hidden>
-                <canvas id="detectionCanvas" hidden></canvas>
             </div>
 
-            <input type="file" id="fileInput" class="scan-file-input" accept="image/*">
+            <div class="step-river-grid">
+                <div class="step-river-fields">
+                    <label class="field-label" for="stepRiver">River</label>
+                    <select id="stepRiver" class="field-input"></select>
 
-            <div class="scanner-actions">
-                <button class="btn btn-outline" id="cameraBtn" type="button">Use Camera</button>
-                <button class="btn btn-outline" id="uploadBtn" type="button">Upload Photo</button>
-            </div>
-            <div class="scanner-actions" style="margin-top:12px;">
-                <button class="btn btn-solid" id="scanBtn" disabled>Scan Image</button>
-                <button class="btn btn-outline" id="resetBtn">Reset</button>
+                    <label class="field-label" for="stepSegment">Segment</label>
+                    <select id="stepSegment" class="field-input" aria-describedby="stepSegmentHint"></select>
+                    <p class="field-hint" id="stepSegmentHint">Segments run from the source (1) to the mouth (4).</p>
+
+                    <div class="step-location">
+                        <button type="button" class="btn btn-outline" id="useLocationBtn">
+                            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3" fill="currentColor"/><path d="M10 1.5v3M10 15.5v3M1.5 10h3M15.5 10h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="10" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+                            Suggest from my location
+                        </button>
+                        <p class="field-hint" id="locationStatus" aria-live="polite">A photo with GPS data also suggests a segment. You can also click the map to pin the exact spot.</p>
+                    </div>
+
+                    <div class="step-suggestion" id="stepSuggestion" aria-live="polite" hidden></div>
+                    <p class="step-warning" id="stepLocationWarning" role="status" hidden></p>
+                    <p class="step-summary" id="stepSummary" hidden></p>
+                </div>
+
+                <div class="step-map-wrap">
+                    <div class="step-map" id="segmentMap" role="region" aria-label="Map of the chosen river. Click a numbered part to choose that segment."></div>
+                </div>
             </div>
         </section>
 
-        <section class="card results-card" id="resultsCard" aria-live="polite">
-            <p class="card-eyebrow">Scan Result</p>
-            <h2 class="card-heading">Quick Read</h2>
-            <div class="verify-banner" id="verifyBanner" hidden>
-                <p class="verify-title">Verified officials only</p>
-                <p class="verify-copy">You can scan freely. To submit an official report, enter your access code.</p>
-                <form id="accessForm" class="verify-form" autocomplete="off">
-                    <input type="text" id="accessCode" placeholder="RICAP-XXXXXX" aria-label="Official access code">
-                    <button type="submit" class="btn btn-solid" id="accessBtn">Verify</button>
-                </form>
-                <p class="verify-error" id="accessError" hidden></p>
-                <p class="verify-foot">Not registered yet? <a href="apply.html">Apply for official access</a></p>
-            </div>
+        <div class="scan-grid">
 
-            <div class="verified-bar" id="verifiedBar" hidden>
-                Verified as <strong id="verifiedName">Verified Official</strong> · <button type="button" id="signOutBtn" class="link-btn">not you?</button>
-            </div>
-
-            <p class="card-desc">A short read appears here the moment a scan finishes. Verified officials can press Submit Official Report to save it to Tracking, the Map and the Forum.</p>
-
-            <div class="scan-warnings" id="scanWarnings" hidden></div>
-
-            <div class="quickread-row" id="quickreadRow">
-                <span class="status-dot" id="quickStatusDot"></span>
-                <div class="quickread-text">
-                    <p class="quickread-title" id="quickStatusTitle">Waiting for scan</p>
-                    <p class="quickread-sub" id="quickStatusSub">Upload or capture a photo, then run the scan.</p>
+            <!-- Step 2: photo upload / camera and scan -->
+            <section class="card scanner-card" aria-labelledby="stepPhotoTitle">
+                <div class="step-head">
+                    <span class="step-num" aria-hidden="true">2</span>
+                    <div>
+                        <p class="card-eyebrow">Capture</p>
+                        <h2 class="card-heading" id="stepPhotoTitle">River Scanner</h2>
+                    </div>
                 </div>
-                <div class="quickread-score">
-                    <span class="score-value" id="quickScoreValue">—</span>
-                    <span class="score-suffix">/ 100</span>
+                <p class="card-desc">Drop a photo below or click to browse. Clear daylight shots of the water work best.</p>
+                <div class="scanner-viewport" id="dropzone" tabindex="0" role="button" aria-label="Upload a river image" aria-describedby="fileRules">
+                    <div class="scanline" aria-hidden="true"></div>
+                    <div class="scanner-placeholder" id="scannerPlaceholder">
+                        <strong>Drop an image here</strong>
+                        or click to browse<br>
+                        <span id="fileRules">JPG · PNG · WEBP, up to 10 MB</span>
+                    </div>
+                    <img id="previewImg" alt="Uploaded river image preview" hidden>
+                    <canvas id="detectionCanvas" hidden></canvas>
+                    <div class="scan-progress" id="scanProgress" hidden>
+                        <span class="gate-spinner" aria-hidden="true"></span>
+                        <span id="scanProgressText">Running the model…</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="reco-box" id="recoBox" hidden>
-                <p class="card-eyebrow">AI Recommendation</p>
-                <p id="recoText" style="white-space:pre-line;margin:6px 0 0;font-size:.9rem;line-height:1.6"></p>
-                <p id="recoSource" class="card-desc" style="margin-top:8px"></p>
-            </div>
+                <p class="file-meta" id="fileMeta" hidden></p>
+                <p class="file-error" id="fileError" role="alert" hidden></p>
 
-            <div class="quickread-actions" id="quickreadActions" hidden>
-                <button class="btn btn-outline" id="scanAnotherBtn">Scan another river</button>
-                <button class="btn btn-purple" id="viewDocsBtn">View in Tracking</button>
-            </div>
-        </section>
+                <input type="file" id="fileInput" class="scan-file-input" accept="image/jpeg,image/png,image/webp">
 
+                <div class="scanner-actions">
+                    <button class="btn btn-outline" id="cameraBtn" type="button">Use Camera</button>
+                    <button class="btn btn-outline" id="uploadBtn" type="button">Upload Photo</button>
+                </div>
+                <div class="scanner-actions scanner-actions--secondary">
+                    <button class="btn btn-solid" id="scanBtn" disabled>Scan Image</button>
+                    <button class="btn btn-outline" id="resetBtn">Reset</button>
+                </div>
+            </section>
+
+            <!-- Step 3: result, recommendation and submit -->
+            <section class="card results-card" id="resultsCard" aria-live="polite" aria-labelledby="stepResultTitle">
+                <div class="step-head">
+                    <span class="step-num" aria-hidden="true">3</span>
+                    <div>
+                        <p class="card-eyebrow">Scan Result</p>
+                        <h2 class="card-heading" id="stepResultTitle">Review and submit</h2>
+                    </div>
+                </div>
+
+                <p class="result-segment" id="resultSegment">No segment chosen yet. Choose one in step 1.</p>
+
+                <div class="scan-warnings" id="scanWarnings" hidden></div>
+
+                <div class="quickread-row" id="quickreadRow">
+                    <span class="status-dot" id="quickStatusDot"></span>
+                    <div class="quickread-text">
+                        <p class="quickread-title" id="quickStatusTitle">Waiting for scan</p>
+                        <p class="quickread-sub" id="quickStatusSub">Upload or capture a photo, then run the scan.</p>
+                    </div>
+                    <div class="quickread-score">
+                        <span class="score-value" id="quickScoreValue">—</span>
+                        <span class="score-suffix">/ 100</span>
+                    </div>
+                </div>
+
+                <p class="result-confidence" id="resultConfidence" hidden></p>
+
+                <div class="reco-box" id="recoBox" hidden>
+                    <p class="card-eyebrow">AI Recommendation</p>
+                    <p id="recoText" class="reco-text"></p>
+                    <p id="recoSource" class="card-desc reco-source"></p>
+                </div>
+
+                <div class="submit-status" id="submitStatus" role="status" hidden></div>
+
+                <div class="quickread-actions" id="quickreadActions" hidden>
+                    <button class="btn btn-outline" id="scanAnotherBtn">Scan another river</button>
+                    <button class="btn btn-purple" id="viewDocsBtn">View in Tracking</button>
+                </div>
+            </section>
+        </div>
     </div>
 </main>
 
+<!-- Camera preview -->
 <div class="camera-overlay" id="cameraOverlay" hidden>
     <video id="cameraVideo" autoplay playsinline muted></video>
     <p class="camera-error" id="cameraError" hidden></p>
@@ -139,8 +220,11 @@
     </div>
 </div>
 
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="vendor/onnxruntime-web/ort.min.js"></script>
 <script src="mapping-data.js"></script>
 <script type="module" src="Image_Processing.js"></script>
+<script type="module" src="admin-nav.js"></script>
 </body>
 </html>

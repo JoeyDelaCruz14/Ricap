@@ -1,6 +1,11 @@
+// Static data shared by the map, scanner, Home, Tracking, profile and Maintenance pages:
+// Bataan bounds and centre, and the list of monitored rivers (id, name, coast, position and a short note).
+// Loaded as a plain script, so these are globals.
+// Sa madaling salita: listahan ng mga ilog at hangganan ng Bataan na ginagamit ng ibang pahina.
+
 const BATAAN_BOUNDS = [
-    [14.33, 120.02], // SW
-    [14.97, 120.66]  // NE
+    [14.33, 120.02],
+    [14.97, 120.66]
 ];
 
 const BATAAN_CENTER = [14.66, 120.44];
@@ -93,8 +98,6 @@ const RIVER_DATA = [
         lat: 14.6600,
         lng: 120.2830,
         note: "One of three river systems (with Bagac and Talisay) assessed in Bataan Peninsula fish habitat studies.",
-        // OSM tags this river "Alamacen River" (different spelling) — without this hint
-        // the name-matching step would miss it and it would fall back to proximity-only.
         osmNames: ["Alamacen River", "Alamacen"]
     },
     {

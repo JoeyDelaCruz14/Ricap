@@ -1,38 +1,51 @@
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Home</title>
-            <link rel="stylesheet" href="style.css">
-            <link rel="stylesheet" href="Responsive.css">
-            <link rel="stylesheet" href="Home.css">
-        </head>
-
-        <body class="forum-page">
-            <nav class="nav scrolled" id="nav">
-                <div class="nav-inner">
-                    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+ <!DOCTYPE html>
+<!-- Home: community forum of river reports with filters, river search and account box. -->
+<!-- Sa madaling salita: ang forum ng mga report sa ilog. -->
+ <html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b0c10">
+<title>Home</title>
+<link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="Responsive.css">
+<link rel="stylesheet" href="Home.css">
+</head>
+    <body class="forum-page">
+        <a class="skip-link" href="#forumFeed">Skip to reports</a>
+ 
+  
+        <!-- Top navigation -->
+        <nav class="nav scrolled" id="nav" aria-label="Main">
+         <div class="nav-inner">
+         <a class="nav-brand" href="Home.html">Ri<span>Cap</span></a>
+           <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks"><span></span><span></span><span></span></button>
                     <ul class="nav-links" id="navLinks">
-                        <li><a href="Home.html" class="nav-link--active">Home</a></li>
+                        <li><a href="Home.html" class="nav-link--active" aria-current="page">Home</a></li>
                         <li><a href="mapping.html">Mapping</a></li>
                         <li><a href="Image_Processing.html">Scanner</a></li>
                         <li><a href="Tracking.html">Tracking</a></li>
-                        <li><a href="main.html#about">About</a></li>
-                        <li><a href="main.html#contact">Contact</a></li>
-                        <li><a href ="main.html">Login</a></li>
-                        <li data-admin-only hidden><a href="Admin.html">Admin</a></li>
+                        <li><a href="main.html#loginbutton">Login</a></li>
+                        <li><a href="Verify.html">Verify</a></li>
                         <li data-admin-only hidden><a href="maintenance.html">Maintenance</a></li>
                     </ul>
                 </div>
             </nav>
 
             <main class="forum">
+                <!-- Title and stats -->
                 <header class="forum-header">
-                    <p class="forum-eyebrow">Community Reports</p>
-                    <h1 class="forum-title">River Watch Forum</h1>
+                    <h1 class="forum-title" tabindex="-1">River Watch Forum</h1>
                     <p class="forum-sub">Live field reports from verified officials, with AI-suggested actions. Vote, comment, and follow Bataan's rivers in real time.</p>
-                    <dl class="forum-stats">
+                    <div class="forum-actions">
+                        <a class="btn btn--primary" href="#forumFeed">
+                            Browse reports
+                            <svg class="btn-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12m0 0-5-5m5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </a>
+                        <a class="btn btn--ghost" href="mapping.html">Open river map</a>
+                    </div>
+                    <dl class="forum-stats" aria-label="Forum totals">
                         <div class="stat"><dt class="stat-num" id="statReports">0</dt><dd class="stat-label">Reports</dd></div>
                         <div class="stat"><dt class="stat-num" id="statRivers">0</dt><dd class="stat-label">Rivers covered</dd></div>
                         <div class="stat"><dt class="stat-num" id="statOfficials">0</dt><dd class="stat-label">Verified officials</dd></div>
@@ -40,7 +53,14 @@
                 </header>
 
                 <div class="forum-body">
-                    <aside class="forum-sidebar" id="forumSidebar">
+                    <!-- Sidebar: search, filters, notifications, officials, account -->
+                    <aside class="forum-sidebar" id="forumSidebar" aria-label="Filters and account">
+                        <div class="sidebar-block" role="search">
+                            <label class="sidebar-block-title" for="riverSearch">Search rivers</label>
+                            <input type="search" id="riverSearch" class="river-search" placeholder="Type a river name" list="riverSearchList" autocomplete="off" enterkeyhint="search" aria-describedby="riverSearchCount">
+                            <datalist id="riverSearchList"></datalist>
+                            <p class="river-search-count" id="riverSearchCount" aria-live="polite"></p>
+                        </div>
                         <div class="sidebar-block">
                             <p class="sidebar-block-title">Filter by status</p>
                             <div class="status-chips" id="statusChips">
@@ -48,11 +68,10 @@
                                 <button type="button" class="chip" data-status="healthy">Healthy</button>
                                 <button type="button" class="chip" data-status="moderate">Moderate</button>
                                 <button type="button" class="chip" data-status="polluted">Polluted</button>
-                                <button type="button" class="chip" data-status="critical">Critical</button>
                             </div>
                         </div>
                         <div class="sidebar-block">
-                            <p class="sidebar-block-title">Sort</p>
+                            <label class="sidebar-block-title" for="sortSelect">Sort</label>
                             <select id="sortSelect" class="sidebar-select">
                                 <option value="newest">Newest first</option>
                                 <option value="liked">Top voted</option>
@@ -72,12 +91,21 @@
                             <div id="authBlock"></div>
                         </div>
                     </aside>
-                    <section class="forum-feed" id="forumFeed" aria-live="polite"></section>
+                    <!-- Report feed (filled by Home.js) -->
+                    <section class="forum-feed" id="forumFeed" aria-live="polite" aria-label="Latest river reports" tabindex="-1"></section>
                 </div>
             </main>
 
-            <button class="fab-submit" id="fabSubmit" hidden>＋ New report</button>
+            <!-- Floating buttons -->
+            <button class="fab-submit" id="fabSubmit" hidden>New report</button>
+            <button type="button" class="back-to-top" id="backToTop" aria-label="Back to top">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V4m0 0-5 5m5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+
+            <!-- Scripts -->
+            <script src="mapping-data.js"></script>
             <script type="module" src="Home.js"></script>
             <script type="module" src="admin-nav.js"></script>
+            <script src="home-page-interactive.js" defer></script>
         </body>
         </html>

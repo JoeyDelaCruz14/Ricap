@@ -67,3 +67,13 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+.claude/
+.agents/
+CLAUDE.md
+skills-lock.json
+
+models/Xenova/
+
+# Local Gemini key (localhost testing only, never commit or deploy)
+gemini-config.js

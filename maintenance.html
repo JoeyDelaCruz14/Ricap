@@ -1,58 +1,72 @@
 <!DOCTYPE html>
+<!-- Maintenance (admins only): manage reports, rivers, access codes and verified users. -->
+<!-- Sa madaling salita: dito inaayos ng admin ang website. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RiCap — Maintenance Module</title>
-
+    <link rel="icon" type="image/png" href="images&vids/Ricaplogo.png">
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="Responsive.css">
-    <link rel="stylesheet" href="apply.css">
-    <link rel="stylesheet" href="admin.css">
     <link rel="stylesheet" href="maintenance.css">
 </head>
-<body class="submit-page maintenance-page">
+<body class="maintenance-page">
 
+    <!-- Background video -->
+    <div class="video-background" aria-hidden="true">
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="images&vids/5.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
+    </div>
+
+    <!-- Top navigation -->
     <nav class="nav" id="nav">
         <div class="nav-inner">
-            <a href="main-admin.html" class="nav-brand">Ri<span>Cap</span></a>
+            <a href="main.html" class="nav-brand">Ri<span>Cap</span></a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks" data-nav-toggle>
+                <span></span><span></span><span></span>
+            </button>
             <ul class="nav-links" id="navLinks">
                 <li><a href="Home.html">Home</a></li>
                 <li><a href="mapping.html">Mapping</a></li>
-                <li><a href="Admin.html">Admin</a></li>
-                <li><a href="maintenance.html" class="nav-link--active">Maintenance</a></li>
+                <li><a href="Image_Processing.html">Scanner</a></li>
+                <li><a href="Tracking.html">Tracking</a></li>
+                <li><a href="main.html#loginbutton">Login</a></li>
+                <li><a href="Verify.html">Verify</a></li>
+                <li data-admin-only hidden><a href="maintenance.html" class="nav-link--active" aria-current="page">Maintenance</a></li>
             </ul>
         </div>
     </nav>
 
-    <main class="submit-main">
-        <div class="submit-shell maint-shell">
+    <main class="page-main">
+        <div class="page-shell">
 
+            <!-- Admin sign-in -->
             <section class="access-gate" id="mGate">
-                <p class="gate-eyebrow">Admin</p>
+                <p class="eyebrow">Admin</p>
                 <h1 class="gate-title">Maintenance Module</h1>
                 <p class="gate-copy">Restricted to RiCap admin accounts created in Firebase Authentication.</p>
                 <form id="mLoginForm" class="access-form" autocomplete="off">
                     <label for="mEmail">Email</label>
-                    <input type="email" id="mEmail" required>
+                    <input type="email" id="mEmail" autocomplete="username" required>
                     <label for="mPassword">Password</label>
-                    <input type="password" id="mPassword" required>
+                    <input type="password" id="mPassword" autocomplete="current-password" required>
                     <button type="submit">Sign in</button>
                 </form>
                 <p class="access-error" id="mLoginError" hidden></p>
             </section>
 
-            <!-- ===================== MODULE ===================== -->
+            <!-- Maintenance panel -->
             <section id="mPanel" hidden>
                 <header class="maint-head">
-                    <div>
-                        <p class="form-eyebrow">Signed in as <span id="mEmailLabel"></span> ·
-                            <button type="button" id="mSignOut" class="link-btn">sign out</button></p>
-                        <h1 class="form-title">Maintenance Module</h1>
-                        <p class="form-sub">Review flagged content, manage river location records, and maintain system records.</p>
-                    </div>
+                    <p class="eyebrow">Signed in as <span id="mEmailLabel"></span> ·
+                        <button type="button" id="mSignOut" class="link-btn">sign out</button></p>
+                    <h1 class="maint-title">Maintenance Module</h1>
+                    <p class="maint-sub">Review flagged content and official applications, manage river location records, and maintain system records.</p>
                 </header>
 
+                <!-- Totals -->
                 <div class="maint-stats" id="mStats">
                     <div class="m-stat"><span id="stReports">0</span><small>Reports</small></div>
                     <div class="m-stat"><span id="stFlagged">0</span><small>Flagged</small></div>
@@ -60,20 +74,29 @@
                     <div class="m-stat"><span id="stCodes">0</span><small>Active officials</small></div>
                 </div>
 
+                <!-- Tabs -->
                 <div class="maint-tabs" role="tablist">
                     <button type="button" class="m-tab is-active" data-tab="flagged">Flagged content <em id="flagBadge" hidden>0</em></button>
+                    <button type="button" class="m-tab" data-tab="applications">Applications <em id="appBadge" hidden>0</em></button>
                     <button type="button" class="m-tab" data-tab="reports">All reports</button>
+                    <button type="button" class="m-tab" data-tab="users">Verified users</button>
                     <button type="button" class="m-tab" data-tab="rivers">River locations</button>
                     <button type="button" class="m-tab" data-tab="system">System records</button>
                 </div>
 
-                <!-- Flagged -->
+                <!-- Tab: flagged reports -->
                 <div class="m-pane is-active" id="pane-flagged">
                     <p class="m-empty" id="flaggedEmpty">Nothing is flagged right now.</p>
                     <div class="m-list" id="flaggedList"></div>
                 </div>
 
-                <!-- All reports -->
+                <!-- Tab: official applications (approve / reject, email access codes) -->
+                <div class="m-pane" id="pane-applications">
+                    <p class="m-empty" id="appsEmpty">No pending applications right now.</p>
+                    <div class="app-list" id="appList"></div>
+                </div>
+
+                <!-- Tab: all reports -->
                 <div class="m-pane" id="pane-reports">
                     <div class="m-toolbar">
                         <input type="search" id="reportSearch" placeholder="Search name, river, reporter…">
@@ -82,7 +105,6 @@
                             <option value="healthy">Healthy</option>
                             <option value="moderate">Moderate</option>
                             <option value="polluted">Polluted</option>
-                            <option value="critical">Critical</option>
                         </select>
                         <button type="button" class="ghost-btn" id="exportReportsBtn">Export CSV</button>
                     </div>
@@ -90,7 +112,16 @@
                     <div class="m-list" id="reportList"></div>
                 </div>
 
-                <!-- Rivers -->
+                <!-- Tab: verified users -->
+                <div class="m-pane" id="pane-users">
+                    <div class="m-toolbar">
+                        <input type="search" id="userSearch" placeholder="Search name, email, role, code…">
+                    </div>
+                    <p class="m-empty" id="usersEmpty">No verified users yet.</p>
+                    <div class="m-users" id="userList"></div>
+                </div>
+
+                <!-- Tab: river records -->
                 <div class="m-pane" id="pane-rivers">
                     <form id="riverForm" class="m-form" autocomplete="off">
                         <h2 id="riverFormTitle">Add river location</h2>
@@ -143,7 +174,7 @@
                     </div>
                 </div>
 
-                <!-- System -->
+                <!-- Tab: access codes and data checks -->
                 <div class="m-pane" id="pane-system">
                     <h2 class="m-h2">Official access codes</h2>
                     <p class="m-empty" id="codesEmpty">No access codes issued yet.</p>
@@ -161,9 +192,12 @@
         </div>
     </main>
 
+    <!-- Toast message -->
     <div class="m-toast" id="mToast" hidden></div>
 
+    <!-- Scripts -->
     <script src="mapping-data.js"></script>
     <script type="module" src="maintenance.js"></script>
+    <script type="module" src="admin-nav.js"></script>
 </body>
 </html>

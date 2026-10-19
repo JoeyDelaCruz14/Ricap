@@ -1,11 +1,6 @@
-// clip-gate.js - zero-shot "is this a river photo?" check using CLIP
-// The transformers library is loaded with a dynamic import() and several CDN
-// fallbacks, so if a CDN is down this file still loads and only the gate fails.
-//
-// How it works: CLIP must pick the best-matching caption from a fixed list. If the list has no caption
-// that fits (e.g. a glass of water or a matcha drink), it grabs the "closest" water caption by default.
-// So the list below includes many look-alike things that are NOT rivers, and the river captions are
-// specific (outdoors, natural water, riverbank) so an indoor drink can't win.
+// CLIP "is this a river photo?" check, run in the browser with transformers.js (loaded from a CDN).
+// Compares the photo to water and non-water captions; the model (~90 MB) downloads on first use.
+// Sa madaling salita: tinitingnan ng AI kung litrato talaga ng ilog ang in-upload bago ito i-scan.
 
 const LIB_URLS = [
     'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js',
@@ -24,10 +19,8 @@ const WATER_LABELS = [
 ];
 
 const NON_WATER_LABELS = [
-    // people
     'a photo of people',
     'a selfie or portrait of a person',
-    // indoors / objects / drinks (the usual false positives)
     'a photo of a glass of drinking water',
     'a photo of a drink in a glass or cup',
     'a photo of a cup of coffee, tea or matcha',
@@ -41,7 +34,6 @@ const NON_WATER_LABELS = [
     'a close-up photo of water droplets or bubbles',
     'a photo of a room indoors',
     'a photo of a screen, poster or document',
-    // outdoors, but not a river
     'a photo of a street or buildings',
     'a photo of a park, garden or trees on land',
     'a photo of a field or mountain',
@@ -52,12 +44,13 @@ const NON_WATER_LABELS = [
 ];
 
 const ALL_LABELS = [...WATER_LABELS, ...NON_WATER_LABELS];
-const MIN_WATER_SCORE = 0.6;   // total probability on river captions (was 0.5)
-const MIN_TOP_SCORE = 0.25;    // best single caption must also be reasonably confident
+const MIN_WATER_SCORE = 0.6;
+const MIN_TOP_SCORE = 0.25;
 
 let libPromise = null;
 let classifierPromise = null;
 
+// Loads transformers.js, trying each CDN URL until one works.
 function loadLib() {
     if (!libPromise) {
         libPromise = (async function () {
@@ -66,6 +59,9 @@ function loadLib() {
                 try {
                     const lib = await import(url);
                     lib.env.allowLocalModels = false;
+                    lib.env.allowRemoteModels = true;
+                    lib.env.remoteHost = 'https://huggingface.co';
+                    lib.env.remotePathTemplate = '{model}/resolve/{revision}/';
                     console.log('[CLIP] library loaded from', url);
                     return lib;
                 } catch (e) {
@@ -80,6 +76,7 @@ function loadLib() {
     return libPromise;
 }
 
+// Loads the CLIP zero-shot classifier once and reuses it.
 export function loadClipGate(onProgress) {
     if (!classifierPromise) {
         classifierPromise = loadLib()
@@ -98,10 +95,10 @@ export function loadClipGate(onProgress) {
     return classifierPromise;
 }
 
-// imageSrc: an object URL, data URL, or image URL
+// Classifies the photo; ok is true when the water captions score high enough.
 export async function checkRiverPhoto(imageSrc) {
     const classifier = await loadClipGate();
-    const results = await classifier(imageSrc, ALL_LABELS);   // sorted, scores sum to 1
+    const results = await classifier(imageSrc, ALL_LABELS);
 
     const waterScore = results
         .filter(function (r) { return WATER_LABELS.includes(r.label); })
@@ -112,7 +109,6 @@ export async function checkRiverPhoto(imageSrc) {
                WATER_LABELS.includes(top.label) &&
                top.score >= MIN_TOP_SCORE;
 
-    // handy when tuning: shows the 3 best captions in the browser console
     console.log('[CLIP] top 3:', results.slice(0, 3).map(function (r) {
         return r.label + ' ' + r.score.toFixed(2);
     }).join(' | '));

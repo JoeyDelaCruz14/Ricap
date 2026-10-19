@@ -1,3 +1,6 @@
+// Nav for main.html: shadow on scroll and the mobile menu (closes on link click, Esc or outside click).
+// Sa madaling salita: ang menu sa itaas ng main.html (anino kapag nag-scroll at menu sa cellphone).
+
 document.addEventListener('DOMContentLoaded', () => {
 
     const nav = document.getElementById('nav');
@@ -7,18 +10,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!nav || !toggle || !links) return;
 
+    // Opens the mobile menu.
     function openMenu() {
         toggle.classList.add('open');
         links.classList.add('open');
         toggle.setAttribute('aria-expanded', 'true');
     }
 
+    // Closes the mobile menu.
     function closeMenu() {
         toggle.classList.remove('open');
         links.classList.remove('open');
         toggle.setAttribute('aria-expanded', 'false');
     }
 
+    // True while the mobile menu is open.
     function isOpen() {
         return links.classList.contains('open');
     }
@@ -49,6 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Nav shadow once the page is scrolled.
     function updateOnScroll() {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;

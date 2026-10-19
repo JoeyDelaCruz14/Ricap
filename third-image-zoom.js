@@ -1,3 +1,6 @@
+// Zooms the .third image while its section scrolls by. Not loaded by any page at the moment.
+// Sa madaling salita: pinapalaki ang larawan habang nag-i-scroll (hindi pa ginagamit).
+
 document.addEventListener('DOMContentLoaded', () => {
     const image = document.querySelector('.third-image');
     const section = document.querySelector('.third');
@@ -9,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxScale = 1.12; 
     let ticking = false;
 
+    // Scales the image by how far the section has scrolled.
     function update() {
         ticking = false;
 
@@ -20,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         image.style.transform = `scale(${scale})`;
     }
 
+    // Runs update() at most once per frame.
     function onScroll() {
         if (!ticking) {
             ticking = true;

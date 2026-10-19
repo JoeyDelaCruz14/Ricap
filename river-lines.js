@@ -1,28 +1,18 @@
-// river-lines.js
-// Loads real river/stream geometry for Bataan from OpenStreetMap (the same data
-// waterwaymap.org displays) via the Overpass API, and draws it on the Leaflet map.
-//
-//  1. Waterways whose NAME matches a river in RIVER_DATA are grouped per river.
-//  2. A river with no name match falls back to PROXIMITY: the nearest waterway within
-//     PROXIMITY_KM of its marker (plus the connected segments) is adopted.
-//  3. Each matched river gets an ANCHOR point ON its line; mapping.js moves the marker there,
-//     so locations come from the real river geometry instead of hand-typed coordinates.
-//  4. mapping.js colours each river's lines by pollution status (healthy/moderate/polluted/critical).
-//
-// Optional per-river hint in mapping-data.js:  osmNames: ["Ilog Balanga"]
+// River geometry for the map and scanner: loads Bataan waterways (local file, then the Overpass
+// API with a 7-day cache), picks each river's main stem, splits it into equal segments and draws
+// them on a Leaflet map. Also exports distance helpers used to match a location to a segment.
+// Sa madaling salita: kinukuha nito ang hugis ng mga ilog, hinahati sa mga segment, at sinusukat ang layo mo sa ilog.
 
-const BBOX = '14.33,120.02,14.97,120.66'; // south,west,north,east (Bataan)
+
+const BBOX = '14.33,120.02,14.97,120.66';
 const ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter'
 ];
+const DATA_URL = 'data/bataan-waterways.json';
 const CACHE_KEY = 'ricap_waterways_v1';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-// Where the marker sits on the river line:
-//   'snap'  = closest point on the line to the coordinates in mapping-data.js (default)
-//   'mid'   = middle of the river's longest segment
-//   'mouth' = downstream end of the longest segment (OSM ways run downstream)
 const ANCHOR_MODE = 'snap';
 const PROXIMITY_KM = 6;
 const MAX_FLOOD_WAYS = 150;
@@ -35,6 +25,7 @@ const QUERY =
 
 const STRIP_WORDS = /\b(river|ilog|rio|sapa|creek|stream|ng|ang)\b/g;
 
+// Normalizes a river name for matching (lower case, without words like "river" or "ilog").
 function norm(name) {
     return String(name || '')
         .toLowerCase()
@@ -44,10 +35,10 @@ function norm(name) {
         .trim();
 }
 
-/* ---------- geometry helpers ---------- */
 
 const RAD = Math.PI / 180;
 
+// Great-circle distance in km between two points.
 function km(aLat, aLng, bLat, bLng) {
     const dLat = (bLat - aLat) * RAD, dLng = (bLng - aLng) * RAD;
     const h = Math.sin(dLat / 2) ** 2 +
@@ -55,7 +46,7 @@ function km(aLat, aLng, bLat, bLng) {
     return 12742 * Math.asin(Math.sqrt(h));
 }
 
-// closest point on segment a-b to p (local planar approximation, fine at this scale)
+// Closest point on the straight segment a-b to point p.
 function nearestOnSegment(p, a, b) {
     const k = Math.cos(p[0] * RAD);
     const ax = a[1] * k, ay = a[0], bx = b[1] * k, by = b[0], px = p[1] * k, py = p[0];
@@ -66,6 +57,7 @@ function nearestOnSegment(p, a, b) {
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
 
+// Closest point on a polyline to point p, with its distance.
 function nearestOnLine(p, coords) {
     let best = null, bestD = Infinity;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -76,6 +68,7 @@ function nearestOnLine(p, coords) {
     return { pt: best, d: bestD };
 }
 
+// Total length of a polyline in km.
 function lineLengthKm(coords) {
     let s = 0;
     for (let i = 0; i < coords.length - 1; i++) {
@@ -84,6 +77,7 @@ function lineLengthKm(coords) {
     return s;
 }
 
+// Point halfway along a polyline.
 function lineMidpoint(coords) {
     const half = lineLengthKm(coords) / 2;
     let acc = 0;
@@ -101,8 +95,115 @@ function lineMidpoint(coords) {
     return coords[Math.floor(coords.length / 2)];
 }
 
-/* ---------- data loading ---------- */
 
+export const SEGMENT_NAMES = ['Upstream', 'Upper-Mid', 'Lower-Mid', 'Downstream'];
+
+// Point at distance d (km) along a polyline.
+function pointAlong(coords, d) {
+    let acc = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+        const seg = km(coords[i][0], coords[i][1], coords[i + 1][0], coords[i + 1][1]);
+        if (acc + seg >= d) {
+            const t = seg ? (d - acc) / seg : 0;
+            return {
+                i,
+                pt: [coords[i][0] + (coords[i + 1][0] - coords[i][0]) * t,
+                     coords[i][1] + (coords[i + 1][1] - coords[i][1]) * t]
+            };
+        }
+        acc += seg;
+    }
+    return { i: coords.length - 2, pt: coords[coords.length - 1] };
+}
+
+// Splits a polyline into n parts of equal length.
+function splitIntoParts(coords, n) {
+    const total = lineLengthKm(coords);
+    const cuts = [];
+    for (let k = 1; k < n; k++) cuts.push(pointAlong(coords, (total * k) / n));
+    const parts = [];
+    let start = { i: -1, pt: coords[0] };
+    cuts.concat([{ i: coords.length - 1, pt: coords[coords.length - 1], end: true }]).forEach(cut => {
+        const part = [start.pt];
+        for (let v = start.i + 1; v <= cut.i && v < coords.length; v++) {
+            if (!cut.end || v < coords.length - 1) part.push(coords[v]);
+        }
+        part.push(cut.pt);
+        parts.push(part.filter((p, idx) => idx === 0 || p[0] !== part[idx - 1][0] || p[1] !== part[idx - 1][1]));
+        start = cut;
+    });
+    return parts;
+}
+
+// Joins connected waterway pieces into the longest path that reaches the coast.
+function buildMainStem(lines, coastKm) {
+    const key = p => p[0] + ',' + p[1];
+    const lens = lines.map(lineLengthKm);
+    const startsAt = {};
+    lines.forEach((c, i) => { (startsAt[key(c[0])] = startsAt[key(c[0])] || []).push(i); });
+
+    const best = new Array(lines.length);
+    const next = new Array(lines.length).fill(-1);
+    const visiting = new Set();
+    let cyclic = false;
+    // Longest path from piece i following connected pieces (memoized).
+    function walk(i) {
+        if (best[i] !== undefined) return best[i];
+        if (visiting.has(i)) { cyclic = true; return 0; }
+        visiting.add(i);
+        let tail = 0;
+        (startsAt[key(lines[i][lines[i].length - 1])] || []).forEach(j => {
+            if (j === i) return;
+            const v = walk(j);
+            if (v > tail) { tail = v; next[i] = j; }
+        });
+        visiting.delete(i);
+        best[i] = lens[i] + tail;
+        return best[i];
+    }
+    let head = 0;
+    lines.forEach((_, i) => { if (walk(i) > walk(head)) head = i; });
+
+    const used = [];
+    let coords = [];
+    for (let i = head; i >= 0 && !used.includes(i); i = next[i]) {
+        used.push(i);
+        coords = coords.length ? coords.concat(lines[i].slice(1)) : lines[i].slice();
+    }
+
+    let uncertain = cyclic ? 'the OSM ways loop back on themselves' : null;
+    if (coastKm && coords.length > 1) {
+        const src = coastKm(coords[0]), mouth = coastKm(coords[coords.length - 1]);
+        if (mouth > src + 0.5) {
+            coords.reverse();
+            uncertain = 'OSM direction pointed inland, so the line was reversed';
+        } else if (Math.abs(mouth - src) <= 0.5 && mouth > 1.5) {
+            uncertain = uncertain || 'both ends are inland; kept the OSM direction';
+        }
+    }
+    return { coords, used, uncertain, lengthKm: lineLengthKm(coords), totalKm: lens.reduce((a, b) => a + b, 0) };
+}
+
+// Line thickness for the current map zoom.
+function lineWeight(zoom) {
+    return Math.max(2.5, Math.min(7, 2.5 + (zoom - 10) * 0.9));
+}
+const HIT_WEIGHT = 22;
+
+// Numbered marker shown at the middle of a segment.
+function segmentIcon(index, color) {
+    return L.divIcon({
+        className: 'seg-marker-icon',
+        html: '<span class="seg-marker" style="--seg-color:' + color + '">' + index + '</span>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        popupAnchor: [0, -13]
+    });
+}
+const NO_ASSESSMENT_COLOR = '#7f8792';
+
+
+// Waterways cached in localStorage, if still fresh.
 function readCache() {
     try {
         const raw = localStorage.getItem(CACHE_KEY);
@@ -113,11 +214,22 @@ function readCache() {
     } catch (e) { return null; }
 }
 
+// Caches downloaded waterways in localStorage.
 function writeCache(ways) {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), ways })); }
     catch (e) { console.warn('[RiverLines] could not cache waterways (storage full?)'); }
 }
 
+// Loads the bundled waterways file (data/bataan-waterways.json).
+async function loadWaterwaysFile() {
+    const res = await fetch(DATA_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!Array.isArray(json.ways)) throw new Error('no ways in ' + DATA_URL);
+    return json.ways;
+}
+
+// Downloads waterways from the Overpass API, trying each endpoint in turn.
 async function fetchWaterways() {
     let lastErr = null;
     for (const url of ENDPOINTS) {
@@ -129,7 +241,6 @@ async function fetchWaterways() {
             });
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const json = await res.json();
-            // Compact: [{ n: names[], w: waterwayType, c: [[lat,lng],...] }]
             return (json.elements || [])
                 .filter(el => el.type === 'way' && Array.isArray(el.geometry) && el.geometry.length > 1)
                 .map(el => {
@@ -148,19 +259,25 @@ async function fetchWaterways() {
     throw lastErr || new Error('Overpass unavailable');
 }
 
-/* ---------- main ---------- */
 
-export async function loadRiverLines(map, rivers) {
-    let ways = readCache();
-    if (!ways) {
-        ways = await fetchWaterways();
-        writeCache(ways);
+// Builds the segments for every river: { riverId: [segment, ...] }.
+export async function computeRiverSegments(rivers, options = {}) {
+    let ways;
+    try {
+        ways = await loadWaterwaysFile();
+    } catch (err) {
+        console.warn('[RiverLines] ' + DATA_URL + ' unavailable, using Overpass', err);
+        ways = readCache();
+        if (!ways) {
+            ways = await fetchWaterways();
+            writeCache(ways);
+        }
+        if (options.contains) ways = ways.filter(w => w.c.some(p => options.contains(p)));
     }
 
-    const assigned = new Array(ways.length).fill(undefined); // way index -> river id
-    const how = {};                                           // river id -> 'name' | 'proximity'
+    const assigned = new Array(ways.length).fill(undefined);
+    const how = {};
 
-    // ---- 1) match by name ----
     const lookup = {};
     rivers.forEach(rv => {
         [rv.name, rv.officialName].concat(rv.osmNames || []).filter(Boolean).forEach(n => {
@@ -173,7 +290,6 @@ export async function loadRiverLines(map, rivers) {
         if (id !== undefined) { assigned[i] = id; how[id] = 'name'; }
     });
 
-    // ---- 2) proximity fallback for rivers with no name match ----
     const endpointIndex = {};
     const key = p => p[0] + ',' + p[1];
     ways.forEach((way, i) => {
@@ -208,26 +324,59 @@ export async function loadRiverLines(map, rivers) {
         how[rv.id] = 'proximity';
     });
 
-    // ---- 3) draw ----
+    const waysOf = {};
+    ways.forEach((way, i) => {
+        if (assigned[i] !== undefined) (waysOf[assigned[i]] = waysOf[assigned[i]] || []).push(i);
+    });
+    const stems = {};
+    const parts = {};
+    Object.keys(waysOf).forEach(riverId => {
+        stems[riverId] = buildMainStem(waysOf[riverId].map(i => ways[i].c), options.coastKm);
+        if (stems[riverId].coords.length > 1) parts[riverId] = splitIntoParts(stems[riverId].coords, 4);
+    });
+    return { ways, assigned, how, waysOf, stems, parts };
+}
+
+// Nearest segment of one river to a point, within maxKm.
+export function nearestSegment(parts, riverId, lat, lng, maxKm) {
+    const list = parts && parts[riverId];
+    if (!list) return null;
+    let best = null;
+    list.forEach((coords, n) => {
+        const d = nearestOnLine([lat, lng], coords).d;
+        if (!best || d < best.km) best = { index: n + 1, km: d };
+    });
+    return best && best.km <= maxKm ? best : null;
+}
+
+// Distance from a point to every segment of every river, nearest first.
+export function segmentDistances(parts, lat, lng) {
+    const out = [];
+    Object.keys(parts || {}).forEach(riverId => {
+        parts[riverId].forEach((coords, n) => {
+            const d = nearestOnLine([lat, lng], coords).d;
+            if (isFinite(d)) out.push({ riverId, index: n + 1, km: d });
+        });
+    });
+    return out.sort((a, b) => a.km - b.km);
+}
+
+// Draws all river segments on a Leaflet map and returns handles for styling them.
+export async function loadRiverLines(map, rivers, options = {}) {
+    const { ways, assigned, how, waysOf, stems, parts } = await computeRiverSegments(rivers, options);
+
     const byRiver = {};
+    const segments = {};
+    const dividers = {};
+    const segmentMarkers = {};
+    const uncertain = [];
     const other = L.featureGroup();
     const unmatchedNames = new Set();
 
     ways.forEach((way, i) => {
-        const label = (way.n && way.n[0]) || 'Unnamed waterway';
         const riverId = assigned[i];
-        if (riverId !== undefined) {
-            if (!byRiver[riverId]) byRiver[riverId] = L.featureGroup().addTo(map);
-            // a dark "halo" under the line so the colour (set later by mapping.js, by
-            // pollution status) reads clearly against the dark basemap at any zoom
-            L.polyline(way.c, { color: '#0a1620', weight: 8, opacity: 0.55 })
-                .addTo(byRiver[riverId]);
-            // statusLine: true marks this as the line mapping.js should recolour by
-            // pollution status; the halo above is left alone so it stays dark.
-            L.polyline(way.c, { color: '#4d9ab8', weight: 4.5, opacity: 0.95, statusLine: true })
-                .bindTooltip(label, { sticky: true })
-                .addTo(byRiver[riverId]);
-        } else {
+        if (riverId === undefined) {
+            const label = (way.n && way.n[0]) || 'Unnamed waterway';
             if (way.n && way.n[0]) unmatchedNames.add(way.n[0]);
             L.polyline(way.c, {
                 color: '#4d9ab8',
@@ -237,9 +386,88 @@ export async function loadRiverLines(map, rivers) {
         }
     });
     other.addTo(map);
+
+    let weight = lineWeight(map.getZoom());
+
+    Object.keys(waysOf).forEach(riverId => {
+        const rv = rivers.find(x => String(x.id) === String(riverId)) || {};
+        const group = byRiver[riverId] = L.featureGroup().addTo(map);
+        const stem = stems[riverId];
+        if (stem.uncertain) uncertain.push({ river: rv.name || riverId, why: stem.uncertain });
+
+        waysOf[riverId].forEach((wi, k) => {
+            if (stem.used.includes(k)) return;
+            L.polyline(ways[wi].c, { color: '#4d9ab8', weight: 2, opacity: 0.6 })
+                .bindTooltip((ways[wi].n && ways[wi].n[0]) || (rv.name || 'River') + ' (side channel)', { sticky: true })
+                .addTo(group);
+        });
+
+        if (stem.coords.length < 2) return;
+        segments[riverId] = parts[riverId].map((coords, n) => {
+            const halo = L.polyline(coords, { color: '#0a1620', weight: weight + 4, opacity: 0.55, interactive: false }).addTo(group);
+            const line = L.polyline(coords, { color: NO_ASSESSMENT_COLOR, weight, opacity: 0.95, interactive: false }).addTo(group);
+            const hit = L.polyline(coords, { color: '#000', weight: HIT_WEIGHT, opacity: 0, interactive: true }).addTo(group);
+            const seg = {
+                id: riverId + '-seg' + (n + 1),
+                riverId,
+                index: n + 1,
+                name: SEGMENT_NAMES[n],
+                riverName: rv.name || rv.officialName || 'River',
+                coords,
+                lengthKm: lineLengthKm(coords),
+                bounds: L.latLngBounds(coords),
+                halo, line, hit,
+                color: NO_ASSESSMENT_COLOR,
+                highlighted: false,
+                marker: L.marker(pointAlong(coords, lineLengthKm(coords) / 2).pt, {
+                    icon: segmentIcon(n + 1, NO_ASSESSMENT_COLOR),
+                    title: (rv.name || 'River') + ', segment ' + (n + 1) + ' of 4 (' + SEGMENT_NAMES[n] + ')',
+                    keyboard: true,
+                    riseOnHover: true,
+                    segmentMarker: true
+                }),
+                setColor(c) {
+                    if (c === this.color) return;
+                    this.color = c;
+                    this.line.setStyle({ color: c });
+                    this.marker.setIcon(segmentIcon(this.index, c));
+                },
+                highlight(on) {
+                    this.highlighted = on;
+                    const w = lineWeight(map.getZoom());
+                    this.line.setStyle({ weight: on ? w + 3 : w, opacity: on ? 1 : 0.95 });
+                    this.halo.setStyle({ weight: (on ? w + 3 : w) + 4, opacity: on ? 0.8 : 0.55 });
+                }
+            };
+            return seg;
+        });
+
+        segmentMarkers[riverId] = L.layerGroup(segments[riverId].map(seg => seg.marker));
+
+        dividers[riverId] = L.layerGroup(segments[riverId].slice(1).map(seg => L.marker(seg.coords[0], {
+            icon: L.divIcon({
+                className: 'seg-divider-icon',
+                html: '<span class="seg-joint"></span>',
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            }),
+            pane: 'shadowPane',
+            interactive: false,
+            keyboard: false
+        })));
+    });
     Object.values(byRiver).forEach(g => g.bringToFront());
 
-    // ---- 4) anchor points on the real lines ----
+    map.on('zoomend', () => {
+        weight = lineWeight(map.getZoom());
+        Object.values(segments).flat().forEach(seg => seg.highlight(seg.highlighted));
+    });
+
+    if (uncertain.length) {
+        console.info('[RiverLines] Flow direction could not be confirmed from the data for:');
+        console.table(uncertain);
+    }
+
     const anchors = {};
     const table = [];
     rivers.forEach(rv => {
@@ -282,5 +510,5 @@ export async function loadRiverLines(map, rivers) {
             Array.from(unmatchedNames).sort());
     }
 
-    return { byRiver, other, anchors, total: ways.length };
+    return { byRiver, other, anchors, total: ways.length, segments, dividers, segmentMarkers, uncertain };
 }
